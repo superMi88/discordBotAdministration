@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from "react";
 
 /*Styles*/
-import styles from '/components/button/flexbox.module.css'
+import styles from '@/components/button/flexbox.module.css'
 
 /*
 type =>

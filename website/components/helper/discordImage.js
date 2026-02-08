@@ -3,7 +3,7 @@ import React, { useEffect, useState } from "react";
 import Image from 'next/image'
 
 /*Styles*/
-import serverSelectStyles from '/components/helper/serverSelect.module.css'
+import serverSelectStyles from '@/components/helper/serverSelect.module.css'
 
 export default function component({ type, id, avatar, icon }) {
 

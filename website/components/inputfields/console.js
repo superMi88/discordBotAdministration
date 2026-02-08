@@ -8,18 +8,18 @@ import { useSWRConfig } from 'swr'
 import Router from 'next/router'
 
 /*lib*/
-import { apiFetcher, getApiFetcher } from '/lib/apifetcher'
+import { apiFetcher, getApiFetcher } from '@/lib/apifetcher'
 
 /*Styles*/
-import utilStyles from '/styles/utils.module.css'
-import textStyles from '/components/inputfields/textarea.module.css'
+import utilStyles from '@/styles/utils.module.css'
+import textStyles from '@/components/inputfields/textarea.module.css'
 
 /*Button*/
-import Button from '/components/button/button.js'
+import Button from '@/components/button/button.js'
 
 /*Flexbox util*/
-import Flexbox from '/components/button/flexbox';
-import FlexItem from '/components/button/flexItem';
+import Flexbox from '@/components/button/flexbox';
+import FlexItem from '@/components/button/flexItem';
 
 import { useRouter } from 'next/router';
 

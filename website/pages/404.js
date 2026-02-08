@@ -4,7 +4,7 @@ import Layout, { siteTitle } from '../components/layout'
 import LayoutBlank from '../components/layoutBlank'
 
 /*Styles*/
-import utilStyles from '/styles/utils.module.css'
+import utilStyles from '@/styles/utils.module.css'
 
 
 export default function Custom404({ allPostsData }) {

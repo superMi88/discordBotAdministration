@@ -1,7 +1,7 @@
-import { database, renameId, databaseWebsite } from '/lib/database'
+import { database, renameId, databaseWebsite } from '@/lib/database'
 import { ObjectId } from 'mongodb'
-import {sendDataToDiscordBot} from '/lib/api/discordBotRequest'
-import {sendDataToNodeProcess} from '/lib/api/discordNodeProcess'
+import {sendDataToDiscordBot} from '@/lib/api/discordBotRequest'
+import {sendDataToNodeProcess} from '@/lib/api/discordNodeProcess'
 
 export default async function handler(req, res) {
 

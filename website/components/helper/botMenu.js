@@ -1,4 +1,4 @@
-import Layout, { siteTitle } from '/components//layout'
+import Layout, { siteTitle } from '@/components//layout'
 import useSWRImmutable from 'swr/immutable'
 import useSWR from 'swr'
 import React, { useEffect, useMemo, useState } from "react";
@@ -8,26 +8,26 @@ import { useSWRConfig } from 'swr'
 import Router from 'next/router'
 
 /*lib*/
-import { apiFetcher, getApiFetcher } from '/lib/apifetcher'
+import { apiFetcher, getApiFetcher } from '@/lib/apifetcher'
 
 /*Styles*/
-import botMenuStyles from '/components/helper/botMenu.module.css'
-import utilStyles from '/styles/utils.module.css'
+import botMenuStyles from '@/components/helper/botMenu.module.css'
+import utilStyles from '@/styles/utils.module.css'
 
 
 /*Icons*/
-import IconPlus from '/components/icons/plus.js'
-import IconMinus from '/components/icons/minus.js'
-import IconPlay from '/components/icons/play.js'
-import IconStop from '/components/icons/stop.js'
-import IconPending from '/components/icons/pending.js'
+import IconPlus from '@/components/icons/plus.js'
+import IconMinus from '@/components/icons/minus.js'
+import IconPlay from '@/components/icons/play.js'
+import IconStop from '@/components/icons/stop.js'
+import IconPending from '@/components/icons/pending.js'
 
 /*Button*/
-import Button from '/components/button/button.js'
+import Button from '@/components/button/button.js'
 
 /*Flexbox util*/
-import Flexbox from '/components/button/flexbox'
-import FlexItem from '/components/button/flexItem'
+import Flexbox from '@/components/button/flexbox'
+import FlexItem from '@/components/button/flexItem'
 
 import { useRouter } from 'next/router';
 

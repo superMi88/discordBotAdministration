@@ -3,7 +3,7 @@ import Image from 'next/image'
 import styles from './layout.module.css'
 import Link from 'next/link'
 
-import LayoutBlank from '/components/layoutBlank'
+import LayoutBlank from '@/components/layoutBlank'
 
 const name = 'Your Name'
 export const siteTitle = 'Lowas Website'
@@ -11,7 +11,7 @@ export const siteTitle = 'Lowas Website'
 /*lib*/
 import { apiFetcher, getApiFetcher } from '../lib/apifetcher'
 
-import DiscordImage from '/components/helper/discordImage'
+import DiscordImage from '@/components/helper/discordImage'
 
 import useSWRImmutable from 'swr/immutable'
 import useSWR from 'swr'
@@ -23,23 +23,23 @@ import React, { useEffect, useState } from "react";
 import Router from 'next/router'
 
 /*Icons*/
-import IconPlugin from '/components/icons/plugin.js'
-import IconMinus from '/components/icons/minus.js'
+import IconPlugin from '@/components/icons/plugin.js'
+import IconMinus from '@/components/icons/minus.js'
 
 /*Icons*/
-import IconAccountCircle from '/components/icons/accountCircle.js'
-import IconWork from '/components/icons/work.js'
-import IconGroup from '/components/icons/group.js'
-import IconHome from '/components/icons/home.js'
-import IconLogout from '/components/icons/logout.js'
-import IconList from '/components/icons/list.js'
-import IconError from '/components/icons/error.js'
-import IconPayments from '/components/icons/payments.js'
-import IconServer from '/components/icons/server.js'
+import IconAccountCircle from '@/components/icons/accountCircle.js'
+import IconWork from '@/components/icons/work.js'
+import IconGroup from '@/components/icons/group.js'
+import IconHome from '@/components/icons/home.js'
+import IconLogout from '@/components/icons/logout.js'
+import IconList from '@/components/icons/list.js'
+import IconError from '@/components/icons/error.js'
+import IconPayments from '@/components/icons/payments.js'
+import IconServer from '@/components/icons/server.js'
 
 /*Flexbox util*/
-import Flexbox from '/components/button/flexbox'
-import FlexItem from '/components/button/flexItem'
+import Flexbox from '@/components/button/flexbox'
+import FlexItem from '@/components/button/flexItem'
 
 
 //standart hooks for my project

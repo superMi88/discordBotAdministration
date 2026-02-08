@@ -553,10 +553,11 @@ li a:hover {
   z-index: 2; /* need to be higher than textmodule.box */
   overflow: hidden;
   border-radius: 6px;
-};
+}
 
 
 .draggableBox{
   cursor: move;
-};
+}
+
 

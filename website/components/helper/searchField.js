@@ -9,10 +9,10 @@ import { useSWRConfig } from 'swr'
 import Router from 'next/router'
 
 /*lib*/
-import { apiFetcher, getApiFetcher } from '/lib/apifetcher'
+import { apiFetcher, getApiFetcher } from '@/lib/apifetcher'
 
 /*Styles*/
-import searchFieldStyles from '/components/helper/searchField.module.css'
+import searchFieldStyles from '@/components/helper/searchField.module.css'
 
 /*
 props.setActiveGuild -> function to set id for state

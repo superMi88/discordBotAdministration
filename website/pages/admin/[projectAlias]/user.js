@@ -8,8 +8,8 @@ import React, { useEffect, useState } from "react";
 import Link from 'next/link'
 
 /*Styles*/
-import Userliste from '/components/helper/userliste';
-import utilStyles from '/styles/utils.module.css'
+import Userliste from '@/components/helper/userliste';
+import utilStyles from '@/styles/utils.module.css'
 
 
 export default function Profile () {

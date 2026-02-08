@@ -1,5 +1,5 @@
-import {database, renameId, databaseWebsite} from '/lib/database'
-import {sendDataToDiscordBot} from '/lib/api/discordBotRequest'
+import {database, renameId, databaseWebsite} from '@/lib/database'
+import {sendDataToDiscordBot} from '@/lib/api/discordBotRequest'
 
 export default async function handler(req, res) {
 

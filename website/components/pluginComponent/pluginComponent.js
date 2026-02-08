@@ -9,40 +9,40 @@ import { useSWRConfig } from 'swr'
 import Router from 'next/router'
 
 /*lib*/
-import { apiFetcher, getApiFetcher } from '/lib/apifetcher'
+import { apiFetcher, getApiFetcher } from '@/lib/apifetcher'
 
 /*components plugins*/
-import IconAndText from '/components/plugins/iconAndText';
-import PluginTypeAlone from '/components/plugins/alone';
+import IconAndText from '@/components/plugins/iconAndText';
+import PluginTypeAlone from '@/components/plugins/alone';
 
 
 /*Styles*/
-import utilStyles from '/styles/utils.module.css'
-import pluginComponentStyles from '/components/pluginComponent/pluginComponent.module.css'
+import utilStyles from '@/styles/utils.module.css'
+import pluginComponentStyles from '@/components/pluginComponent/pluginComponent.module.css'
 
 
-import PluginName from '/components/pluginComponent/pluginName.js'
+import PluginName from '@/components/pluginComponent/pluginName.js'
 
 /*Icons*/
-import IconDelete from '/components/icons/delete.js'
+import IconDelete from '@/components/icons/delete.js'
 
-import IconExpandMore from '/components/icons/expandMore.js'
-import IconExpandLess from '/components/icons/expandLess.js'
-import IconClose from '/components/icons/close.js'
+import IconExpandMore from '@/components/icons/expandMore.js'
+import IconExpandLess from '@/components/icons/expandLess.js'
+import IconClose from '@/components/icons/close.js'
 
-import IconCheck from '/components/icons/check.js'
-import IconSave from '/components/icons/save.js'
+import IconCheck from '@/components/icons/check.js'
+import IconSave from '@/components/icons/save.js'
 
 /*Button*/
-import Button from '/components/button/button.js'
-import InputText from '/components/button/inputText.js'
+import Button from '@/components/button/button.js'
+import InputText from '@/components/button/inputText.js'
 
 
-import PopupBoxSmall from '/components/button/popupBoxSmall.js'
+import PopupBoxSmall from '@/components/button/popupBoxSmall.js'
 
 /*Flexbox util*/
-import Flexbox from '/components/button/flexbox';
-import FlexItem from '/components/button/flexItem';
+import Flexbox from '@/components/button/flexbox';
+import FlexItem from '@/components/button/flexItem';
 
 import { useRouter } from 'next/router';
 

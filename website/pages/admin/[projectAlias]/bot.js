@@ -1,7 +1,7 @@
 
-import Layout, { siteTitle } from '/components/layout'
+import Layout, { siteTitle } from '@/components/layout'
 import React, { useEffect, useState } from "react";
-import BotList from '/components/botList'
+import BotList from '@/components/botList'
 
 
 

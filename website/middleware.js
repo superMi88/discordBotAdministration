@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { verifyJwtToken } from "/auth";
+import { verifyJwtToken } from "./auth";
 
 export async function middleware(req) {
   const url = req.nextUrl;
@@ -77,7 +77,7 @@ export async function middleware(req) {
   if (url.pathname === "/admin") {
     return NextResponse.next();
   }
-  
+
   return NextResponse.redirect(new URL("/admin", req.url));
 }
 

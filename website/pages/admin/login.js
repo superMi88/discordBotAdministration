@@ -1,7 +1,7 @@
 import Head from 'next/head'
 import Image from 'next/image'
 
-import LayoutBlank from '/components/layoutBlank'
+import LayoutBlank from '@/components/layoutBlank'
 
 //beides für die Testausgabe mit der ap
 import useSWR from 'swr'
@@ -15,12 +15,12 @@ import cookie from "js-cookie"
 import { useRouter } from 'next/router'
 
 //fetcher
-import { getApiFetcher } from '/lib/apifetcher'
+import { getApiFetcher } from '@/lib/apifetcher'
 
 //styles
-import utilStyles from '/styles/utils.module.css'
+import utilStyles from '@/styles/utils.module.css'
 
-import log from '/lib/log';
+import log from '@/lib/log';
 
 let errorMessage = false;
 
@@ -92,7 +92,7 @@ function loginLoadingPage() {
 
 function loginPage(setup) {
 
-  const { clientId, url } = require('/../discordBot.config.json');
+  const { clientId, url } = require('../../../discordBot.config.json');
 
   return (
     <LayoutBlank>
@@ -135,7 +135,7 @@ function showErrorMessage() {
   return ''
 }
 
-import { databaseWebsite } from '/lib/database'
+import { databaseWebsite } from '@/lib/database'
 
 export async function getServerSideProps(context) {
 

@@ -7,7 +7,7 @@ import { useSWRConfig } from 'swr'
 import Router from 'next/router'
 
 /*Styles*/
-import styles from '/components/button/inputText.module.css'
+import styles from '@/components/button/inputText.module.css'
 
 export default function component(props) {
 

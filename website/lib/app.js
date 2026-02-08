@@ -178,7 +178,7 @@ export async function updateUser(databaseName, discordId, field, value) {
 
 const { Storage } = require('@google-cloud/storage');
 
-const serviceKey = '.././keys.json'
+const serviceKey = '../../keys.json'
 
 
 

@@ -7,13 +7,13 @@ import { useSWRConfig } from 'swr'
 import Router from 'next/router'
 
 /*Icons*/
-import IconPlus from '/components/icons/plus.js'
-import IconMinus from '/components/icons/minus.js'
+import IconPlus from '@/components/icons/plus.js'
+import IconMinus from '@/components/icons/minus.js'
 /*Button*/
-import Button from '/components/button/button.js'
+import Button from '@/components/button/button.js'
 
 /*Styles*/
-import styles from '/components/button/popupBox.module.css'
+import styles from '@/components/button/popupBox.module.css'
 
 //just a small container for bottomdiv components
 export default function component(props) {

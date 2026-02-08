@@ -24,7 +24,7 @@ module.exports = {
             pluginDatabase = helper.addWrapperForPlugin(pluginDatabase)
 
             //add Plugin logic
-            pluginDatabase.logic = require('../plugins/' + data.data.pluginTag + '/plugin.js'); //test über neues Object
+            pluginDatabase.logic = require('../../plugins/' + data.data.pluginTag + '/plugin.js'); //test über neues Object
 
             //execute plugin execute function to start plugin
             response = await pluginDatabase.logic["execute"](
@@ -40,14 +40,17 @@ module.exports = {
         }
 
         if (pluginDatabase) {
-            let plugin = require(`../plugins/${data.data.pluginTag}/plugin.js`);
+            let plugin = require(`../../plugins/${data.data.pluginTag}/plugin.js`);
 
             //old -> config dont exist
             let config = null
 
             if (fs.existsSync(`./plugins/${data.data.pluginTag}/config.js`)) {
                 //new way
-                config = require(`../plugins/${data.data.pluginTag}/config.js`);
+                config = require(`../../plugins/${data.data.pluginTag}/config.js`);
+            } else if (fs.existsSync(`../../plugins/${data.data.pluginTag}/config.js`)) {
+                //new way
+                config = require(`../../plugins/${data.data.pluginTag}/config.js`);
             }
 
             console.log("plugin hier")

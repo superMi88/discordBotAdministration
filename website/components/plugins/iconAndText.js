@@ -7,34 +7,34 @@ import { useSWRConfig } from 'swr'
 import Router from 'next/router'
 
 /*lib*/
-import { apiFetcher, getApiFetcher } from '/lib/apifetcher'
+import { apiFetcher, getApiFetcher } from '@/lib/apifetcher'
 
 /*Styles*/
-import utilStyles from '/styles/utils.module.css'
+import utilStyles from '@/styles/utils.module.css'
 
-import componentStyle from '/components/plugins/iconAndText.module.css'
+import componentStyle from '@/components/plugins/iconAndText.module.css'
 
 
 //plugin Input fields
-import InputFields from '/components/pluginComponent/inputFields.js'
+import InputFields from '@/components/pluginComponent/inputFields.js'
 
 /*Icons*/
-import IconPlus from '/components/icons/plus.js'
-import IconMinus from '/components/icons/minus.js'
-import IconDragHandle from '/components/icons/dragHandle.js'
-import IconDelete from '/components/icons/delete.js'
-import IconExpandMore from '/components/icons/expandMore.js'
-import IconExpandLess from '/components/icons/expandLess.js'
+import IconPlus from '@/components/icons/plus.js'
+import IconMinus from '@/components/icons/minus.js'
+import IconDragHandle from '@/components/icons/dragHandle.js'
+import IconDelete from '@/components/icons/delete.js'
+import IconExpandMore from '@/components/icons/expandMore.js'
+import IconExpandLess from '@/components/icons/expandLess.js'
 
 /*Button*/
-import Button from '/components/button/button.js'
+import Button from '@/components/button/button.js'
 
-import PopupBoxSmall from '/components/button/popupBoxSmall.js'
+import PopupBoxSmall from '@/components/button/popupBoxSmall.js'
 
 
 /*Flexbox util*/
-import Flexbox from '/components/button/flexbox';
-import FlexItem from '/components/button/flexItem';
+import Flexbox from '@/components/button/flexbox';
+import FlexItem from '@/components/button/flexItem';
 
 import { useRouter } from 'next/router';
 

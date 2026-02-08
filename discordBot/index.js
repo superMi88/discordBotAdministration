@@ -1,6 +1,7 @@
 const { MongoClient } = require('mongodb');
 const { fork } = require('child_process');
 const fs = require('fs');
+const path = require('path');
 const ipc = require('node-ipc').default;
 const log = require('./lib/log');
 
@@ -24,22 +25,22 @@ function ensureDirectories() {
  * Startet einen Discord Bot Prozess und registriert ihn im Singleton
  */
 function startBotProcess(id, token, ownerId, projectAlias) {
-    
-    const child = fork(`./discordBot.js`, [id, token, ownerId, projectAlias]);
+
+    const child = fork(path.join(__dirname, `discordBot.js`), [id, token, ownerId, projectAlias]);
 
     child.on("message", async (message) => {
         // Event Management
         if (message.manager === "addEvent") {
             await EventManager.addEvents(message.events, message.botId);
         }
-        
+
         if (message.manager === "triggerEvent") {
             // Hier nutzen wir jetzt den BotManager statt der lokalen Variable
             EventManager.triggerEvent(
-                message.triggerPluginId, 
-                message.currencyId, 
-                message.discordUserId, 
-                message.oldValue, 
+                message.triggerPluginId,
+                message.currencyId,
+                message.discordUserId,
+                message.oldValue,
                 message.newValue
             );
         }
@@ -47,7 +48,7 @@ function startBotProcess(id, token, ownerId, projectAlias) {
 
     // HIER: Registrierung im Singleton
     botManager.addBot(id, child);
-    
+
     return child;
 }
 

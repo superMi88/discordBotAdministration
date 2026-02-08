@@ -1,5 +1,5 @@
 import { createImage } from "../../../lib/app";
-import { database } from '/lib/database';
+import { database } from '@/lib/database';
 var ObjectId = require('mongodb').ObjectId;
 
 export const config = {
@@ -45,7 +45,7 @@ export default async (req, res) => {
 };
 
 const { Storage } = require('@google-cloud/storage');
-const serviceKey = './../keys.json';
+const serviceKey = '../../../../keys.json';
 
 const storage = new Storage({
   keyFilename: serviceKey,

@@ -6,9 +6,9 @@ const { MongoClient, ConnectionClosedEvent } = require('mongodb');
 const url = 'mongodb://localhost:27017';
 const client = new MongoClient(url);
 
-import log from '/lib/log';
+import log from '@/lib/log';
 
-import {sendDataToNodeProcess} from '/lib/api/discordNodeProcess'
+import {sendDataToNodeProcess} from '@/lib/api/discordNodeProcess'
 
 export default async function handler(req, res) {
 

@@ -1,4 +1,4 @@
-import {database} from '/lib/database'
+import {database} from '@/lib/database'
 var ObjectId = require('mongodb').ObjectId
 
 import {sendDataToDiscordBot} from '../../../lib/api/discordBotRequest'

@@ -1,4 +1,4 @@
-import {database} from '/lib/database'
+import {database} from '@/lib/database'
 var ObjectId = require('mongodb').ObjectId; 
 
 //Zum setzen der Currency, wird verwendet in der Userliste, zB. um die anzahl coins oder Beeren zu erhöhen

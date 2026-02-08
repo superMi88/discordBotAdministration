@@ -7,26 +7,26 @@ import { useSWRConfig } from 'swr'
 import Router from 'next/router'
 
 /*lib*/
-import { apiFetcher, getApiFetcher } from '/lib/apifetcher'
+import { apiFetcher, getApiFetcher } from '@/lib/apifetcher'
 
 /*Styles*/
-import emojiStyles from '/components/inputfields/currency.module.css'
+import emojiStyles from '@/components/inputfields/currency.module.css'
 
 /*Server Select helper component*/
-import ServerSelect from '/components/helper/serverSelect.js'
-import SearchField from '/components/helper/searchField.js'
-import BottomDiv from '/components/helper/bottomDiv.js'
-import SelectMenu from '/components/helper/selectMenu.js'
+import ServerSelect from '@/components/helper/serverSelect.js'
+import SearchField from '@/components/helper/searchField.js'
+import BottomDiv from '@/components/helper/bottomDiv.js'
+import SelectMenu from '@/components/helper/selectMenu.js'
 
 /*RefBox*/
-import RefBox from '/components/inputfields/refBox.js'
+import RefBox from '@/components/inputfields/refBox.js'
 
 /*Flexbox util*/
-import Flexbox from '/components/button/flexbox'
-import FlexItem from '/components/button/flexItem'
+import Flexbox from '@/components/button/flexbox'
+import FlexItem from '@/components/button/flexItem'
 
 /*Button*/
-import Button from '/components/button/button.js'
+import Button from '@/components/button/button.js'
 
 import { useRouter } from 'next/router';
 

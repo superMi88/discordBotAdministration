@@ -1,4 +1,4 @@
-import {database, databaseWebsite} from '/lib/database'
+import {database, databaseWebsite} from '@/lib/database'
 var ObjectId = require('mongodb').ObjectId; 
 
 export default async function handler(req, res) {

@@ -1,4 +1,4 @@
-import Layout, { siteTitle } from '/components/layout'
+import Layout, { siteTitle } from '@/components/layout'
 //import {useUser} from '../lib/useUser'
 import useSWRImmutable from 'swr/immutable'
 import useSWR from 'swr'
@@ -9,8 +9,8 @@ import Link from 'next/link'
 import cookie from "js-cookie"
 import Cookies from "cookies";
 
-import utilStyles from '/styles/utils.module.css'
-import LayoutBlank from '/components/layoutBlank'
+import utilStyles from '@/styles/utils.module.css'
+import LayoutBlank from '@/components/layoutBlank'
 
 //standart hooks for my project
 import * as Hooks from "@/hooks";

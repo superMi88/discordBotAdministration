@@ -8,11 +8,11 @@ import { useSWRConfig } from 'swr'
 import Router from 'next/router'
 
 /*lib*/
-import { apiFetcher, getApiFetcher } from '/lib/apifetcher'
+import { apiFetcher, getApiFetcher } from '@/lib/apifetcher'
 
 /*Styles*/
-import utilStyles from '/styles/utils.module.css'
-import pictureUploadStyles from '/components/inputfields/image.module.css'
+import utilStyles from '@/styles/utils.module.css'
+import pictureUploadStyles from '@/components/inputfields/image.module.css'
 
 import { useRouter } from 'next/router';
 //type={props.block.type} name={props.block.name}

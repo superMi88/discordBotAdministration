@@ -2,7 +2,7 @@ const { MongoClient, ConnectionClosedEvent } = require('mongodb');
 
 // Connection URL
 
-import config from '/config'
+import config from '@/config'
 
 export async function database(databaseName, callback) {
 
