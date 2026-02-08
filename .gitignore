@@ -28,12 +28,14 @@ yarn-debug.log*
 yarn-error.log*
 
 # --- Project Specific Temp ---
-/discordBot/temp
-/discordBot/cache
-/discordBot/uploads
+/discordBot/temp/
+/discordBot/cache/
+/discordBot/uploads/
 
-/website/temp
-/website/cache
-/website/uploads
+/website/temp/
+/website/cache/
+/website/uploads/
 
-/uploads
+/temp/
+/cache/
+/uploads/
