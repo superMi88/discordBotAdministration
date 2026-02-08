@@ -5,10 +5,10 @@ import Image from 'next/image'
 import Link from 'next/link'
 
 /*Styles*/
-import utilStyles from '/styles/utils.module.css'
+import utilStyles from '@/styles/utils.module.css'
 
 /*lib*/
-import { apiFetcher, getApiFetcher } from '/lib/apifetcher'
+import { apiFetcher, getApiFetcher } from '@/lib/apifetcher'
 
 import { useRouter } from 'next/router'
 

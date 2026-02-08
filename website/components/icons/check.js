@@ -1,4 +1,4 @@
-import Icon from '/components/icons/icon.js'
+import Icon from '@/components/icons/icon.js'
 
 export default function component(props) {
   return (

@@ -1,5 +1,5 @@
 
-import Layout, { siteTitle } from '/components/layout'
+import Layout, { siteTitle } from '@/components/layout'
 //import {useUser} from '../lib/useUser'
 import useSWRImmutable from 'swr/immutable'
 import useSWR from 'swr'
@@ -7,29 +7,29 @@ import React, { useEffect, useState } from "react";
 import Image from 'next/image'
 
 /*Icons*/
-import IconPlus from '/components/icons/plus.js'
-import IconMinus from '/components/icons/minus.js'
+import IconPlus from '@/components/icons/plus.js'
+import IconMinus from '@/components/icons/minus.js'
 /*Button*/
-import Button from '/components/button/button.js'
+import Button from '@/components/button/button.js'
 
 
 /*Button*/
-import InputText from '/components/button/inputText.js'
+import InputText from '@/components/button/inputText.js'
 
 /*Flexbox util*/
-import Flexbox from '/components/button/flexbox'
-import FlexItem from '/components/button/flexItem'
+import Flexbox from '@/components/button/flexbox'
+import FlexItem from '@/components/button/flexItem'
 
 
 /*Styles*/
-import currencyStyles from '/styles/currency.module.css'
-import utilStyles from '/styles/utils.module.css'
+import currencyStyles from '@/styles/currency.module.css'
+import utilStyles from '@/styles/utils.module.css'
 
 /*lib*/
-import { apiFetcher, getApiFetcher } from '/lib/apifetcher'
+import { apiFetcher, getApiFetcher } from '@/lib/apifetcher'
 import { useRouter } from 'next/router';
 
-import CurrencyDashboard from '/components/currencyDashboard.js'
+import CurrencyDashboard from '@/components/currencyDashboard.js'
 
 export default function bot() {
 

@@ -6,32 +6,32 @@ import Link from 'next/link'
 
 import useSWRImmutable from 'swr/immutable'
 import cookie from 'js-cookie'
-import DiscordImage from '/components/helper/discordImage'
+import DiscordImage from '@/components/helper/discordImage'
 
 /*Icons*/
-import IconPlugin from '/components/icons/plugin.js'
-import IconMinus from '/components/icons/minus.js'
+import IconPlugin from '@/components/icons/plugin.js'
+import IconMinus from '@/components/icons/minus.js'
 
 /*Icons*/
-import IconAccountCircle from '/components/icons/accountCircle.js'
-import IconWork from '/components/icons/work.js'
-import IconGroup from '/components/icons/group.js'
-import IconHome from '/components/icons/home.js'
-import IconLogout from '/components/icons/logout.js'
-import IconList from '/components/icons/list.js'
-import IconError from '/components/icons/error.js'
-import IconPayments from '/components/icons/payments.js'
-import IconServer from '/components/icons/server.js'
+import IconAccountCircle from '@/components/icons/accountCircle.js'
+import IconWork from '@/components/icons/work.js'
+import IconGroup from '@/components/icons/group.js'
+import IconHome from '@/components/icons/home.js'
+import IconLogout from '@/components/icons/logout.js'
+import IconList from '@/components/icons/list.js'
+import IconError from '@/components/icons/error.js'
+import IconPayments from '@/components/icons/payments.js'
+import IconServer from '@/components/icons/server.js'
 
 /*Styles*/
 import styles from './layout.module.css'
 
 /*Flexbox util*/
-import Flexbox from '/components/button/flexbox'
-import FlexItem from '/components/button/flexItem'
+import Flexbox from '@/components/button/flexbox'
+import FlexItem from '@/components/button/flexItem'
 
 /*lib*/
-import { apiFetcher, getApiFetcher } from '/lib/apifetcher'
+import { apiFetcher, getApiFetcher } from '@/lib/apifetcher'
 
 import { useRouter } from 'next/router';
 

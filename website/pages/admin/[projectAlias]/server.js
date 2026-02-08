@@ -1,5 +1,5 @@
 
-import Layout, { siteTitle } from '/components/layout'
+import Layout, { siteTitle } from '@/components/layout'
 //import {useUser} from '../lib/useUser'
 import useSWRImmutable from 'swr/immutable'
 import useSWR from 'swr'
@@ -8,7 +8,7 @@ import Image from 'next/image'
 
 
 /*components plugins*/
-import CpuComponent from '/components/cpuInfo';
+import CpuComponent from '@/components/cpuInfo';
 
 import cookie from 'js-cookie'
 

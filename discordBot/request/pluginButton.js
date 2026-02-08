@@ -22,10 +22,10 @@ module.exports = {
         let response = ""
 
         let client = clientExtendedInfos.client
-        
+
 
         //Wenn es kein Plugin gibt ist es neu und und muss neu geladen werden(execute function ausführen etc)
-        if(!pluginDatabase){
+        if (!pluginDatabase) {
 
             let botId = clientExtendedInfos.clientId
 
@@ -34,38 +34,41 @@ module.exports = {
             pluginDatabase = helper.addWrapperForPlugin(pluginDatabase)
 
             //add Plugin logic
-            pluginDatabase.logic = require('../plugins/' + data.data.pluginTag + '/plugin.js'); //test über neues Object
+            pluginDatabase.logic = require('../../plugins/' + data.data.pluginTag + '/plugin.js'); //test über neues Object
 
             //execute plugin execute function to start plugin
             response = await pluginDatabase.logic["execute"](
-                clientExtendedInfos.client, 
+                clientExtendedInfos.client,
                 pluginDatabase,
                 clientExtendedInfos.projectAlias //projectAlias
             )
-            
+
             //add Plugin to Plugin Manager
             PluginManager.add(pluginDatabase)
         }
 
-        if(pluginDatabase){
-            let plugin = require(`../plugins/${data.data.pluginTag}/plugin.js`);
+        if (pluginDatabase) {
+            let plugin = require(`../../plugins/${data.data.pluginTag}/plugin.js`);
 
             //old -> config dont exist
             let config = null
 
             if (fs.existsSync(`./plugins/${data.data.pluginTag}/config.js`)) {
                 //new way
-                config = require(`../plugins/${data.data.pluginTag}/config.js`);
+                config = require(`../../plugins/${data.data.pluginTag}/config.js`);
+            } else if (fs.existsSync(`../../plugins/${data.data.pluginTag}/config.js`)) {
+                //new way
+                config = require(`../../plugins/${data.data.pluginTag}/config.js`);
             }
 
 
 
             response = await plugin[data.data.onClick](
-                pluginDatabase, 
+                pluginDatabase,
                 config,
                 clientExtendedInfos.projectAlias //projectAlias
             )
-        
+
         }
 
         ipc.server.emit(

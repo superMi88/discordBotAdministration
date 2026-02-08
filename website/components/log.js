@@ -1,5 +1,5 @@
 
-import Layout, { siteTitle } from '/components/layout'
+import Layout, { siteTitle } from '@/components/layout'
 //import {useUser} from '../lib/useUser'
 import useSWRImmutable from 'swr/immutable'
 import useSWR from 'swr'
@@ -8,17 +8,17 @@ import React, { useEffect, useState } from "react";
 import Link from 'next/link'
 
 /*Styles*/
-import utilStyles from '/styles/utils.module.css'
+import utilStyles from '@/styles/utils.module.css'
 
 /*Icons*/
-import IconDelete from '/components/icons/delete.js'
+import IconDelete from '@/components/icons/delete.js'
 /*Button*/
-import Button from '/components/button/button.js'
+import Button from '@/components/button/button.js'
 
 import { useRouter } from 'next/router';
 
 /*lib*/
-import { apiFetcher, getApiFetcher } from '/lib/apifetcher'
+import { apiFetcher, getApiFetcher } from '@/lib/apifetcher'
 
 export default function Profile({ file }) {
 

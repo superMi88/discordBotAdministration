@@ -1,5 +1,5 @@
-import {database} from '/lib/database'
-import { verifyJwtToken } from "/auth";
+import {database} from '@/lib/database'
+import { verifyJwtToken } from "@/auth";
 
 export default async function handler(req, res) {
 

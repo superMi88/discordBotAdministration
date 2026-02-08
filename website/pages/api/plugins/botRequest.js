@@ -1,7 +1,7 @@
-import {database} from '/lib/database'
-import {sendDataToDiscordBot} from '/lib/api/discordBotRequest'
+import {database} from '@/lib/database'
+import {sendDataToDiscordBot} from '@/lib/api/discordBotRequest'
 
-import { verifyJwtToken } from "/auth";
+import { verifyJwtToken } from "@/auth";
 
 export default async function handler(req, res) {
 

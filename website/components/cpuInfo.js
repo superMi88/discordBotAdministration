@@ -14,7 +14,7 @@ import { apiFetcher, getApiFetcher } from '../lib/apifetcher'
 
 import { useRouter } from 'next/router';
 /*Styles*/
-import styles from '/components/cpuInfo.module.css'
+import styles from '@/components/cpuInfo.module.css'
 
 //just a small container for bottomdiv components
 export default function component(props) {

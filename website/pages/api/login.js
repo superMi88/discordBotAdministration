@@ -4,22 +4,22 @@ export default async function handler(req, res) {
 
         const body = req.body
 
-        const stuff = await getToken(body.code)   
-        
+        const stuff = await getToken(body.code)
+
         console.log(body.code)
 
         //die userdaten von discord mit token und refresh token
         const userinfo = await getUserinfos(stuff.token_type, stuff.access_token, stuff.refresh_token);
 
         //const imgsrc = `https://cdn.discordapp.com/avatars/${userinfo.id}/${userinfo.avatar}.webp`
-        
+
         //wenn userdaten gesetzt sind in datenbank abspeichern
         let userExistBool = false
         let jwt = false
 
         //bedeutet sozusagen hier nur das der user exestiert 
-        if(userinfo.verified){
-            const { getWebsiteUser, createNewWebsiteUser } = require('/lib/app.js');
+        if (userinfo.verified) {
+            const { getWebsiteUser, createNewWebsiteUser } = require('../../lib/app');
 
 
             /* setup wird erst in einer zukünftigen version angeboten
@@ -28,8 +28,8 @@ export default async function handler(req, res) {
             }
             */
 
-            const websiteUser = await getWebsiteUser(userinfo.id);  
-            
+            const websiteUser = await getWebsiteUser(userinfo.id);
+
             const jsonwebtoken = require("jsonwebtoken");
 
             console.log(userinfo)
@@ -76,8 +76,8 @@ export default async function handler(req, res) {
 //https://www.youtube.com/watch?v=gg40nfS0pTU
 async function getToken(code) {
 
-    const { clientId, clientSecret, url } = require('/../discordBot.config.json');
-    
+    const { clientId, clientSecret, url } = require('../../../discordBot.config.json');
+
     const api_endpoint = 'https://discord.com/api/oauth2/token'
 
     const req = await fetch(api_endpoint, {
@@ -90,7 +90,7 @@ async function getToken(code) {
             'client_secret': clientSecret,
             'grant_type': 'authorization_code',
             'code': code,
-            'redirect_uri': url+"admin/login/",
+            'redirect_uri': url + "admin/login/",
             'scope': 'identify'
         })
     })

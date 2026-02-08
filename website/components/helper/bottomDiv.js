@@ -9,7 +9,7 @@ import Router from 'next/router'
 
 /*Styles*/
 
-import bottomdivStyles from '/components/helper/bottomDiv.module.css'
+import bottomdivStyles from '@/components/helper/bottomDiv.module.css'
 
 //just a small container for bottomdiv components
 export default function component(props) {

@@ -24,7 +24,7 @@ container for SelectMenu normal used like this, for roles, emojis, channels, etc
 */
 
 /*Styles*/
-import selectMenuStyles from '/components/helper/selectMenu.module.css'
+import selectMenuStyles from '@/components/helper/selectMenu.module.css'
 
 //just a small container for bottomdiv components
 export default function component(props) {

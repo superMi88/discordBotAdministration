@@ -5,11 +5,11 @@ import { useSWRConfig } from 'swr'
 import Router from 'next/router'
 
 /*lib*/
-import { apiFetcher, getApiFetcher } from '/lib/apifetcher'
+import { apiFetcher, getApiFetcher } from '@/lib/apifetcher'
 
 /*Styles*/
-import utilStyles from '/styles/utils.module.css'
-import fileUploadStyles from '/components/inputfields/file.module.css'
+import utilStyles from '@/styles/utils.module.css'
+import fileUploadStyles from '@/components/inputfields/file.module.css'
 
 import { useRouter } from 'next/router';
 

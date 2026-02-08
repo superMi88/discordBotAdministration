@@ -36,4 +36,8 @@ yarn-error.log*
 /website/cache
 /website/uploads
 
+/temp
+/cache
+/uploads
+
 /uploads

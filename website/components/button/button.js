@@ -8,7 +8,7 @@ import Router from 'next/router'
 
 
 /*Styles*/
-import styles from '/components/button/button.module.css'
+import styles from '@/components/button/button.module.css'
 
 //just a small container for bottomdiv components
 export default function component(props) {

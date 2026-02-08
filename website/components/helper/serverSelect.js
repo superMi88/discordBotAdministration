@@ -9,10 +9,10 @@ import { useSWRConfig } from 'swr'
 import Router from 'next/router'
 
 /*lib*/
-import { apiFetcher, getApiFetcher } from '/lib/apifetcher'
+import { apiFetcher, getApiFetcher } from '@/lib/apifetcher'
 
 /*Styles*/
-import serverSelectStyles from '/components/helper/serverSelect.module.css'
+import serverSelectStyles from '@/components/helper/serverSelect.module.css'
 
 /*
 props.setActiveGuild -> function to set id for state
@@ -25,7 +25,7 @@ props.guildMap.icon
 */
 
 
-import DiscordImage from '/components/helper/discordImage'
+import DiscordImage from '@/components/helper/discordImage'
 
 export default function component(props) {
 

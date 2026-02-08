@@ -2,10 +2,10 @@
 import React, { useEffect, useState } from "react";
 
 /*lib*/
-import { apiFetcher, getApiFetcher } from '/lib/apifetcher'
+import { apiFetcher, getApiFetcher } from '@/lib/apifetcher'
 
 /*Button*/
-import InputText from '/components/button/inputText.js'
+import InputText from '@/components/button/inputText.js'
 import { useRouter } from 'next/router';
 
 export default function component(props) {

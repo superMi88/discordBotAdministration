@@ -34,21 +34,21 @@ import cookie from "js-cookie"
 export default async function handler(req, res) {
 
     if (req.method === 'POST') {
-    
-        const { getAllUser,  } = require('/lib/app.js');
+
+        const { getAllUser, } = require('../../../lib/app');
         const data = await getAllUser(req.body.projectAlias, req.body);
 
         let response = [];
-        
+
         for (let i = 0; i < data.length; i++) {
             const discordUserDatabbaseData = data[i];
             delete discordUserDatabbaseData['_id'];
             response.push(discordUserDatabbaseData)
         }
 
-    
+
         res.status(200).json(response)
-    
+
     } else {
         // Handle any other HTTP method
     }

@@ -1,7 +1,7 @@
 import { IncomingForm } from 'formidable';
 import fs from 'fs';
 import path from 'path';
-import { database } from '/lib/database'; // Angenommene Import-Pfad für die Datenbank
+import { database } from '@/lib/database'; // Angenommene Import-Pfad für die Datenbank
 import { v4 as uuidv4 } from 'uuid';
 
 export const config = {

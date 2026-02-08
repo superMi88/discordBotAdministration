@@ -6,7 +6,7 @@ module.exports = (client, db) => {
     const errChannel = "123"
     const database = db
 
-    process.on('unhandledRejection', (err) =>{
+    process.on('unhandledRejection', (err) => {
 
         console.log("[Crash] :: unhandledRejection")
         console.log(err)
@@ -15,14 +15,14 @@ module.exports = (client, db) => {
 
         const fs = require('fs');
 
-        fs.appendFile('./../logs/error.log', err.stack.toString()+"\n\n", err => {
+        fs.appendFile('./logs/error.log', err.stack.toString() + "\n\n", err => {
             if (err) {
                 console.error(err);
             }
         });
     })
 
-    process.on('uncaughtException', (err) =>{
+    process.on('uncaughtException', (err) => {
 
         console.log("[Crash] :: uncaughtException")
         console.log(err)
@@ -31,14 +31,14 @@ module.exports = (client, db) => {
 
         const fs = require('fs');
 
-        fs.appendFile('./../logs/error.log', err.stack.toString()+"\n\n", err => {
+        fs.appendFile('./logs/error.log', err.stack.toString() + "\n\n", err => {
             if (err) {
                 console.error(err);
             }
         });
     })
 
-    process.on('uncaughtExceptionMonitor', (err) =>{
+    process.on('uncaughtExceptionMonitor', (err) => {
 
         console.log("[Crash] :: uncaughtExceptionMonitor")
         console.log(err)
@@ -47,7 +47,7 @@ module.exports = (client, db) => {
 
         const fs = require('fs');
 
-        fs.appendFile('./../logs/error.log', err.stack.toString()+"\n\n", err => {
+        fs.appendFile('./logs/error.log', err.stack.toString() + "\n\n", err => {
             if (err) {
                 console.error(err);
             }
@@ -62,7 +62,7 @@ module.exports = (client, db) => {
 
         const fs = require('fs');
 
-        fs.appendFile('./../logs/error.log', type+"\n\n"+promise+"\n\n"+reason+"\n\n", err => {
+        fs.appendFile('./logs/error.log', type+"\n\n"+promise+"\n\n"+reason+"\n\n", err => {
             if (err) {
                 console.error(err);
             }

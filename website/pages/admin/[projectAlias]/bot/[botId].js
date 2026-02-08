@@ -1,12 +1,12 @@
 
-import Layout, { siteTitle } from '/components/layout'
+import Layout, { siteTitle } from '@/components/layout'
 //import {useUser} from '../lib/useUser'
 import useSWRImmutable from 'swr/immutable'
 import useSWR from 'swr'
 import React, { useEffect, useState } from "react";
 
-import BotMenu from '/components/helper/botMenu';
-import BotDashboard from '/components/botDashboard';
+import BotMenu from '@/components/helper/botMenu';
+import BotDashboard from '@/components/botDashboard';
 
 
 import cookie from 'js-cookie'
@@ -14,16 +14,16 @@ import cookie from 'js-cookie'
 import Link from 'next/link'
 
 /*Styles*/
-import utilStyles from '/styles/utils.module.css'
+import utilStyles from '@/styles/utils.module.css'
 
 /*Icons*/
-import IconPlus from '/components/icons/plus.js'
-import IconMinus from '/components/icons/minus.js'
+import IconPlus from '@/components/icons/plus.js'
+import IconMinus from '@/components/icons/minus.js'
 /*Button*/
-import Button from '/components/button/button.js'
+import Button from '@/components/button/button.js'
 
 /*lib*/
-import { apiFetcher, getApiFetcher } from '/lib/apifetcher'
+import { apiFetcher, getApiFetcher } from '@/lib/apifetcher'
 
 import { useRouter } from 'next/router';
 
@@ -40,7 +40,7 @@ export default function bot({ botexist, botId }) {
 }
 
 
-import { database } from '/lib/database'
+import { database } from '@/lib/database'
 
 export async function getServerSideProps(context) {
 

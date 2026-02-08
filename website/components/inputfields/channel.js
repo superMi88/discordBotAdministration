@@ -8,32 +8,32 @@ import { useSWRConfig } from 'swr'
 import Router from 'next/router'
 
 /*lib*/
-import { apiFetcher, getApiFetcher } from '/lib/apifetcher'
+import { apiFetcher, getApiFetcher } from '@/lib/apifetcher'
 
 /*Styles*/
-import utilStyles from '/styles/utils.module.css'
-import channelStyles from '/components/inputfields/channel.module.css'
+import utilStyles from '@/styles/utils.module.css'
+import channelStyles from '@/components/inputfields/channel.module.css'
 
 /*Server Select helper component*/
-import ServerSelect from '/components/helper/serverSelect.js'
-import SearchField from '/components/helper/searchField.js'
-import BottomDiv from '/components/helper/bottomDiv.js'
-import SelectMenu from '/components/helper/selectMenu.js'
+import ServerSelect from '@/components/helper/serverSelect.js'
+import SearchField from '@/components/helper/searchField.js'
+import BottomDiv from '@/components/helper/bottomDiv.js'
+import SelectMenu from '@/components/helper/selectMenu.js'
 
-import PopupBox from '/components/button/popupBox.js'
+import PopupBox from '@/components/button/popupBox.js'
 
 /*Button*/
-import Button from '/components/button/button.js'
+import Button from '@/components/button/button.js'
 
 /*RefBox*/
-import RefBox from '/components/inputfields/refBox.js'
+import RefBox from '@/components/inputfields/refBox.js'
 
 /*Icons*/
-import IconTextChannel from '/components/icons/discord/text.js'
+import IconTextChannel from '@/components/icons/discord/text.js'
 
 /*Flexbox util*/
-import Flexbox from '/components/button/flexbox'
-import FlexItem from '/components/button/flexItem'
+import Flexbox from '@/components/button/flexbox'
+import FlexItem from '@/components/button/flexItem'
 
 
 import { useRouter } from 'next/router';

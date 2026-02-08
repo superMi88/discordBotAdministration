@@ -55,7 +55,7 @@ module.exports = {
         pluginNew.id = filteredDocs._id.toString()
         pluginNew.status = filteredDocs.status
 
-        var requestx = require('../plugins/' + filteredDocs.pluginTag + '/plugin');
+        var requestx = require('../../plugins/' + filteredDocs.pluginTag + '/plugin');
         const request = Object.create(requestx); //test über neues Object
 
         request.info.blocks.forEach(inputFieldDefinitionWrapper => {
@@ -261,7 +261,7 @@ module.exports = {
         for (const plugin of plugins) {
 
             //move plugin logic from plugin.js into plugin
-            plugin.logic = require('../plugins/' + plugin.pluginTag + '/plugin.js'); //test über neues Object
+            plugin.logic = require('../../plugins/' + plugin.pluginTag + '/plugin.js'); //test über neues Object
 
             //if plugin is saved run execute to start plugin
             if (plugin.status == "saved") {
@@ -336,7 +336,7 @@ module.exports = {
     async getPluginInfo(bucketName, pluginTag, db) {
 
         const fs = require('fs')
-        const path = "./plugins/" + pluginTag + "/plugin.png"
+        const path = "../plugins/" + pluginTag + "/plugin.png"
 
         if (fs.existsSync(path)) {
 
@@ -376,7 +376,7 @@ module.exports = {
 const { Storage } = require('@google-cloud/storage');
 const { DataManager } = require("discord.js");
 
-const serviceKey = './../keys.json'
+const serviceKey = '../../keys.json'
 
 
 

@@ -9,40 +9,40 @@ import { useSWRConfig } from 'swr'
 import Router from 'next/router'
 
 /*lib*/
-import { apiFetcher, getApiFetcher } from '/lib/apifetcher'
+import { apiFetcher, getApiFetcher } from '@/lib/apifetcher'
 
 
 /*Icons*/
-import IconDelete from '/components/icons/delete.js'
+import IconDelete from '@/components/icons/delete.js'
 
-import IconExpandMore from '/components/icons/expandMore.js'
-import IconExpandLess from '/components/icons/expandLess.js'
-import IconClose from '/components/icons/close.js'
+import IconExpandMore from '@/components/icons/expandMore.js'
+import IconExpandLess from '@/components/icons/expandLess.js'
+import IconClose from '@/components/icons/close.js'
 
-import IconCheck from '/components/icons/check.js'
-import IconSave from '/components/icons/save.js'
+import IconCheck from '@/components/icons/check.js'
+import IconSave from '@/components/icons/save.js'
 
 /*Input Fields*/
-import InputEmoji from '/components/inputfields/emoji.js'
-import InputText from '/components/inputfields/text.js'
-import InputTextarea from '/components/inputfields/textarea.js'
-import InputChannel from '/components/inputfields/channel.js'
-import InputRoles from '/components/inputfields/roles.js'
-import InputToggle from '/components/inputfields/toggle.js'
-import InputImage from '/components/inputfields/image.js'
-import InputCurrency from '/components/inputfields/currency.js'
-import InputPlugin from '/components/inputfields/plugin.js'
-import InputDate from '/components/inputfields/date.js'
-import InputServer from '/components/inputfields/server.js'
-import InputFile from '/components/inputfields/file.js'
-import InputConsole from '/components/inputfields/console.js'
+import InputEmoji from '@/components/inputfields/emoji.js'
+import InputText from '@/components/inputfields/text.js'
+import InputTextarea from '@/components/inputfields/textarea.js'
+import InputChannel from '@/components/inputfields/channel.js'
+import InputRoles from '@/components/inputfields/roles.js'
+import InputToggle from '@/components/inputfields/toggle.js'
+import InputImage from '@/components/inputfields/image.js'
+import InputCurrency from '@/components/inputfields/currency.js'
+import InputPlugin from '@/components/inputfields/plugin.js'
+import InputDate from '@/components/inputfields/date.js'
+import InputServer from '@/components/inputfields/server.js'
+import InputFile from '@/components/inputfields/file.js'
+import InputConsole from '@/components/inputfields/console.js'
 
 
 
 
 /*Flexbox util*/
-import Flexbox from '/components/button/flexbox';
-import FlexItem from '/components/button/flexItem';
+import Flexbox from '@/components/button/flexbox';
+import FlexItem from '@/components/button/flexItem';
 
 import { useRouter } from 'next/router';
 
