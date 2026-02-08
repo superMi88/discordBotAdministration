@@ -1,0 +1,108 @@
+.channel{
+    width: 100px;
+    height: 40px;
+    min-width: 100px;;
+    min-height: 40px;
+    padding: 4px;
+    cursor: pointer;
+    border-radius: 6px;
+
+    font-size: 14px;
+    background-color: var(--dark3);
+}
+
+.selected{
+    background-color: var(--color1);
+}
+
+.container {
+    position: relative;
+    display: flex;
+    flex-direction: row;
+}
+
+.currentDrag{
+    opacity: 0.4;
+}
+
+.box {
+    border: 5px solid transparent;
+    background-color: var(--dark4);
+    border-radius: .5em;
+    padding: 10px;
+    width: 100%;
+    display: flex;
+    /*z-index: 1; /* need to be lower than global.yourDiv */
+}
+  
+.box.over {
+    border: 5px solid var(--color1);
+}
+  
+
+
+.boxStrich{
+    /*border: 3px solid transparent;*/
+    background-color: var(--dark1);
+    border-radius: 12px;
+    margin: 2px 0;
+
+    border-style: solid;
+    border-width: 6px 5px;
+    border-color: var(--dark2);
+    /*z-index: 100;*/
+
+    height: 20px;
+}
+
+.boxStrich.overStrich{
+    /*border: 3px dotted #666;*/
+    background-color: var(--color1);
+}
+
+
+/*channel style*/
+
+.channel{
+    width: 200px;
+    height: 40px;
+    min-width: 100px;
+    min-height: 40px;
+    padding: 4px;
+    /*margin: 0 4px;*/
+    cursor: pointer;
+    border-radius: 6px;
+
+    font-size: 14px;
+    background-color: var(--input);
+
+    position: relative;
+}
+
+.selected{
+    background-color: var(--color1);
+}
+
+.selectField{
+    width: 100%;
+}
+
+.channelIcon{
+    margin-top: 2px;
+    margin-right: 2px;
+    min-width: 18px;
+    min-height: 18px;
+    width: 18px;
+    height: 18px;
+    border-radius: 18px;
+    overflow: hidden;
+}
+
+.fieldWrapper{
+    margin: 0;
+    position: absolute;
+    top: 50%;
+    -ms-transform: translateY(-50%);
+    transform: translateY(-50%);
+    display: flex;
+}

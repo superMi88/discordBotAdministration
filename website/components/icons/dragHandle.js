@@ -1,0 +1,19 @@
+import useSWRImmutable from 'swr/immutable'
+import useSWR from 'swr'
+import React, { useEffect, useState } from "react";
+import Image from 'next/image'
+import Link from 'next/link'
+import { useSWRConfig } from 'swr'
+import Router from 'next/router'
+
+
+/*Styles*/
+import styles from '/components/icons/icon.module.css'
+
+//just a small container for bottomdiv components
+export default function component(props) {
+
+    return(
+      <svg className={styles.icon} viewBox="0 0 48 48"><path d="M9.5 22.5q-.65 0-1.075-.425Q8 21.65 8 21q0-.65.425-1.075Q8.85 19.5 9.5 19.5h29q.65 0 1.075.425Q40 20.35 40 21q0 .65-.425 1.075-.425.425-1.075.425Zm0 6q-.65 0-1.075-.425Q8 27.65 8 27q0-.65.425-1.075Q8.85 25.5 9.5 25.5h29q.65 0 1.075.425Q40 26.35 40 27q0 .65-.425 1.075-.425.425-1.075.425Z"/></svg>
+    )
+}

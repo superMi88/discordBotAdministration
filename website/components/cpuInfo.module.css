@@ -1,0 +1,70 @@
+
+
+.title{
+  margin: 10px;
+}
+
+.progressTitle{
+  
+  color: white;
+  font-size: 14px;
+}
+
+.progressBarContainer{
+  display: flex;
+  flex-direction: column;
+  background-color: var(--container);
+  margin: 10px;
+  padding: 10px 16px;
+  border-radius: 8px;
+}
+.progressBarContainerBottom{
+  display: flex;
+  /*background-color: rgb(208, 255, 0);*/
+}
+
+.progressBarContainerBottomLeft{
+  /*background-color: rgb(0, 255, 242);*/
+
+
+  padding: 0px;
+  color: var(--dark4);
+  font-size: 12px;
+
+}
+
+.progressBarContainerBottomRight{
+  /*background-color: rgb(0, 255, 0);*/
+  margin-left: auto;
+  
+  padding: 0px;
+  color: var(--dark4);
+  font-size: 12px;
+}
+
+.smallLine{
+  background-color: var(--innerContainer2);
+  width: 1px;
+  margin: 4px 4px;
+}
+
+.progress {
+  /*background: rgba(255,255,255,0.1);*/
+  justify-content: flex-start;
+  border-radius: 4px;
+  align-items: center;
+  position: relative;
+  padding: 2px;
+  display: flex;
+  height: 16px;
+  background: var(--innerContainer2);
+}
+
+.progressValue {
+  /*animation: load 3s normal forwards;*/
+  border-radius: 4px;
+  background: var(--color1);
+  height: 100%;
+  /*width: 0;*/
+}
+

@@ -1,0 +1,143 @@
+.button {
+  color:white;
+  border-style: solid;
+  border-width: 1px;
+  border-radius: 4px;
+  display: flex; 
+  vertical-align: middle;
+  height: 40px;
+  text-align: center;
+  background-color: rgb(19, 153, 19);
+  border-color: rgb(16, 129, 16);
+
+  flex-direction: row;
+  justify-content: center;
+  cursor: pointer;
+}
+
+.headline{
+}
+
+.colorGreen {
+  background-color: rgb(19, 153, 19);
+  border-color: rgb(16, 129, 16);
+}
+
+
+/*mögliche box für den inhalt eines buttons*/
+.buttonBox {
+  text-align: center;
+  margin: auto;
+}
+
+.buttonDisabled{
+  background-color: #7a7c91;
+}
+
+/*spielbrett*/
+.gameboard{
+  display: flex;
+  width: 40vw;
+  height: 40vw;
+  border-color: aquamarine;
+  border-width: 2px;
+  border-style: solid;
+  
+  align-items: stretch;
+  flex-direction: column;
+
+  position: relative;
+}
+.gamecard{
+  border-color: salmon;
+  border-width: 2px;
+  border-style: solid;
+  width: 100%;
+  position: absolute;
+  transition: top 0.5s, left 0.5s;
+}
+
+/*dont use*/
+.gamerow{
+  display:flex;
+  flex-direction: row;
+  align-content: stretch;
+  align-items: stretch;
+  height: 100%;
+}
+
+@keyframes example {
+  0%   {background-color:red; left:0px; top:0px;}
+  25%  {background-color:yellow; left:200px; top:0px;}
+  50%  {background-color:blue; left:200px; top:200px;}
+  75%  {background-color:green; left:0px; top:200px;}
+  100% {background-color:red; left:0px; top:0px;}
+}
+
+.gamecardActive{
+  border-color: darkgoldenrod;
+  border-width: 8px;
+  border-style: solid;
+
+/*  background-color: red;
+  animation-name: example;
+  animation-duration: 4s;*/
+}
+
+.mainBody{
+  height: 100vh;
+  width: 100vw;
+  background-color: #f8f8f8;
+  display:flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.menuBox{
+  background-color: white;
+  border-width: 1px;
+  border-style: solid;
+  border-color: #ccc;
+  width: 300px;
+  box-shadow: 0 4px 8px 0 rgba(0, 0, 0, 0.2), 0 6px 20px 0 rgba(0, 0, 0, 0.19);
+}
+
+.playerbox{
+  display:flex;
+  flex-direction: row;
+  border-color: black;
+  border-width: 1px;
+  border-style: solid;
+  border-radius: 4px;
+  position: relative;
+  overflow: hidden;
+}
+
+.colorRed {
+  color:white;
+  display: flex; 
+  vertical-align: middle;
+  height: 40px;
+  width: 200px;
+  text-align: center;
+
+  flex-direction: row;
+  justify-content: center;
+  cursor: pointer;
+
+  background-color: rgb(153, 19, 19);
+  border-color: rgb(129, 16, 16);
+  width: 40px;
+  position: absolute;
+  right: 0px;
+  height: 40px;
+}
+
+.playername{
+  margin: 5px;
+}
+
+
+.menuBoxMargin{
+  margin:20px;
+}

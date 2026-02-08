@@ -1,0 +1,53 @@
+.emoji{
+    width: 40px;
+    height: 40px;
+    min-width: 40px;
+    min-height: 40px;
+    padding: 4px;
+    cursor: pointer;
+    border-radius: 6px;
+
+    font-size: 14px;
+    background-color: var(--input);
+}
+
+
+
+
+/*emoji style*/
+
+.emojiButton{
+    width: 40px;
+    height: 40px;
+    padding: 4px;
+    margin: 4px;
+    cursor: pointer;
+    border-radius: 6px;
+}
+
+.emojiButton:hover{
+    background-color: var(--dark3);
+}
+
+.emojiSelected{
+    background-color: var(--color1);
+}
+
+
+.selectField{
+    padding: 4px;
+    width: 100%;
+}
+
+.guildName{
+    padding: 6px;
+    background-color: var(--dark3);
+    border-radius: 6px;
+}
+
+.emojiSelectField{
+    display: flex;
+    flex-wrap: wrap;
+}
+
+

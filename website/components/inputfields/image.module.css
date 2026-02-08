@@ -1,0 +1,63 @@
+
+.deleteButton{
+    position: absolute;
+    right:5px;
+    top:5px;
+    background-color: red;
+    height: 20px;
+    width: 20px;
+    padding-left: 6px;
+    padding-top: 9px;
+    line-height: 0px;
+    border-radius: 10px;
+    cursor: pointer;
+}
+
+
+
+.imageliste{
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: left;
+    gap: 8px 16px;
+    position: relative;
+    min-height: 100px;
+}
+
+.imagedivUploader{
+    /*background-color: black;*/
+    min-width: 100px;
+    width:  100px;
+    height: 100px;
+    overflow: hidden;
+    position: relative;
+    display: flex;
+    background-color: var(--dark2);
+    border-radius: 10px;
+    border-width: 5px;
+    border-color: var(--dark4);
+    border-style: solid;
+    border-radius: 10px;
+    cursor: pointer;
+}
+
+.imagedivUploader:hover{
+    background-color: var(--dark3);
+}
+
+.imageUploadButton{
+    text-align: center;
+    cursor: pointer;
+}
+
+.imagediv{
+    /*background-color: black;*/
+    min-width: 100px;
+    width:  100px;
+    height: 100px;
+    overflow: hidden;
+    position: relative;
+    display: flex;
+    background-color: lightsteelblue;
+    border-radius: 10px;
+}

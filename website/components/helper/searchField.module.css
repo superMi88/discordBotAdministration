@@ -1,0 +1,32 @@
+.textfield {
+    background-color: var(--dark3);
+    border: none;
+    border-style: none;
+    border-radius: 10px;
+    height: 32px;
+    width: 100%;
+    color: white;
+}
+
+.textfield:focus {
+    outline-width: 4px;
+    outline-style: solid;
+    outline-color: var(--color1);
+}
+
+.text {
+    width: 100%;
+    height: 40px;
+    min-height: 40px;
+    padding: 4px;
+    /*margin: 0 4px;*/
+    cursor: pointer;
+    border-radius: 6px;
+
+    font-size: 14px;
+    background-color: var(--dark3);
+}
+
+.topdiv {
+    display: flex;
+}

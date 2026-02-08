@@ -1,0 +1,101 @@
+.imgbox{
+  
+  position: relative;
+  height: 100px;
+  width: 400px;
+  background-color: #3d4054;
+  border-radius: 15px;
+  margin-top: 10px;
+}
+
+.backgroundImage{
+  height: 150px;
+  overflow: hidden;
+}
+
+
+.content{
+  background-color: #303245;
+  margin: 20px;
+  border-radius: 15px;
+  overflow: hidden;
+  max-width: 600px;
+}
+
+.profileImage{
+  position: relative;
+  height: 120px;
+  width: 120px;
+  overflow: hidden;
+  background-color: #3d4054;
+  border-radius: 100px;
+  margin-top: -50px;
+  margin-left: 20px;
+  border-color: #303245;
+  border-width: 6px;
+  border-style: solid;
+}
+
+.imgInnerBox{
+  position: absolute;
+  left: 0;
+  top: 0;
+  border-radius: 15px;
+  overflow: hidden;
+  width: 60px;
+  height: 60px;
+  background-color: blue;
+}
+
+.animeTitle{
+  position: absolute;
+  left: 110px;
+  top: 0;
+}
+
+.animeStatus{
+  position: absolute;
+  left: 110px;
+  top: 20px;
+}
+
+.animeScore{
+  position: absolute;
+  left: 110px;
+  top: 40px;
+}
+
+
+.spotifyTitle{
+  position: absolute;
+  left: 110px;
+  top: 10px;
+  border-width: 2px;
+  border-style: solid;
+  border-color:#303245;
+  border-radius: 10px;
+  background-color: #303245;
+  overflow: hidden;
+  height: 30px;
+  color:white;
+  width: 280px;
+}
+
+.progressBarBorder{
+  position: absolute;
+  left: 110px;
+  top: 80px;
+  border-width: 2px;
+  border-style: solid;
+  border-color:#303245;
+  border-radius: 10px;
+  background-color: #303245;
+  overflow: hidden;
+  height: 12px;
+  width: 280px;
+}
+
+
+.progressBarInner{
+  background-color: #4a7fdf;
+}

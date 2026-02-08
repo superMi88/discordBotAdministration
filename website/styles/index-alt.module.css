@@ -1,0 +1,555 @@
+#mainBody{
+    background-color: #3e3126;
+
+    
+
+    position: relative;
+}
+
+
+#oben{
+    position: absolute;
+    top:0;
+    background-color: #40e6ff;
+    width: 100%;
+    height: 50%;
+}
+
+.h1{
+    color: white;
+    position: absolute;
+    top: 200px;
+    left: 50%;
+    transform: translate(-50%, -50%);
+}
+
+
+#background0{
+    position: absolute;
+    bottom: 0px;
+    min-width: 1000px;
+    width: 100%;
+    display: flex; align-items: center; justify-content: center;
+    /*
+    background-image: url(
+        "/index/hero.png");
+            background-size: 100%;*/
+}
+#background02{
+    position: relative;
+    top: 140px;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    min-width: 1000px;
+    max-width: 1000px;
+    /*
+    background-image: url(
+        "/index/hero.png");
+            background-size: 100%;*/
+}
+
+#background1{
+    position: absolute;
+    top:0;
+    bottom: 0;
+    width: 100px;
+    left: 0;
+    /*
+    background-image: url(
+        "/index/background.png");
+            background-size: 100px;
+            background-repeat: repeat-y;*/
+}
+
+#background2{
+    position: absolute;
+    top:0;
+    bottom: 0;
+    width: 100px;
+    right: 0;
+    /*
+    background-image: url(
+        "/index/background.png");
+            background-size: 100px;
+            background-repeat: repeat-y;*/
+
+    /* Mirror the background image */
+    -webkit-transform: scaleX(-1);
+    -khtml-transform: scaleX(-1);
+    -moz-transform: scaleX(-1);
+    -ms-transform: scaleX(-1);
+    -o-transform: scaleX(-1);
+    transform: scaleX(-1);
+}
+
+
+
+
+#hero{
+    width: 100%;
+    height: 500px;
+    /*background-color: #5db545;*/
+    position: relative;
+    display: flex;
+}
+
+#minispiel{
+    width: 100%;
+    height: 600px;
+    background-color: #3e3126;
+}
+
+#waldspiel{
+    width: 100%;
+    height: 100%;
+    max-width: 800px;
+    margin-right: auto;
+    margin-left: auto;
+    background-color: #3e3126;
+    position: relative;
+    display: flex;
+    
+    flex-direction: column;
+    justify-content: right;
+}
+
+.igelText{
+    background-color: #534b3c;
+    
+    color: white;
+    
+    margin: 20px;
+    border-radius: 10px;
+    display: inline-block;
+    z-index: 100;
+    height: fit-content;
+    padding: 10px;
+    box-shadow: rgba(0, 0, 0, 0.24) 0px 3px 8px;
+}
+@media only screen and (min-width: 800px) {
+    
+    .igelText{
+        position: absolute;
+        top:0;
+        max-width: 400px;
+        margin: 30px;
+        
+    }
+}
+
+.igelText2{
+    background-color: #534b3c;
+    
+    color: white;
+    
+    margin: 20px;
+    border-radius: 10px;
+    display: inline-block;
+    z-index: 100;
+    height: fit-content;
+    padding: 10px;
+    box-shadow: rgba(0, 0, 0, 0.24) 0px 3px 8px;
+}
+
+
+.igelTextfeld{
+    color: white;
+    margin: 14px;
+}
+
+.igelNameBig{
+    margin-left: 14px;   
+    margin-top: 16px;
+}
+.igelName{
+    margin-left: 14px;   
+    margin-top: 8px;
+}
+
+.igelImageBig{
+    border-radius: 50%;
+    overflow: hidden;
+    width: 60px;
+    height: 60px;
+}
+
+.igelImage{
+    border-radius: 50%;
+    overflow: hidden;
+    width: 40px;
+    height: 40px;
+}
+
+.igelImageWrapper{
+    display: flex;
+    margin: 14px;    
+}
+
+.waldspielTier{
+    width: 140px;
+    position: absolute;
+    z-index: 200;
+}
+
+.tier1{
+    top: 60%;
+    left: 20%;
+    width: 20%;
+}
+
+.tier2{
+    top: 50%;
+    left: 40%;
+    width: 20%;
+}
+
+.tier3{
+    top: 60%;
+    left: 60%;
+    width: 20%;
+}
+
+.tierhero1{
+    top: 60%;
+    right: 10%;
+    width: 150px;
+    transform: rotate(-5deg);
+}
+
+.tierhero2{
+    top: 20%;
+    left: 15%;
+    width: 150px;
+    transform: rotate(-3deg);
+}
+
+.tierhero3{
+    top: 60%;
+    left: 10%;
+    width: 150px;
+    
+    transform: rotate(3deg);
+}
+
+.notVisible{
+    display: hidden;
+    opacity: 0;
+    animation: fadeOut 1s;
+}
+
+.visible{
+    animation: fadeIn 1s;
+    /*display: hidden;*/
+}
+
+@keyframes fadeIn {
+    0% { opacity: 0; }
+    100% { opacity: 1; }
+}
+@keyframes fadeOut {
+    0% { opacity: 1; }
+    100% { opacity: 0; }
+}
+
+
+#afterHero{
+    width: 100%;
+    max-width: 800px;
+    margin-right: auto;
+    margin-left: auto;
+    background-color: #3e3126;
+    position: relative;
+    display: flex;
+    
+    flex-direction: column;
+    justify-content: right;
+}
+
+#eventBannerWrapper{
+    width: 100%;
+    max-width: 800px;
+    margin-right: auto;
+    margin-left: auto;
+    background-color: #3e3126;
+    position: relative;
+    display: flex;
+    
+    flex-direction: column;
+    justify-content: right;
+}
+
+#eventBanner{
+    
+    
+    padding: 10px;  
+    margin-top:0px;
+    padding-top:10px;
+    padding-bottom: 20px;
+    background-color: red;
+    display: flex;
+    gap:20px;
+    flex-direction: row;
+    background-color: #3e3126;
+    margin-left: 10px;
+    margin-right: 10px;
+    
+}
+
+
+
+.eventImage{
+    width: calc(50% - 10px);
+    max-width: 400px;
+    border-radius: 8px;
+}
+
+@media only screen and (max-width: 800px) {
+    
+    #eventBanner{
+        margin-top:0px;
+        padding-top:0;
+    }
+}
+@media only screen and (max-width: 400px) {
+    
+    #eventBanner{
+        flex-direction: column;
+    }
+    .eventImage{
+        width: 100%;
+    }
+}
+
+
+
+
+#minecraft{
+
+    /*min-height: 700px;
+    /*max-height: 700px;*/
+    height: 100%;
+    max-width: 800px;
+    margin-left: auto;
+    margin-right: auto;
+
+    overflow: hidden;
+    background-color: transparent;
+    position: relative;
+    display: flex;
+    
+    flex-direction: column;
+    justify-content: right;
+}
+
+.minecraftBackground{
+    /*
+    position: absolute;
+    top:0;
+    left:0;*/
+    border-radius: 8px;
+    
+    /*min-width: 1300px;*/
+    width: 100%;
+    /*height: 100%;*/
+    /*aspect-ratio: 1/1;*/
+    z-index: 1;
+}
+
+.buttonStyle{
+    background-color: #43a127;
+    padding: 10px 20px;
+    color:white;
+    border-radius: 10px;
+    box-shadow: rgba(0, 0, 0, 0.24) 0px 3px 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.buttonStyle>img{
+    float:left;
+    width: 30px;
+    margin-right: 10px;
+}
+
+.button1{
+    position: absolute;
+    top: 80%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+}
+@media only screen and (min-width: 800px) {
+    .button1{
+        left: 20%;
+        top: 80%;
+    }
+}
+
+.button2{
+    position: absolute;
+    top: 70%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+}
+
+
+.extraBox{
+    /*
+    position: absolute;
+    top:0;
+    left:0;*/
+    border-radius: 8px;
+    margin:20px;
+    margin-top: 0;
+    /*min-width: 1300px;*/
+    width: 100%-40px;
+    /*height: 100%;*/
+    /*aspect-ratio: 1/1;*/
+    z-index: 1;
+    position: relative;
+}
+
+
+.minecraftChat{
+    
+    bottom: 40px;
+    z-index: 10;
+    border-radius: 8px 0 0 8px;
+    overflow: hidden;
+
+    position: absolute;
+    right: 0;
+    width: 400px;
+    
+}
+
+
+@media only screen and (max-width: 800px) {
+    .minecraftChat{
+        display: none;
+    }
+}
+
+
+
+
+#rulesWrapper{
+    width: 100%;
+    max-width: 800px;
+    margin-right: auto;
+    margin-left: auto;
+    background-color: #3e3126;
+    position: relative;
+    display: flex;
+    
+    flex-direction: column;
+    justify-content: right;
+}
+
+
+
+@media only screen and (max-width: 800px) {
+    
+    #rulesWrapper{
+        margin-top:0px;
+        padding-top:0;
+    }
+}
+@media only screen and (max-width: 400px) {
+    
+    #rulesWrapper{
+        flex-direction: column;
+    }
+}
+
+#rules{
+    padding: 20px;  
+    margin-top:0px;
+    padding-top:0px;
+    padding-bottom: 20px;
+    background-color: red;
+    display: flex;
+    gap:20px;
+    flex-direction: column;
+    background-color: #3e3126;
+
+    max-width: 800px;
+}
+
+.rulesImage{
+    width: calc(50% - 10px);
+    border-radius: 8px;
+}
+
+#rules{
+    display: flex;
+}
+
+#rules>div{
+    background-color: #3e3126;
+    border-radius: 8px;
+    color: white;
+    padding: 10px;
+    box-shadow: rgba(0, 0, 0, 0.24) 0px 3px 8px;
+}
+
+
+#team{
+    width: 100%;
+    height: 400px;
+    background-color: #3e3126;
+    position: relative;
+}
+
+#team{
+    width: 100%;
+    max-width: 800px;
+    margin-right: auto;
+    margin-left: auto;
+    background-color: #3e3126;
+    position: relative;
+    display: flex;
+    
+    flex-direction: column;
+    justify-content: right;
+}
+
+.teamBox{
+    display: flex;
+    justify-content: center;
+    gap: 20px;
+}
+
+.teamUser{
+    background-color: #534b3c;
+    border-radius: 8px;
+    color: white;
+    padding: 10px;
+    width: 200px;
+    box-shadow: rgba(0, 0, 0, 0.24) 0px 3px 8px;
+}
+
+.teamUser>img{
+    border-radius: 50%;
+    width: 60px;
+    margin-left: auto;
+    margin-right: auto;
+    margin-top: 10px;
+    margin-bottom: 10px;
+}
+
+.teamUser>div{
+    border-radius: 50%;
+    margin-top: 10px;
+    margin-bottom: 30px;
+    display: flex;
+    justify-content: center;
+}
+
+.teamUser>.userContent{
+    border-radius: 50%;
+    margin-top: 10px;
+    margin-bottom: 10px;
+    display: flex;
+    justify-content: center;
+}

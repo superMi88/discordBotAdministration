@@ -1,0 +1,107 @@
+.button{
+    background-color: var(--color1);
+    padding: 6px 10px;
+    border-radius: 8px;
+    cursor: pointer;
+}
+
+.button:hover{
+    background-color: var(--color2);
+}
+
+
+.buttonflexbox{
+    display:flex;
+    gap: 6px;
+    padding: 6px;
+}
+
+.pluginName{
+    font-size: 20px;
+    /*background-color: var(--dark3);*/
+    display: flex;
+    padding: 6px;
+    gap: 6px;
+}
+
+.pluginHeader{
+    font-size: 14px;
+    background-color: var(--dark3);
+    padding:6px;
+    border-radius: 10px;
+}
+
+.channelName{
+    font-size: 14px;
+    background-color: var(--contaoner);
+    border-radius: 0px 0px 6px 6px;
+}
+
+
+.saved{
+    background-color: var(--info);
+    font-size: 14px;
+    
+    padding: 10px 6px;
+    
+    border-radius: 6px;
+}
+
+.unsaved{
+    background-color: var(--warning);
+    font-size: 14px;
+    padding: 10px 6px;
+    
+    border-radius: 6px;
+}
+  
+
+.deleteWindow{
+    z-index: 1000;
+    position: fixed;
+  top: 50%;
+  left: 50%;
+  /* bring your own prefixes */
+  transform: translate(-50%, -50%);
+    width: 500px;
+    height: 300px;
+    background-color: var(--dark2);
+    border-color: var(--dark1);
+    border-width: 6px;
+    border-style: solid;
+    border-radius: 8px;
+}
+
+.deleteWindowDiv{
+    margin: 8px;
+    height: 210px;
+}
+
+.infoMessage{
+    margin: 10px;
+    padding: 2px;
+    border-radius: 8px;
+    border-width: 2px;
+    border-style: solid;
+}
+
+.infoMessageInfo{
+    background-color: var(--color1);
+    border-color: var(--color1);
+}
+
+.infoMessageError{
+    background-color: var(--delete);
+    border-color: var(--delete);
+}
+
+.channelIcon{
+    margin-top: 2px;
+    margin-right: 2px;
+    min-width: 18px;
+    min-height: 18px;
+    width: 18px;
+    height: 18px;
+    border-radius: 18px;
+    overflow: hidden;
+}

@@ -1,0 +1,54 @@
+.buttonWrapper{
+    height: 40px;
+    border-radius: 6px;
+    display: flex;
+    cursor: pointer;
+    color: #fff;
+}
+
+/*cursor overwrite*/
+
+.cursorGrab{
+    cursor: grab;
+}
+
+.iconWrapper{
+    height: 26px;
+    width: 26px;
+    margin: auto 2px;
+}
+
+.text{
+    margin: auto 10px;
+}
+
+/*Color*/
+.color{
+    background-color: var(--color1);
+}
+.colorHover:hover{
+    background-color: var(--color2);
+}
+
+.color2{
+    background-color: var(--button);
+}
+.colorHover2:hover{
+    background-color: var(--buttonHover);
+}
+
+.colorNormal{
+    background-color: var(--button);
+}
+.colorHoverNormal:hover{
+    background-color: var(--buttonHover);
+}
+
+
+.colorDelete{
+    background-color: var(--delete)
+}
+
+.colorHoverDelete:hover{
+    background-color: var(--delete2)
+}

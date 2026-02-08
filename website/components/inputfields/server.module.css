@@ -1,0 +1,99 @@
+.channel{
+    width: 100px;
+    height: 40px;
+    min-width: 100px;;
+    min-height: 40px;
+    padding: 4px;
+    cursor: pointer;
+    border-radius: 6px;
+
+    font-size: 14px;
+    background-color: var(--input);
+}
+
+.selected{
+    background-color: var(--color1);
+}
+
+.container {
+    position: relative;
+    display: flex;
+    flex-direction: row;
+}
+
+.currentDrag{
+    opacity: 0.4;
+}
+
+.box {
+    border: 5px solid transparent;
+    background-color: var(--dark4);
+    border-radius: .5em;
+    padding: 10px;
+    width: 100%;
+    display: flex;
+    /*z-index: 1; /* need to be lower than global.yourDiv */
+}
+  
+.box.over {
+    border: 5px solid var(--color1);
+}
+  
+
+
+.boxStrich{
+    /*border: 3px solid transparent;*/
+    background-color: var(--dark1);
+    border-radius: 12px;
+    margin: 2px 0;
+
+    border-style: solid;
+    border-width: 6px 5px;
+    border-color: var(--dark2);
+    /*z-index: 100;*/
+
+    height: 20px;
+}
+
+.boxStrich.overStrich{
+    /*border: 3px dotted #666;*/
+    background-color: var(--color1);
+}
+
+
+/*channel style*/
+
+.channel{
+    width: 200px;
+    height: 40px;
+    min-width: 100px;
+    min-height: 40px;
+    padding: 4px;
+    /*margin: 0 4px;*/
+    cursor: pointer;
+    border-radius: 6px;
+
+    font-size: 14px;
+}
+
+.selected{
+    background-color: var(--color1);
+}
+
+.selectField{
+    width: 100%;
+}
+
+
+.serverIcon{
+    min-width: 30px;
+    min-height: 30px;
+    width: 30px;
+    height: 30px;
+    border-radius: 30px;
+    overflow: hidden;
+}
+
+.fieldWrapper{
+    display: flex;
+}

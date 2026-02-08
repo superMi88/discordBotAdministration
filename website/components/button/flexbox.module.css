@@ -1,0 +1,15 @@
+.flexbox {
+    display: flex;
+    padding: 6px;
+    grid-gap: 6px;
+    gap: 6px;
+}
+
+
+.flexContainerMarginLeft {
+    margin-left: auto;
+}
+
+.flexContainerWith100{
+    width: 100%;
+}

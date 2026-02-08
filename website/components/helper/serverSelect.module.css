@@ -1,0 +1,24 @@
+.serverIcon{
+    width: 40px;
+    height: 40px;
+    min-width: 40px;;
+    min-height: 40px;
+    margin: 8px 0px;
+    cursor: pointer;
+    border-radius: 6px;
+
+    font-size: 14px;
+    background-color: var(--dark3);
+    border-radius: 20px;
+    overflow: hidden;
+}
+
+.serverSelect{
+    width: 60px;
+    position: absolute;
+    left:6px;
+    top:50px;
+    bottom: 0px;
+    overflow-x: hidden;
+    overflow-y: scroll;
+}

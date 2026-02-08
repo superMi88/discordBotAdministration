@@ -1,0 +1,88 @@
+.usernameBox{
+  border-radius: 8px;
+  background-color: #43455a;
+  min-height: 66px;
+  margin-bottom: 10px;
+  overflow: hidden;
+  color:white;
+  margin-top:20px
+}
+
+.usernameBoxOpen{
+  height:100%;
+}
+
+.usernameBoxLoading{
+  border-radius: 8px;
+  background-color: #43455a;
+  padding: 4px;
+  height: 40px;
+  margin-bottom: 10px;
+}
+
+.profilDiv{
+  border-radius: 50px;
+  width: 36px;
+  height: 36px;
+  border-style: solid;
+  overflow: hidden;
+  border-width: 2px;
+  margin: 2px;
+}
+
+.profilName{
+  font-size: 14px;
+  margin-top: 2px;
+  line-height: 19px;
+  display: flex;
+  justify-content: center;
+  flex-direction: column;
+}
+
+.profilNameId{
+  color: var(--dark4);
+}
+
+.profilSwitch{
+  margin-left: auto
+}
+
+.profilSwitch{
+  margin-left: auto
+}
+
+.permissionBox{
+  margin:10px;
+  display:flex;
+}
+
+.permissionContainer{
+  margin:10px;
+  width: 150px;
+}
+
+
+/*image guild*/
+.guildImage{
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  overflow: hidden;
+}
+
+.coinInputWrapperDiv{
+  display: flex;
+}
+
+.coinInputWrapper{
+  flex-grow: 1;
+}
+
+
+.mainDiv{
+  background-color: var(--container);
+  border-radius: 4px;
+  margin: 8px 8px;
+
+  color: white;
+}

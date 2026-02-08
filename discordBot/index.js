@@ -1,0 +1,106 @@
+const { MongoClient } = require('mongodb');
+const { fork } = require('child_process');
+const fs = require('fs');
+const ipc = require('node-ipc').default;
+const log = require('./lib/log');
+
+const EventManager = require("./libIndex/eventManager.js");
+const botManager = require('./libIndex/botManager'); // Singleton Instanz
+
+const MONGO_URL = 'mongodb://localhost:27017';
+const client = new MongoClient(MONGO_URL);
+
+/**
+ * Erstellt benötigte Verzeichnisse
+ */
+function ensureDirectories() {
+    const dirs = ['./temp', './cache'];
+    dirs.forEach(dir => {
+        if (!fs.existsSync(dir)) fs.mkdirSync(dir);
+    });
+}
+
+/**
+ * Startet einen Discord Bot Prozess und registriert ihn im Singleton
+ */
+function startBotProcess(id, token, ownerId, projectAlias) {
+    
+    const child = fork(`./discordBot.js`, [id, token, ownerId, projectAlias]);
+
+    child.on("message", async (message) => {
+        // Event Management
+        if (message.manager === "addEvent") {
+            await EventManager.addEvents(message.events, message.botId);
+        }
+        
+        if (message.manager === "triggerEvent") {
+            // Hier nutzen wir jetzt den BotManager statt der lokalen Variable
+            EventManager.triggerEvent(
+                message.triggerPluginId, 
+                message.currencyId, 
+                message.discordUserId, 
+                message.oldValue, 
+                message.newValue
+            );
+        }
+    });
+
+    // HIER: Registrierung im Singleton
+    botManager.addBot(id, child);
+    
+    return child;
+}
+
+/**
+ * IPC Server Setup
+ */
+function setupIPC() {
+    ipc.config.id = 'nodeProcess';
+    ipc.config.retry = 1500;
+    ipc.config.silent = true;
+
+    ipc.serve(() => {
+        ipc.server.on('WebserverRequest', async (data, socket) => {
+            console.log("IPC Command:", data.command);
+            try {
+                // Versuche den Command aus RequestNode zu laden
+                const requestHandler = require(`./requestNode/${data.command}`);
+                await requestHandler.execute(ipc, data, socket);
+            } catch (e) {
+                // Falls die Datei nicht existiert, prüfen wir ob es ein interner Command ist
+                if (data.command === 'startNodeProcess') {
+                    startBotProcess(data.data.id, data.data.token, data.data.ownerId, data.data.projectAlias);
+                } else {
+                    console.log(`[Bot] ${data.command} nicht gefunden.`);
+                }
+            }
+        });
+    });
+    ipc.server.start();
+}
+
+async function main() {
+    try {
+        ensureDirectories();
+        setupIPC();
+
+        await client.connect();
+        const dbWebsite = client.db("Website");
+        const allProjects = await dbWebsite.collection('projects').find({}).toArray();
+
+        for (const project of allProjects) {
+            const projectDb = client.db(project.name);
+            const bots = await projectDb.collection('botCollection').find({}).toArray();
+
+            for (const botData of bots) {
+                // Bots beim Starten automatisch registrieren
+                startBotProcess(botData.id, botData.token, botData.ownerId, project.name);
+            }
+        }
+        log.write("Alle Prozesse initialisiert.");
+    } catch (error) {
+        console.error("Main Error:", error);
+    }
+}
+
+main();
