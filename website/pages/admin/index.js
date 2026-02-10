@@ -1,54 +1,31 @@
-import Layout, { siteTitle } from '@/components/layout'
-//import {useUser} from '../lib/useUser'
-import useSWRImmutable from 'swr/immutable'
-import useSWR from 'swr'
-import React, { useEffect, useState } from "react";
 
-import Link from 'next/link'
-
-import cookie from "js-cookie"
-import Cookies from "cookies";
-
-import utilStyles from '@/styles/utils.module.css'
-import LayoutBlank from '@/components/layoutBlank'
-
-//standart hooks for my project
+import { useEffect } from 'react';
+import { useRouter } from 'next/router';
 import * as Hooks from "@/hooks";
+import LayoutBlank from '@/components/layoutBlank';
+import utilStyles from '@/styles/utils.module.css';
 
-export default function Profile() {
+export default function AdminIndex() {
+    const router = useRouter();
+    const decodedToken = Hooks.useDecodedToken();
 
-  const decodedToken = Hooks.useDecodedToken();
+    useEffect(() => {
+        if (decodedToken && decodedToken.project) {
+            // Redirect to the project specific bot page
+            router.push(`/admin/${decodedToken.project}/bot`);
+        } else {
+            // If no token or no project in token, redirect to home page or show error
+            router.push('/');
+        }
+    }, [decodedToken, router]);
 
-  if(!decodedToken){
-    return ( //wenn die id übergeben wurde war es erfolgreich
-
-      <LayoutBlank>
-        <div className={`${utilStyles.body}`}>
-          <div className={`${utilStyles.projectSelectBox}`}>
-            
-            <h2>Projekte</h2>
-            <a href={''}>loading</a>
-            <a href={''}>loading</a>
-            
-          </div>
-        </div>
-      </LayoutBlank>
-    )
-  }
-
-  return ( //wenn die id übergeben wurde war es erfolgreich
-  <LayoutBlank>
-    <div className={`${utilStyles.body}`}>
-      <div className={`${utilStyles.projectSelectBox}`}>
-        
-        <h2>Projekte</h2>
-        {decodedToken.projects.map(project => {
-          return (<a href={'/admin/'+project+"/bot"}>{project}</a>)
-        })}
-        
-      </div>
-    </div>
-  </LayoutBlank>
-  )
-  
+    return (
+        <LayoutBlank>
+            <div className={`${utilStyles.body}`}>
+                <div className={`${utilStyles.whiteText}`}>
+                    Weiterleitung...
+                </div>
+            </div>
+        </LayoutBlank>
+    );
 }

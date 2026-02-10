@@ -2,83 +2,77 @@ import { NextResponse } from "next/server";
 import { verifyJwtToken } from "./auth";
 
 export async function middleware(req) {
-  const url = req.nextUrl;
+  const { pathname } = req.nextUrl;
 
+  if (pathname === "/admin/login") {
+    return NextResponse.redirect(new URL("/", req.url));
+  }
+
+  // 1. Öffentliche Routen (kein Login nötig)
+  if (
+    pathname.startsWith("/api/login") ||
+    pathname.startsWith("/api/projects") ||
+    pathname === "/admin/callback" ||
+    pathname.match(/^\/admin\/[^/]+\/login$/) // Allow /admin/[project]/login
+  ) {
+    return NextResponse.next();
+  }
+
+  // 2. Token prüfen
   const token = req.cookies.get("jwt")?.value;
   let verifiedToken = null;
+
   if (token) {
     try {
       verifiedToken = await verifyJwtToken(token);
     } catch (err) {
-      console.log("Token verification failed:", err);
+      console.log("Token invalid:", err);
     }
   }
 
-  if (url.pathname === "/api/login") {
-    return NextResponse.next();
+  // 3. Wenn kein Token da ist -> Redirect zum Login
+  if (!verifiedToken) {
+    // Wenn wir schon auf einer Login-Seite sind, nichts tun (vermeidet Loop)
+    if (pathname.includes("/login")) {
+      return NextResponse.next();
+    }
+    // Sonst redirect zur Startseite oder einer generischen Login-Seite
+    // Hier schicken wir ihn zur Startseite, wo er ein Projekt auswählen kann
+    return NextResponse.redirect(new URL("/", req.url));
   }
 
-  if (url.pathname.startsWith("/api/")) {
-    if (verifiedToken) {
-      const contentType = req.headers.get("content-type") || "";
-      // Falls der Request JSON sendet, parsen wir den Body
-      if (contentType.includes("application/json")) {
-        const rawBody = await req.text();
-        let body;
-        try {
-          body = JSON.parse(rawBody);
-        } catch (err) {
-          return new NextResponse(
-            JSON.stringify({ message: "Invalid JSON format" }),
-            { status: 400, headers: { "Content-Type": "application/json" } }
-          );
-        }
-        const projectAlias = body.projectAlias;
-        if (!verifiedToken.projects.includes(projectAlias)) {
-          return new NextResponse(
-            JSON.stringify({ message: "Access denied, user doesn't have access to this project" }),
-            { status: 401, headers: { "Content-Type": "application/json" } }
-          );
-        }
-      }
-      // Bei anderen Content-Types (z. B. multipart/form-data) überspringen wir den JSON-Parsing-Block
+  // 4. Wenn Token da ist:
+
+  // Wenn User auf /admin/login oder /admin/[project]/login geht, aber schon eingeloggt ist -> Redirect zum Bot
+  if (pathname.includes("/login")) {
+    if (verifiedToken.project) {
+      return NextResponse.redirect(new URL(`/admin/${verifiedToken.project}/bot`, req.url));
+    }
+    return NextResponse.redirect(new URL("/", req.url));
+  }
+
+  // Api Requests prüfen
+  if (pathname.startsWith("/api/")) {
+    return NextResponse.next(); // Hier könnte man noch strengere Checks machen
+  }
+
+  // Zugriff auf Projekt-Seiten prüfen
+  // URL: /admin/[projectAlias]/...
+  const adminProjectMatch = pathname.match(/^\/admin\/([^/]+)/);
+  if (adminProjectMatch) {
+    const requestedProject = adminProjectMatch[1];
+
+    // Darf der User auf dieses Projekt zugreifen?
+    // Im neuen Token steht 'project' (String), nicht mehr 'projects' (Array)
+    if (verifiedToken.project === requestedProject || verifiedToken.admin === true) {
       return NextResponse.next();
     } else {
-      return new NextResponse(
-        JSON.stringify({ message: "Invalid or missing token" }),
-        { status: 401, headers: { "Content-Type": "application/json" } }
-      );
+      // Falsches Projekt -> Redirect zur Startseite oder Fehler
+      return NextResponse.redirect(new URL("/", req.url));
     }
   }
 
-  if (url.pathname === "/admin/login") {
-    if (verifiedToken) {
-      return NextResponse.redirect(new URL("/admin", req.url));
-    }
-    return NextResponse.next();
-  }
-
-  if (!verifiedToken) {
-    return NextResponse.redirect(new URL("/admin/login", req.url));
-  }
-
-  if (verifiedToken && verifiedToken.admin === true) {
-    return NextResponse.next();
-  }
-
-  if (verifiedToken && Array.isArray(verifiedToken.projects)) {
-    for (const project of verifiedToken.projects) {
-      if (url.pathname.startsWith(`/admin/${project}/`)) {
-        return NextResponse.next();
-      }
-    }
-  }
-
-  if (url.pathname === "/admin") {
-    return NextResponse.next();
-  }
-
-  return NextResponse.redirect(new URL("/admin", req.url));
+  return NextResponse.next();
 }
 
 export const config = {

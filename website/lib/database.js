@@ -16,25 +16,14 @@ export async function database(databaseName, callback) {
     let response = await callback(db)
 
     await client.close();
-    
-    return response
-}
 
-export async function databaseWebsite(callback) {
-
-    const client = new MongoClient(config.database.url);
-
-    await client.connect()
-    const db = client.db(config.database.nameWebsite)
-    let response = await callback(db)
-
-    await client.close();
-    
     return response
 }
 
 
-export function renameId(name){
+
+
+export function renameId(name) {
 
     return (doc) => {
         doc[name] = doc._id;

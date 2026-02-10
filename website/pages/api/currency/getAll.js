@@ -1,5 +1,5 @@
-import {database, renameId, databaseWebsite} from '@/lib/database'
-import {sendDataToDiscordBot} from '@/lib/api/discordBotRequest'
+import { database, renameId } from '@/lib/database'
+import { sendDataToDiscordBot } from '@/lib/api/discordBotRequest'
 
 export default async function handler(req, res) {
 
@@ -9,7 +9,7 @@ export default async function handler(req, res) {
 
         res.status(200).json({
             text: "all currencys (getAll)",
-            data: await database(req.body.projectAlias, async function(db){
+            data: await database(req.body.projectAlias, async function (db) {
 
                 //----------------
                 const body = req.body
@@ -17,25 +17,25 @@ export default async function handler(req, res) {
                 //let insertResult = null;
                 let guildObj = {}
 
-                guildObj = {global : true, icon: "", guild: "global", currencys: []}
+                guildObj = { global: true, icon: "", guild: "global", currencys: [] }
 
                 //-------------
 
 
-                await db.collection('currency').find({}).sort( { "guildId": 1} )
-                .map((doc) => {
-                    doc['currencyId'] = doc._id;
-                    delete doc['_id'];
-                    
-                    guildObj.currencys.push(doc)
-                        
-                    return true
-                }
-                ).toArray();
+                await db.collection('currency').find({}).sort({ "guildId": 1 })
+                    .map((doc) => {
+                        doc['currencyId'] = doc._id;
+                        delete doc['_id'];
+
+                        guildObj.currencys.push(doc)
+
+                        return true
+                    }
+                    ).toArray();
                 return guildObj
             })
         })
-    
+
     } else {
         // Handle any other HTTP method
     }
@@ -53,7 +53,7 @@ async function validateToken(access_token) {
 
     const response = await req.json();
 
-    return {response} ;
+    return { response };
 }
 
 
