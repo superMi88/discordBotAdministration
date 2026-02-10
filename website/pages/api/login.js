@@ -4,7 +4,7 @@ export default async function handler(req, res) {
 
         const body = req.body
 
-        const stuff = await getToken(body.code)
+        const stuff = await getToken(req, body.code)
 
         console.log(body.code)
 
@@ -74,13 +74,17 @@ export default async function handler(req, res) {
 
 //https://stackoverflow.com/questions/65237821/400-error-when-requesting-a-token-from-discord-api
 //https://www.youtube.com/watch?v=gg40nfS0pTU
-async function getToken(code) {
+async function getToken(req, code) {
 
-    const { clientId, clientSecret, url } = require('../../../discordBot.config.json');
+    const { clientId, clientSecret } = require('../../../discordBot.config.json');
+
+    const protocol = req.headers['x-forwarded-proto'] || 'http';
+    const host = req.headers.host;
+    const url = `${protocol}://${host}/`;
 
     const api_endpoint = 'https://discord.com/api/oauth2/token'
 
-    const req = await fetch(api_endpoint, {
+    const response = await fetch(api_endpoint, {
         method: "POST",
         header: {
             "Content-Type": "application/x-www-form-urlencoded"
@@ -94,9 +98,9 @@ async function getToken(code) {
             'scope': 'identify'
         })
     })
-    const response = await req.json();
+    const data = await response.json();
 
-    return response;
+    return data;
 }
 
 async function getUserinfos(token_type, access_token, refresh_token) {

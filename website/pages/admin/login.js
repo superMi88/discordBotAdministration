@@ -92,7 +92,12 @@ function loginLoadingPage() {
 
 function loginPage(setup) {
 
-  const { clientId, url } = require('../../../discordBot.config.json');
+  const { clientId } = require('../../../discordBot.config.json');
+
+  const [origin, setOrigin] = useState("");
+  useEffect(() => {
+    setOrigin(window.location.origin + "/");
+  }, []);
 
   return (
     <LayoutBlank>
@@ -109,7 +114,7 @@ function loginPage(setup) {
 
 
 
-            <a id="loginButton" className={utilStyles.buttonWithLogo} href={getAuthorizationLink(clientId, url + "admin/login/")}>
+            <a id="loginButton" className={utilStyles.buttonWithLogo} href={getAuthorizationLink(clientId, origin + "admin/login/")}>
               <div className={utilStyles.buttonBoxLogo}>
                 <img src="/discord.svg" alt="svg discord" />
               </div>
