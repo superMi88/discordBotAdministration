@@ -57,13 +57,13 @@ export default function Layout({ selected }) {
     const decodedToken = Hooks.useDecodedToken();
 
     const router = useRouter()
-    const {projectAlias} = router.query
+    const { projectAlias } = router.query
 
     //const projectAlias = useSelector(state => state.project.value)
 
     const [openProfileMenu, setOpenProfileMenu] = useState(false);
 
-    if(!projectAlias){
+    if (!projectAlias) {
         console.log("loadingProjectAlias")
         return "loadingProjectAlias"
     }
@@ -71,18 +71,18 @@ export default function Layout({ selected }) {
     return (
         <Flexbox className={styles.rightNav}>
             <FlexItem>
-                <InsertLink href={"/admin/" + projectAlias + "/user"} text="Userliste" classNameToAdd="" icon={<IconGroup />} active={selected == "userliste"} />
+                <InsertLink href={"/" + projectAlias + "/user"} text="Userliste" classNameToAdd="" icon={<IconGroup />} active={selected == "userliste"} />
             </FlexItem>
             <FlexItem>
-                <InsertLink href={"/admin/" + projectAlias + "/currency"} text="currency" classNameToAdd="" icon={<IconPayments />} active={selected == "currency"} />
+                <InsertLink href={"/" + projectAlias + "/currency"} text="currency" classNameToAdd="" icon={<IconPayments />} active={selected == "currency"} />
             </FlexItem>
             {!(decodedToken && decodedToken.admin) ? "" :
                 <>
                     <FlexItem>
-                        <InsertLink href={"/admin/" + projectAlias + "/server"} text="Server" classNameToAdd="" icon={<IconServer />} active={selected == "server"} />
+                        <InsertLink href={"/" + projectAlias + "/server"} text="Server" classNameToAdd="" icon={<IconServer />} active={selected == "server"} />
                     </FlexItem>
                     <FlexItem>
-                        <InsertLink href={"/admin/" + projectAlias + "/log"} text="Log" classNameToAdd="" icon={<IconError />} active={selected == "errorlog"} />
+                        <InsertLink href={"/" + projectAlias + "/log"} text="Log" classNameToAdd="" icon={<IconError />} active={selected == "errorlog"} />
                     </FlexItem>
                 </>
             }
@@ -98,7 +98,7 @@ export default function Layout({ selected }) {
                             }
                         }}
                         >
-                            <DiscordImage type="avatar" id={decodedToken.userId} avatar={decodedToken.userAvatar /*TODO:useravatar dont exist currently*/} /> 
+                            <DiscordImage type="avatar" id={decodedToken.userId} avatar={decodedToken.userAvatar /*TODO:useravatar dont exist currently*/} />
                         </div>
 
                         {openProfileMenu ?
@@ -110,7 +110,7 @@ export default function Layout({ selected }) {
                                 <div className={styles.logoutContainer}
                                     onClick={(e) => {
                                         cookie.remove("token")
-                                        router.push('/admin/login')
+                                        router.push('/')
                                     }}
                                 >
                                     <div className={styles.iconWrapper}><IconLogout /></div>

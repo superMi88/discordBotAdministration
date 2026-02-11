@@ -25,17 +25,17 @@ export default function Callback() {
         if (error) {
             console.error('Login error:', error);
             // Im Fehlerfall zurück zum Projekt-Login
-            router.push(`/admin/${state}/login?error=true`);
+            router.push(`/${state}/login?error=true`);
         } else if (data) {
             if (data.login) {
                 // Erfolgreich eingeloggt
                 cookie.set('jwt', data.jwt, { expires: 7 });
                 console.log(`[Callback] Erfolgreich eingeloggt für Projekt: ${state}`);
-                router.push(`/admin/${state}/bot`);
+                router.push(`/${state}/bot`);
             } else {
                 // Login fehlgeschlagen (z.B. User nicht in DB)
                 console.warn('[Callback] Login verweigert.');
-                router.push(`/admin/${state}/login?error=unauthorized`);
+                router.push(`/${state}/login?error=unauthorized`);
             }
         }
     }, [data, error, router, state, shouldFetch]);

@@ -95,7 +95,7 @@ async function getToken(req, projectAlias, code) {
 
     const protocol = req.headers['x-forwarded-proto'] || 'http';
     const host = req.headers.host;
-    const url = `${protocol}://${host}/admin/callback/`;
+    const url = `${protocol}://${host}/callback/`;
 
     const api_endpoint = 'https://discord.com/api/oauth2/token'
 

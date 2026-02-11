@@ -52,7 +52,7 @@ export default function Layout(req) {
     let selected = req.selected
 
     const router = useRouter()
-    const {projectAlias} = router.query
+    const { projectAlias } = router.query
 
     //const count = useSelector(state => state.counter.value)
     //const projectAlias = useSelector(state => state.project.value)
@@ -64,7 +64,7 @@ export default function Layout(req) {
 
     const [openProjectMenu, setOpenProjectMenu] = useState(false);
 
-    const botId = cookie.get(projectAlias+"-selectedBotId")
+    const botId = cookie.get(projectAlias + "-selectedBotId")
 
     const {
         data: dataBot,
@@ -86,16 +86,16 @@ export default function Layout(req) {
         //window.location.assign("/admin/" + projectName + "/bot")
 
         Router.push({
-            pathname: "/admin/" + projectName + "/bot",
+            pathname: "/" + projectName + "/bot",
             //query: { sortBy: 'price' }
-          }, 
-          undefined, { shallow: true }
+        },
+            undefined, { shallow: true }
         )
 
         //dispatch(setProject(projectName))
 
         setOpenProjectMenu(false)
-        
+
     }
 
     return (
@@ -114,12 +114,12 @@ export default function Layout(req) {
                 </div>
                 : ""}
 
-            <InsertLink href={"/admin/" + projectAlias + "/bot"} text="Botliste" classNameToAdd="" icon={<IconList />} active={selected == "bot"} />
+            <InsertLink href={"/" + projectAlias + "/bot"} text="Botliste" classNameToAdd="" icon={<IconList />} active={selected == "bot"} />
 
             {!dataBot ? "Loading Bot Data" :
                 <>
 
-                    <InsertLink href={"/admin/" + projectAlias + `/bot/${dataBot.id}`} text="Bot" classNameToAdd="" element={
+                    <InsertLink href={"/" + projectAlias + `/bot/${dataBot.id}`} text="Bot" classNameToAdd="" element={
 
                         <div className={styles.linkElementContainer}>
                             <DiscordImage type="avatar" id={dataBot.id} avatar={dataBot.avatar} />

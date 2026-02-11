@@ -37,7 +37,7 @@ export default function bot(props) {
                 //show all if admin else only show id owner of bot
                 //if(dataAccount.admin != true /*&& object.ownerId != dataAccount.userinfo.id*/) return ""
 
-                let url = "/admin/"+projectAlias+"/bot/" + object.id
+                let url = "/" + projectAlias + "/bot/" + object.id
 
                 return (
                     <Link key={i} href={url} className={utilStyles.abox}>

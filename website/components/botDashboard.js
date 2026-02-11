@@ -103,7 +103,7 @@ export default function bot({ botexist, botId }) {
                                             { console.log(plugin) }
                                             return (
                                                 <div className={utilStyles.botPluginBox} key={"pluginLink-" + plugin.name}>
-                                                    <Link key={i} href={`/admin/${projectAlias}/bot/${botId}/${plugin.name}`} >
+                                                    <Link key={i} href={`/${projectAlias}/bot/${botId}/${plugin.name}`} >
 
                                                         <div className={utilStyles.botPluginBoxInnerContainer}>
 

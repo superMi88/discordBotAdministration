@@ -111,13 +111,13 @@ export default function bot() {
                                                 console.log(eventPlugin)
 
                                                 return <div className={currencyStyles.eventbox}>
-                                                    <Link key={i} href={`/admin/${projectAlias}/bot/${botId}`} >
+                                                    <Link key={i} href={`/${projectAlias}/bot/${botId}`} >
                                                         <Flexbox>
                                                             <FlexItem>
                                                                 <div className={styles.linkElementContainer}>
-                                                            
+
                                                                     <DiscordImage type="avatar" id={botId} avatar={avatar} />
-                                                                
+
                                                                 </div>
                                                             </FlexItem>
                                                             <FlexItem>
@@ -126,7 +126,7 @@ export default function bot() {
                                                         </Flexbox>
                                                     </Link>
 
-                                                    <Link key={i} href={`/admin/${projectAlias}/bot/${botId}/${pluginTag}#${pluginId}`} >
+                                                    <Link key={i} href={`/${projectAlias}/bot/${botId}/${pluginTag}#${pluginId}`} >
                                                         <Flexbox>
                                                             <FlexItem>
                                                                 {pluginTag}
@@ -137,14 +137,14 @@ export default function bot() {
                                                         </Flexbox>
                                                     </Link>
 
-                                                    
 
 
 
-                                                    
+
+
                                                     {eventPlugin.message}
-                                                    </div>
-                                                
+                                                </div>
+
                                             })}
                                         </>
                                     }

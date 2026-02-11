@@ -4,21 +4,26 @@ import { verifyJwtToken } from "./auth";
 export async function middleware(req) {
   const { pathname } = req.nextUrl;
 
-  if (pathname === "/admin/login") {
-    return NextResponse.redirect(new URL("/", req.url));
-  }
-
-  // 1. Öffentliche Routen (kein Login nötig)
+  // 1. Skip middleware for internal stuff, homepage, and favicon
   if (
-    pathname.startsWith("/api/login") ||
-    pathname.startsWith("/api/projects") ||
-    pathname === "/admin/callback" ||
-    pathname.match(/^\/admin\/[^/]+\/login$/) // Allow /admin/[project]/login
+    pathname.startsWith('/_next') ||
+    pathname === '/' ||
+    pathname === '/favicon.ico'
   ) {
     return NextResponse.next();
   }
 
-  // 2. Token prüfen
+  // 2. Public routes (no login required)
+  if (
+    pathname.startsWith("/api/login") ||
+    pathname.startsWith("/api/projects") ||
+    pathname === "/callback" ||
+    pathname.match(/^\/[^/]+\/login$/) // Matches /[project]/login
+  ) {
+    return NextResponse.next();
+  }
+
+  // 3. Verify Token
   const token = req.cookies.get("jwt")?.value;
   let verifiedToken = null;
 
@@ -30,51 +35,51 @@ export async function middleware(req) {
     }
   }
 
-  // 3. Wenn kein Token da ist -> Redirect zum Login
+  // 4. If no token -> Redirect to Login
   if (!verifiedToken) {
-    // Wenn wir schon auf einer Login-Seite sind, nichts tun (vermeidet Loop)
+    // If we are already on a login page, do nothing
     if (pathname.includes("/login")) {
       return NextResponse.next();
     }
-    // Sonst redirect zur Startseite oder einer generischen Login-Seite
-    // Hier schicken wir ihn zur Startseite, wo er ein Projekt auswählen kann
+    // Otherwise redirect to start page
     return NextResponse.redirect(new URL("/", req.url));
   }
 
-  // 4. Wenn Token da ist:
+  // 5. If token is present:
 
-  // Wenn User auf /admin/login oder /admin/[project]/login geht, aber schon eingeloggt ist -> Redirect zum Bot
+  // If user visits login page but is already logged in -> Redirect to Bot
   if (pathname.includes("/login")) {
     if (verifiedToken.project) {
-      return NextResponse.redirect(new URL(`/admin/${verifiedToken.project}/bot`, req.url));
+      return NextResponse.redirect(new URL(`/${verifiedToken.project}/bot`, req.url));
     }
     return NextResponse.redirect(new URL("/", req.url));
   }
 
-  // Api Requests prüfen
+  // Check API requests
   if (pathname.startsWith("/api/")) {
-    return NextResponse.next(); // Hier könnte man noch strengere Checks machen
+    return NextResponse.next();
   }
 
-  // Zugriff auf Projekt-Seiten prüfen
-  // URL: /admin/[projectAlias]/...
-  const adminProjectMatch = pathname.match(/^\/admin\/([^/]+)/);
-  if (adminProjectMatch) {
-    const requestedProject = adminProjectMatch[1];
+  // 6. Check access to project pages
+  // URL format: /[projectAlias]/...
+  const pathParts = pathname.split('/');
+  // pathParts[0] is empty, [1] is project
+  const requestedProject = pathParts[1];
 
-    // Darf der User auf dieses Projekt zugreifen?
-    // Im neuen Token steht 'project' (String), nicht mehr 'projects' (Array)
-    if (verifiedToken.project === requestedProject || verifiedToken.admin === true) {
-      return NextResponse.next();
-    } else {
-      // Falsches Projekt -> Redirect zur Startseite oder Fehler
-      return NextResponse.redirect(new URL("/", req.url));
-    }
+  // Ignore technical paths that might have slipped through (like 'api' if not caught above)
+  if (requestedProject === 'api' || requestedProject === 'callback') {
+    return NextResponse.next();
   }
 
-  return NextResponse.next();
+  // Check if user has access to this project
+  if (verifiedToken.project === requestedProject || verifiedToken.admin === true) {
+    return NextResponse.next();
+  } else {
+    // Wrong project -> Redirect to Home
+    return NextResponse.redirect(new URL("/", req.url));
+  }
 }
 
 export const config = {
-  matcher: ["/admin/:path*", "/api/:path*"],
+  matcher: ['/((?!_next/static|_next/image|favicon.ico).*)'],
 };

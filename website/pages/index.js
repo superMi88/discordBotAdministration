@@ -26,7 +26,7 @@ export default function Index() {
             <div key={project.name} style={{ border: '1px solid #ccc', padding: '20px', borderRadius: '8px' }}>
               <h2>{project.alias}</h2>
               <p>{project.description}</p>
-              <Link href={`/admin/${project.name}/login/`}>
+              <Link href={`/${project.name}/login/`}>
                 <button style={{ padding: '10px 20px', cursor: 'pointer' }}>Projekt Verwalten</button>
               </Link>
             </div>

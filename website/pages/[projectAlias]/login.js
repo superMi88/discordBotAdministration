@@ -31,15 +31,15 @@ export default function ProjectLogin({ setup }) {
         if (data.login) {
             cookie.set("jwt", data.jwt, { expires: 7 })
             console.log('[Webseite] Erfolgreich angemeldet für ' + projectAlias);
-            Router.push(`/admin/${projectAlias}/bot`)
+            Router.push(`/${projectAlias}/bot`)
             return loginLoadingPage()
         }
         if (data.login === false) {
             errorMessage = "User nicht berechtigt für dieses Projekt"
-            Router.push(`/admin/${projectAlias}/login`)
+            Router.push(`/${projectAlias}/login`)
             return loginPage(setup, projectAlias)
         }
-        Router.push(`/admin/${projectAlias}/bot`)
+        Router.push(`/${projectAlias}/bot`)
         errorMessage = "Beim Anmelden ist ein Fehler aufgetreten"
     }
 
@@ -65,14 +65,15 @@ function loginLoadingPage() {
 }
 
 function loginPage(setup, projectAlias) {
-    const { clientId } = require('../../../../discordBot.config.json');
+    const config = require('../../../discordBot.config.json');
+    const { clientId } = config;
     const [redirectUrl, setRedirectUrl] = useState("");
     const state = projectAlias;
 
     useEffect(() => {
         if (window.location.origin) {
             // Use central callback URL
-            const callbackUrl = `${window.location.origin}/admin/callback/`;
+            const callbackUrl = `${window.location.origin}/callback/`;
             setRedirectUrl(getAuthorizationLink(clientId, callbackUrl, state));
         }
     }, [clientId, projectAlias, state]);
