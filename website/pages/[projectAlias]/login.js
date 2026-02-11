@@ -1,5 +1,6 @@
 
 import Head from 'next/head'
+import Image from 'next/image'
 import LayoutBlank from '@/components/layoutBlank'
 import useSWR from 'swr'
 import Router from 'next/router'
@@ -91,8 +92,13 @@ function loginPage(setup, projectAlias) {
                     <div className={`${utilStyles.whiteText} ${utilStyles.flexEnd} `}>
                         {redirectUrl && (
                             <a id="loginButton" className={utilStyles.buttonWithLogo} href={redirectUrl}>
-                                <div className={utilStyles.buttonBoxLogo}>
-                                    <img src="/discord.svg" alt="Discord Logo" />
+                                <div className={utilStyles.buttonBoxLogo} style={{ position: 'relative', width: '30px', height: '30px' }}>
+                                    <Image
+                                        src="/discord.svg"
+                                        alt="Discord Logo"
+                                        layout="fill"
+                                        objectFit="contain"
+                                    />
                                 </div>
                                 <div className={utilStyles.buttonBoxText}>Mit Discord Anmelden</div>
                             </a>

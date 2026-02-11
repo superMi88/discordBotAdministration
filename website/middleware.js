@@ -8,7 +8,8 @@ export async function middleware(req) {
   if (
     pathname.startsWith('/_next') ||
     pathname === '/' ||
-    pathname === '/favicon.ico'
+    pathname === '/favicon.ico' ||
+    pathname.match(/\.(png|jpg|jpeg|svg|gif|webp)$/)
   ) {
     return NextResponse.next();
   }
