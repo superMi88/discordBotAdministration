@@ -16,15 +16,12 @@ module.exports = {
 		},
 		{
 			type: "alone", //definiert wie die felder heißen text und icon
-			style: "column",
-			description: "Foldername",
+			description: "Start File (server.jar)",
 			fields: [
 				{  //name abhängig von type
-					type: "text", //definiert wie die felder heißen text und icon
-					name: "foldername", //datenbank name
-					regex: "^[a-zA-Z0-9\\s\\<\\>\\@]+$",
+					type: "file", //definiert wie die felder heißen text und icon
+					name: "file", //datenbank name
 					required: true,
-					maxZeichen: 50
 				}
 			]
 		},
@@ -83,12 +80,16 @@ module.exports = {
 				}
 			]
 		},
-		
+
 	],
 	buttons: [
 		{
 			name: "Save",
 			onClick: "save" //calls function name on click
+		},
+		{
+			name: "Verschieben",
+			onClick: "verschieben"
 		}
 	]
 };
