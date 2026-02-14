@@ -19,6 +19,10 @@ jobs:
             # Gehe zum Projektordner (Definiert in Github Secrets als PROJECT_PATH)
             cd ${{ secrets.PROJECT_PATH }}
             
+            # Lade NVM Umgebungsvariablen (sonst werden npm/node nicht gefunden)
+            export NVM_DIR="/root/.nvm"
+            [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"
+
             # Code aktualisieren
             git pull origin master
             
