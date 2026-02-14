@@ -85,7 +85,7 @@ export default function bot(props) {
                     {!dataBot ? "Loading Bot Data" :
                         <>
 
-                            <InsertLink href={"/admin/" + projectAlias + `/bot/${dataBot.id}`} text="Bot" classNameToAdd="" element={
+                            <InsertLink href={"/" + projectAlias + `/bot/${dataBot.id}`} text="Bot" classNameToAdd="" element={
 
                                 <div className={styles.linkElementContainer}>
                                     <DiscordImage type="avatar" id={dataBot.id} avatar={dataBot.avatar} />
@@ -119,7 +119,7 @@ export default function bot(props) {
                                         return (
                                             <InsertLink
                                                 key={i}
-                                                href={"/admin/" + projectAlias + `/bot/${botId}/${plugin.name}`}
+                                                href={"/" + projectAlias + `/bot/${botId}/${plugin.name}`}
                                                 text={plugin.shortDescription}
                                                 classNameToAdd="" icon={<IconPlugin />}
                                                 active={selected == `bot-${botId}-${plugin.name}`}

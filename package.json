@@ -6,9 +6,9 @@
   "scripts": {
     "bot:start": "node discordBot/index.js",
     "bot:dev": "node --max-old-space-size=8192 --no-warnings discordBot/index.js",
-    "web:dev": "cd website && next dev",
-    "web:build": "cd website && next build",
-    "web:start": "cd website && next start -p 80"
+    "web:dev": "node website/initEnv.js && cd website && next dev",
+    "web:build": "node website/initEnv.js && cd website && next build",
+    "web:start": "node website/initEnv.js && cd website && next start -p 80"
   },
   "author": "Lowa",
   "license": "ISC",

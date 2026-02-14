@@ -2,85 +2,85 @@ import { NextResponse } from "next/server";
 import { verifyJwtToken } from "./auth";
 
 export async function middleware(req) {
-  const url = req.nextUrl;
+  const { pathname } = req.nextUrl;
 
+  // 1. Skip middleware for internal stuff, homepage, and favicon
+  if (
+    pathname.startsWith('/_next') ||
+    pathname === '/' ||
+    pathname === '/favicon.ico' ||
+    pathname.match(/\.(png|jpg|jpeg|svg|gif|webp)$/)
+  ) {
+    return NextResponse.next();
+  }
+
+  // 2. Public routes (no login required)
+  if (
+    pathname.startsWith("/api/login") ||
+    pathname.startsWith("/api/projects") ||
+    pathname === "/callback" ||
+    pathname.match(/^\/[^/]+\/login$/) // Matches /[project]/login
+  ) {
+    return NextResponse.next();
+  }
+
+  // 3. Verify Token
   const token = req.cookies.get("jwt")?.value;
   let verifiedToken = null;
+
   if (token) {
     try {
       verifiedToken = await verifyJwtToken(token);
     } catch (err) {
-      console.log("Token verification failed:", err);
+      console.log("Token invalid:", err);
     }
   }
 
-  if (url.pathname === "/api/login") {
-    return NextResponse.next();
-  }
-
-  if (url.pathname.startsWith("/api/")) {
-    if (verifiedToken) {
-      const contentType = req.headers.get("content-type") || "";
-      // Falls der Request JSON sendet, parsen wir den Body
-      if (contentType.includes("application/json")) {
-        const rawBody = await req.text();
-        let body;
-        try {
-          body = JSON.parse(rawBody);
-        } catch (err) {
-          return new NextResponse(
-            JSON.stringify({ message: "Invalid JSON format" }),
-            { status: 400, headers: { "Content-Type": "application/json" } }
-          );
-        }
-        const projectAlias = body.projectAlias;
-        if (!verifiedToken.projects.includes(projectAlias)) {
-          return new NextResponse(
-            JSON.stringify({ message: "Access denied, user doesn't have access to this project" }),
-            { status: 401, headers: { "Content-Type": "application/json" } }
-          );
-        }
-      }
-      // Bei anderen Content-Types (z. B. multipart/form-data) überspringen wir den JSON-Parsing-Block
-      return NextResponse.next();
-    } else {
-      return new NextResponse(
-        JSON.stringify({ message: "Invalid or missing token" }),
-        { status: 401, headers: { "Content-Type": "application/json" } }
-      );
-    }
-  }
-
-  if (url.pathname === "/admin/login") {
-    if (verifiedToken) {
-      return NextResponse.redirect(new URL("/admin", req.url));
-    }
-    return NextResponse.next();
-  }
-
+  // 4. If no token -> Redirect to Login
   if (!verifiedToken) {
-    return NextResponse.redirect(new URL("/admin/login", req.url));
-  }
-
-  if (verifiedToken && verifiedToken.admin === true) {
-    return NextResponse.next();
-  }
-
-  if (verifiedToken && Array.isArray(verifiedToken.projects)) {
-    for (const project of verifiedToken.projects) {
-      if (url.pathname.startsWith(`/admin/${project}/`)) {
-        return NextResponse.next();
-      }
+    // If we are already on a login page, do nothing
+    if (pathname.includes("/login")) {
+      return NextResponse.next();
     }
+    // Otherwise redirect to start page
+    return NextResponse.redirect(new URL("/", req.url));
   }
 
-  if (url.pathname === "/admin") {
+  // 5. If token is present:
+
+  // If user visits login page but is already logged in -> Redirect to Bot
+  if (pathname.includes("/login")) {
+    if (verifiedToken.project) {
+      return NextResponse.redirect(new URL(`/${verifiedToken.project}/bot`, req.url));
+    }
+    return NextResponse.redirect(new URL("/", req.url));
+  }
+
+  // Check API requests
+  if (pathname.startsWith("/api/")) {
     return NextResponse.next();
   }
 
-  return NextResponse.redirect(new URL("/admin", req.url));
+  // 6. Check access to project pages
+  // URL format: /[projectAlias]/...
+  const pathParts = pathname.split('/');
+  // pathParts[0] is empty, [1] is project
+  const requestedProject = pathParts[1];
+
+  // Ignore technical paths that might have slipped through (like 'api' if not caught above)
+  if (requestedProject === 'api' || requestedProject === 'callback') {
+    return NextResponse.next();
+  }
+
+  // Check if user has access to this project
+  if (verifiedToken.project === requestedProject || verifiedToken.admin === true) {
+    return NextResponse.next();
+  } else {
+    // Wrong project -> Redirect to Home
+    return NextResponse.redirect(new URL("/", req.url));
+  }
 }
 
 export const config = {
-  matcher: ["/admin/:path*", "/api/:path*"],
+  matcher: ['/((?!_next/static|_next/image|favicon.ico).*)'],
 };

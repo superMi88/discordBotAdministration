@@ -1,6 +1,5 @@
 module.exports = {
-    database:{
-        url: 'mongodb://localhost:27017',
-        nameWebsite: "Website"
+    database: {
+        url: 'mongodb://localhost:27017'
     }
 }

@@ -27,7 +27,7 @@ import * as Hooks from "@/hooks";
 export default function bot({ discordId }) {
 
     const router = useRouter()
-    const {projectAlias} = router.query
+    const { projectAlias } = router.query
 
     //const projectAlias = useSelector(state => state.project.value)
 
@@ -89,7 +89,7 @@ export default function bot({ discordId }) {
                     setErrorMessage("Error: UNKNOWN_ERROR")
                     setCreateBot(false)
                 } else {
-                    router.push('/admin/' + projectAlias + '/bot/' + botId + '/plugins')
+                    router.push('/' + projectAlias + '/bot/' + botId + '/plugins')
                 }
 
 

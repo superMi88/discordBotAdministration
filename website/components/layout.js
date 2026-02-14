@@ -107,7 +107,7 @@ export default function Layout({ children, selected, props }) {
   }
 
   const handleClick = (e, projectName) => {
-    window.location.assign("/admin/" + projectName + "/bot")
+    window.location.assign("/" + projectName + "/bot")
 
     setProject()
   }
@@ -116,8 +116,8 @@ export default function Layout({ children, selected, props }) {
     <LayoutBlank>
 
       <div className={`${styles.navigationMain} ${getStyleName()}`}>
-          <ProjectMenu selected={selected} />
-          <BotPluginList selected={selected} />
+        <ProjectMenu selected={selected} />
+        <BotPluginList selected={selected} />
       </div>
 
       <div className={styles.rightMainContent}>

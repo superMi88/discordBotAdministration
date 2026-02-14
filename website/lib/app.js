@@ -28,26 +28,37 @@ export async function test(discordId) {
 }
 
 
-export async function getWebsiteUser(discordId) {
+export async function getWebsiteUser(databaseName, discordId) {
+
+  console.log(`[getWebsiteUser] Connecting to DB: ${databaseName} with discordId: ${discordId}`);
+
+  if (!databaseName) {
+    console.error("[getWebsiteUser] databaseName is missing!");
+  }
 
   await client.connect();
-  const db = client.db(config.database.nameWebsite);
-  const userCollection = db.collection('websiteUser');
-
-  /*add User to Database if he doesnt exist yet*/
-  //const updateResult = await collection.updateOne({ a: 3 }, { $set: { b: 1 } });
+  const db = client.db(databaseName);
+  // collection websiteUser war alt, userWebsite neu
+  const userCollection = db.collection('userWebsite');
 
   const filteredDocs = await userCollection.findOne({ discordId: discordId });
+
+  if (!filteredDocs) {
+    console.warn(`[getWebsiteUser] No user found in ${databaseName}.userWebsite for ${discordId}`);
+  } else {
+    console.log(`[getWebsiteUser] User found: ${filteredDocs.username || filteredDocs.discordId}`);
+  }
+
   await client.close();
   return filteredDocs;
 }
 
 
-export async function createNewWebsiteUser(discordId) {
+export async function createNewWebsiteUser(databaseName, discordId) {
 
   await client.connect();
-  const db = client.db(config.database.nameWebsite);
-  const userCollection = db.collection('websiteUser');
+  const db = client.db(databaseName);
+  const userCollection = db.collection('userWebsite');
 
   //Sicherheitsabfrage collection sollte empty sein
   const isCollectionEmpty = !Boolean(await userCollection.find({}).limit(1).count())

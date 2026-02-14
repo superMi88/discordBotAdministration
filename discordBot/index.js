@@ -86,8 +86,8 @@ async function main() {
         setupIPC();
 
         await client.connect();
-        const dbWebsite = client.db("Website");
-        const allProjects = await dbWebsite.collection('projects').find({}).toArray();
+        const projectsPath = path.join(__dirname, '../projects.json');
+        const allProjects = JSON.parse(fs.readFileSync(projectsPath, 'utf8'));
 
         for (const project of allProjects) {
             const projectDb = client.db(project.name);

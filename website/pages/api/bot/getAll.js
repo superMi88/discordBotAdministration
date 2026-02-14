@@ -1,5 +1,5 @@
-import {database, databaseWebsite} from '@/lib/database'
-var ObjectId = require('mongodb').ObjectId; 
+import { database } from '@/lib/database'
+var ObjectId = require('mongodb').ObjectId;
 
 export default async function handler(req, res) {
 
@@ -7,7 +7,7 @@ export default async function handler(req, res) {
 
         const projectAlias = req.body.projectAlias
 
-        const dataDatabase =  await database(projectAlias, async function(db){
+        const dataDatabase = await database(projectAlias, async function (db) {
             return await db.collection('botCollection').find({}).toArray()
         })
 
@@ -23,10 +23,10 @@ export default async function handler(req, res) {
             }
             data.push(element)
         }
-        
-    
+
+
         res.status(200).json(data)
-    
+
     } else {
         // Handle any other HTTP method
     }

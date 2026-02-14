@@ -29,11 +29,11 @@ import { useRouter } from 'next/router';
 export default function bot({ botexist, botId }) {
 
     const router = useRouter()
-    const {projectAlias} = router.query
+    const { projectAlias } = router.query
 
     //const projectAlias = useSelector(state => state.project.value)
 
-    cookie.set(projectAlias+"-selectedBotId", botId)
+    cookie.set(projectAlias + "-selectedBotId", botId)
 
     //Alle Plugins die Activ ausgewählt sind
     const {
@@ -79,11 +79,11 @@ export default function bot({ botexist, botId }) {
                                 <div className="content">
 
                                     <div className={utilStyles.botPluginBoxContainer}>
-                                        {dataAllPlugins.response.map(function (plugin, i) {
+                                        {dataAllPlugins.response && dataAllPlugins.response.map(function (plugin, i) {
 
                                             var count = 0
 
-                                            dataPlugins.data.plugins.map(function (pluginBlock, i) {
+                                            dataPlugins.data && dataPlugins.data.plugins && dataPlugins.data.plugins.map(function (pluginBlock, i) {
                                                 if (plugin.name == pluginBlock.pluginTag) {
                                                     count++
                                                 }
@@ -103,7 +103,7 @@ export default function bot({ botexist, botId }) {
                                             { console.log(plugin) }
                                             return (
                                                 <div className={utilStyles.botPluginBox} key={"pluginLink-" + plugin.name}>
-                                                    <Link key={i} href={`/admin/${projectAlias}/bot/${botId}/${plugin.name}`} >
+                                                    <Link key={i} href={`/${projectAlias}/bot/${botId}/${plugin.name}`} >
 
                                                         <div className={utilStyles.botPluginBoxInnerContainer}>
 
@@ -119,6 +119,7 @@ export default function bot({ botexist, botId }) {
 
 
                                         })}
+                                        {!dataAllPlugins.response && <div className={utilStyles.error}>{dataAllPlugins.message || "Keine Plugins gefunden"}</div>}
                                     </div>
                                 </div>
                         }

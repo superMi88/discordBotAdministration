@@ -1,7 +1,8 @@
 # --- Security & Keys ---
 keys.json
 discordBot.config.json
-process.config.js
+projects.json
+
 .env
 .env.local
 .env.development.local

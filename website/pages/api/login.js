@@ -4,7 +4,7 @@ export default async function handler(req, res) {
 
         const body = req.body
 
-        const stuff = await getToken(body.code)
+        const stuff = await getToken(req, body.projectAlias, body.code)
 
         console.log(body.code)
 
@@ -24,43 +24,58 @@ export default async function handler(req, res) {
 
             /* setup wird erst in einer zukünftigen version angeboten
             if(body.setup){
-                await createNewWebsiteUser(userinfo.id);  
+                await createNewWebsiteUser(body.projectAlias, userinfo.id);  
             }
             */
 
-            const websiteUser = await getWebsiteUser(userinfo.id);
+            let websiteUser = await getWebsiteUser(body.projectAlias, userinfo.id);
+
+            // Prüfen ob User nicht existiert (potenzieller First-Joiner)
+            if (!websiteUser) {
+                const { createNewWebsiteUser } = require('../../lib/app');
+                const result = await createNewWebsiteUser(body.projectAlias, userinfo.id);
+                if (result.login) {
+                    websiteUser = await getWebsiteUser(body.projectAlias, userinfo.id);
+                    console.log(`[Login] First User for ${body.projectAlias}! Created new Admin User (${userinfo.username}).`);
+                }
+            }
 
             const jsonwebtoken = require("jsonwebtoken");
 
             console.log(userinfo)
 
-            const payload = {
-                userId: userinfo.id,
-                username: userinfo.username,
-                admin: websiteUser.admin,
-                projects: websiteUser.projects,
-                access_token: stuff.access_token,
-                refresh_token: stuff.refresh_token
-            };
+            if (websiteUser) {
+                let isAdmin = websiteUser.admin;
 
-            const secret = process.env.JWT_SECRET; // Geheimnis, das zum Signieren des Tokens verwendet wird
+                const payload = {
+                    userId: userinfo.id,
+                    username: userinfo.username,
+                    admin: isAdmin,
+                    project: body.projectAlias, // Jetzt projektbezogen
+                    access_token: stuff.access_token,
+                    refresh_token: stuff.refresh_token
+                };
 
-            // Erstelle das JWT mit einer Ablaufzeit von 24 Stunden
-            const token = jsonwebtoken.sign(payload, secret, { expiresIn: "24h" });
+                const secret = process.env.JWT_SECRET; // Geheimnis, das zum Signieren des Tokens verwendet wird
 
-            console.log("JWT Token:", token);
+                // Erstelle das JWT mit einer Ablaufzeit von 24 Stunden
+                const token = jsonwebtoken.sign(payload, secret, { expiresIn: "24h" });
 
-            console.log(websiteUser)
+                console.log("JWT Token:", token);
 
-            jwt = token
-            userExistBool = true
+                jwt = token
+                userExistBool = true
+            } else {
+                console.log(`[Login] Access denied for user ${userinfo.username} on project ${body.projectAlias}. User not found in DB.`);
+                userExistBool = false
+                jwt = false
+            }
 
         }
 
 
-
         res.status(200).json({
-            login: true,
+            login: userExistBool,
             jwt: jwt
         })
     } else {
@@ -74,13 +89,17 @@ export default async function handler(req, res) {
 
 //https://stackoverflow.com/questions/65237821/400-error-when-requesting-a-token-from-discord-api
 //https://www.youtube.com/watch?v=gg40nfS0pTU
-async function getToken(code) {
+async function getToken(req, projectAlias, code) {
 
-    const { clientId, clientSecret, url } = require('../../../discordBot.config.json');
+    const { clientId, clientSecret } = require('../../../discordBot.config.json');
+
+    const protocol = req.headers['x-forwarded-proto'] || 'http';
+    const host = req.headers.host;
+    const url = `${protocol}://${host}/callback/`;
 
     const api_endpoint = 'https://discord.com/api/oauth2/token'
 
-    const req = await fetch(api_endpoint, {
+    const response = await fetch(api_endpoint, {
         method: "POST",
         header: {
             "Content-Type": "application/x-www-form-urlencoded"
@@ -90,13 +109,13 @@ async function getToken(code) {
             'client_secret': clientSecret,
             'grant_type': 'authorization_code',
             'code': code,
-            'redirect_uri': url + "admin/login/",
+            'redirect_uri': url,
             'scope': 'identify'
         })
     })
-    const response = await req.json();
+    const data = await response.json();
 
-    return response;
+    return data;
 }
 
 async function getUserinfos(token_type, access_token, refresh_token) {
