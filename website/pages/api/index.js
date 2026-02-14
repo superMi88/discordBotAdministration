@@ -43,7 +43,7 @@ export default async function handler(req, res) {
 function readInfo(zusatz) {
 
     try {
-        const { getInfo } = require(path.join(process.cwd(), "pages/api" + zusatz + "/_info.js"));
+        const { getInfo } = eval('require')(path.join(process.cwd(), "pages/api" + zusatz + "/_info.js"));
 
         return getInfo()
 
@@ -77,7 +77,7 @@ function readFile(zusatz) {
             if (file.name !== "_info.js" && file.name !== "_middleware.js") {
                 if (file.name !== "getGoogleApiPhotos.js") {
 
-                    const { getInformation, getFields } = require(path.join(process.cwd(), "pages/api" + zusatz + "/" + file.name));
+                    const { getInformation, getFields } = eval('require')(path.join(process.cwd(), "pages/api" + zusatz + "/" + file.name));
                     if (getInformation) {
                         information = getInformation()
                     }
