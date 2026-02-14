@@ -12,51 +12,51 @@ const fs = require('fs');
 const fsp = require('fs/promises');
 const AdmZip = require('adm-zip');  // Neues Modul für das Entpacken
 
-const { spawn, exec  } = require('child_process');
+const { spawn, exec } = require('child_process');
 
 
 
 // Eigene Logging-Funktion
 function log(folderPath, ...args) {
 
-  const message = args.map(arg => {
-    if (typeof arg === 'object') {
-      return JSON.stringify(arg, null, 2);
-    }
-    return String(arg);
-  }).join(' ') + '\n';
+	const message = args.map(arg => {
+		if (typeof arg === 'object') {
+			return JSON.stringify(arg, null, 2);
+		}
+		return String(arg);
+	}).join(' ') + '\n';
 
-  const LOG_FILE = path.join(folderPath, 'console.txt');
+	const LOG_FILE = path.join(folderPath, 'console.txt');
 
-  console.log(LOG_FILE)
-  console.log(message)
-  fs.appendFileSync(LOG_FILE, message);
-  // Optional: auch in die Konsole schreiben
-  // console.log(...args);
+	console.log(LOG_FILE)
+	console.log(message)
+	fs.appendFileSync(LOG_FILE, message);
+	// Optional: auch in die Konsole schreiben
+	// console.log(...args);
 }
 
 let mcProcess;
 
 class Plugin {
-  async execute(client, plugin, projectAlias) {
+	async execute(client, plugin, projectAlias) {
 
-    let db = DatabaseManager.get();
+		let db = DatabaseManager.get();
 
-    plugin.on(client, Events.MessageCreate, async interaction => {
-      // Keine Bot-Interaktionen
-      if (interaction.author.bot) return;
-    });
-  }
+		plugin.on(client, Events.MessageCreate, async interaction => {
+			// Keine Bot-Interaktionen
+			if (interaction.author.bot) return;
+		});
+	}
 
-  async addEvents(plugin, eventsArray) {
-    // ...
-  }
+	async addEvents(plugin, eventsArray) {
+		// ...
+	}
 
-  async console(plugin, config, projectAlias) {
+	async console(plugin, config, projectAlias) {
 
 		//log('write log test');
 
-    	const targetFolderPath = path.join(__dirname, '../../..', 'MinecraftCurseForge', projectAlias, plugin.botId, plugin.id);
+		const targetFolderPath = path.join(__dirname, '../../', 'MinecraftCurseForge', projectAlias, plugin.botId, plugin.id);
 
 		const LOG_FILE = path.join(targetFolderPath, 'console.txt');
 		try {
@@ -67,237 +67,237 @@ class Plugin {
 		}
 	}
 
-  async verschieben(plugin, config, projectAlias) {
-    let status = await PluginManager.save(plugin, config);
-    if (!status.saved) {
-      return status;
-    }
-
-    const fileName = plugin.var.file;
-
-	console.log("plugin und config")
-	console.log(plugin)
-	console.log(config)
-
-    const sourcePath = path.join(__dirname, '../../..', 'uploads', projectAlias, plugin.botId, plugin.id, fileName);
-    const targetFolderPath = path.join(__dirname, '../../..', 'MinecraftCurseForge', projectAlias, plugin.botId, plugin.id);
-	const targetFilePath = path.join(targetFolderPath, "server");
-
-    try {
-		console.log("Quellpfad:", sourcePath);
-		console.log("Zielpfad Folder(nur fürs Entpacken):", targetFolderPath);
-		//console.log("Zielpfad File(nur fürs Entpacken):", targetFilePath);
-	  
-		// Sicherstellen, dass die Quelldatei existiert
-		await fsp.access(sourcePath);
-	  
-		// ZIP-Datei validieren und entpacken
-		let zip;
-		try {
-		  zip = new AdmZip(sourcePath); // nicht verschoben, also direkt von sourcePath lesen
-		  if (zip.getEntries().length === 0) {
-			throw new Error("ZIP-Datei enthält keine Einträge.");
-		  }
-		} catch (err) {
-		  throw new Error("Die ZIP-Datei ist ungültig oder beschädigt.");
+	async verschieben(plugin, config, projectAlias) {
+		let status = await PluginManager.save(plugin, config);
+		if (!status.saved) {
+			return status;
 		}
-	  
-		// ZIP-Datei entpacken
-		//zip.extractAllTo(targetFolderPath, true);
-		
 
-		const entries = zip.getEntries();
+		const fileName = plugin.var.file;
 
-		// Erkenne gemeinsamen Wurzelordner
-		const rootFolder = entries[0].entryName.split('/')[0];
+		console.log("plugin und config")
+		console.log(plugin)
+		console.log(config)
 
-		// Extrahiere alle Einträge, aber ohne rootFolder im Pfad
-		entries.forEach(entry => {
-			let relativePath = entry.entryName;
+		const sourcePath = path.join(__dirname, '../../', 'uploads', projectAlias, plugin.botId, plugin.id, fileName);
+		const targetFolderPath = path.join(__dirname, '../../', 'MinecraftCurseForge', projectAlias, plugin.botId, plugin.id);
+		const targetFilePath = path.join(targetFolderPath, "server");
 
-			// Entferne den ersten Ordneranteil
-			if (relativePath.startsWith(rootFolder + '/')) {
-				relativePath = relativePath.slice(rootFolder.length + 1);
+		try {
+			console.log("Quellpfad:", sourcePath);
+			console.log("Zielpfad Folder(nur fürs Entpacken):", targetFolderPath);
+			//console.log("Zielpfad File(nur fürs Entpacken):", targetFilePath);
+
+			// Sicherstellen, dass die Quelldatei existiert
+			await fsp.access(sourcePath);
+
+			// ZIP-Datei validieren und entpacken
+			let zip;
+			try {
+				zip = new AdmZip(sourcePath); // nicht verschoben, also direkt von sourcePath lesen
+				if (zip.getEntries().length === 0) {
+					throw new Error("ZIP-Datei enthält keine Einträge.");
+				}
+			} catch (err) {
+				throw new Error("Die ZIP-Datei ist ungültig oder beschädigt.");
 			}
 
-			// Zielpfad berechnen
-			const fullPath = path.join(targetFolderPath, relativePath);
+			// ZIP-Datei entpacken
+			//zip.extractAllTo(targetFolderPath, true);
 
-			if (entry.isDirectory) {
-				fs.mkdirSync(fullPath, { recursive: true });
-			} else {
-				fs.mkdirSync(path.dirname(fullPath), { recursive: true });
-				fs.writeFileSync(fullPath, entry.getData());
+
+			const entries = zip.getEntries();
+
+			// Erkenne gemeinsamen Wurzelordner
+			const rootFolder = entries[0].entryName.split('/')[0];
+
+			// Extrahiere alle Einträge, aber ohne rootFolder im Pfad
+			entries.forEach(entry => {
+				let relativePath = entry.entryName;
+
+				// Entferne den ersten Ordneranteil
+				if (relativePath.startsWith(rootFolder + '/')) {
+					relativePath = relativePath.slice(rootFolder.length + 1);
+				}
+
+				// Zielpfad berechnen
+				const fullPath = path.join(targetFolderPath, relativePath);
+
+				if (entry.isDirectory) {
+					fs.mkdirSync(fullPath, { recursive: true });
+				} else {
+					fs.mkdirSync(path.dirname(fullPath), { recursive: true });
+					fs.writeFileSync(fullPath, entry.getData());
+				}
+			});
+
+			console.log("ZIP-Datei wurde erfolgreich entpackt.");
+
+			return { saved: true, infoMessage: "Entpacken erfolgreich", infoStatus: "Info" };
+		} catch (err) {
+			console.error("Fehler beim Entpacken der Datei: ", err);
+			return { saved: false, infoMessage: "Fehler beim Entpacken", infoStatus: "Error" };
+		}
+	}
+
+	async stopServer(plugin, config, projectAlias) {
+		let status = await PluginManager.save(plugin, config);
+		if (!status.saved) {
+			return status;
+		}
+
+		const targetFolderPath = path.join(__dirname, '../../', 'MinecraftCurseForge', projectAlias, plugin.botId, plugin.id);
+		const isWindows = process.platform === 'win32';
+		const scriptName = isWindows ? 'run.ps1' : 'run.sh';
+		const scriptPath = path.join(targetFolderPath, scriptName);
+
+		if (!fs.existsSync(scriptPath)) {
+			console.error(`❌ ${scriptName} fehlt unter: ${scriptPath}`);
+			return { saved: false, error: `${scriptName} fehlt` };
+		}
+
+		console.log("🛑 Versuche Server zu stoppen...");
+		console.log(mcProcess);
+
+		if (mcProcess && !mcProcess.killed) {
+			// Sende "stop" Befehl über stdin
+			mcProcess.stdin.write('stop\n');
+
+			// Timeout: falls nach 10 Sekunden nicht beendet, dann force kill
+			setTimeout(() => {
+				if (!mcProcess.killed) {
+					console.log('⏱️ Prozess lebt noch – erzwinge Beendigung...');
+					if (isWindows) {
+						spawn('taskkill', ['/PID', mcProcess.pid.toString(), '/T', '/F']);
+					} else {
+						//mcProcess.kill('SIGKILL');
+
+						exec(`pkill -P ${mcProcess.pid}`, (err) => {
+							if (err) console.error("Fehler bei pkill:", err);
+							try {
+								process.kill(mcProcess.pid, 'SIGKILL'); // fallback
+							} catch (e) {
+								console.error("Fehler bei SIGKILL:", e);
+							}
+						});
+					}
+				}
+			}, 10000);
+
+			return { saved: true, infoMessage: "Stop-Befehl gesendet", infoStatus: "Info" };
+		} else {
+			console.warn("⚠️ Kein laufender Minecraft-Prozess gefunden.");
+			return { saved: false, infoMessage: "Kein laufender Server gefunden", infoStatus: "Warning" };
+		}
+	}
+
+	async startServer(plugin, config, projectAlias) {
+		let status = await PluginManager.save(plugin, config);
+		if (!status.saved) {
+			return status;
+		}
+
+
+		const fileName = plugin.var.file;
+
+		const sourcePath = path.join(__dirname, '../../', 'uploads', projectAlias, plugin.botId, plugin.id, fileName);
+		const targetFolderPath = path.join(__dirname, '../../', 'MinecraftCurseForge', projectAlias, plugin.botId, plugin.id);
+		const targetFilePath = path.join(targetFolderPath, fileName);
+
+		// Log-Datei bei jedem Start zurücksetzen
+		fs.writeFileSync(path.join(targetFolderPath, 'console.txt'), '');
+
+		const isWindows = process.platform === 'win32';
+		const scriptName = isWindows ? 'run.ps1' : 'run.sh';
+		const scriptPath = path.join(targetFolderPath, scriptName);
+
+		if (!fs.existsSync(scriptPath)) {
+			console.error(`❌ ${scriptName} fehlt unter: ${scriptPath}`);
+			return { saved: false, error: `${scriptName} fehlt` };
+		}
+
+		console.log("🟢 Starte Minecraft-Server...");
+		console.log(process.env);
+
+		const command = isWindows ? 'powershell.exe' : '/bin/bash';
+		const args = isWindows
+			? ['-ExecutionPolicy', 'Bypass', '-File', scriptPath]
+			: [scriptPath];
+		const options = {
+			cwd: targetFolderPath,
+			env: process.env,
+			shell: true
+		};
+
+
+		// Erstelle einen Write Stream für die Datei 'cmd.txt'
+		const logFile = fs.createWriteStream('cmd.txt', { flags: 'a' }); // 'a' bedeutet anhängen an die Datei
+
+		//createServerProperties(targetFolderPath) //TODO überarbeiten
+		createEula(targetFolderPath)
+
+		mcProcess = spawn(command, args, options);
+
+		console.log(`Minecraft-Server gestartet mit PID ${mcProcess.pid}`);
+
+		// Schreibe die Standardausgabe in die Datei
+		mcProcess.stdout.on('data', (data) => {
+			log(targetFolderPath, `[Minecraft-Server] ${data.toString()}\n`);
+			logFile.write(`[Minecraft-Server] ${data.toString()}\n`);
+			console.log(`[Minecraft-Server] ${data}`);
+
+			const output = data.toString();
+			if (output.includes('Done')) {
+				console.log('✅ Server ist jetzt bereit!');
+				// Hier kannst du weitere Logik starten, z. B. Spieler OP geben
+
+				if (plugin['var'].op) {
+					sendToServer(mcProcess, 'op ' + plugin['var'].op);
+				}
 			}
 		});
 
-		console.log("ZIP-Datei wurde erfolgreich entpackt.");
-	  
-		return { saved: true, infoMessage: "Entpacken erfolgreich", infoStatus: "Info" };
-	  } catch (err) {
-		console.error("Fehler beim Entpacken der Datei: ", err);
-		return { saved: false, infoMessage: "Fehler beim Entpacken", infoStatus: "Error" };
-	  }
-  }
+		// Schreibe Fehlerausgabe in die Datei
+		mcProcess.stderr.on('data', (data) => {
+			log(targetFolderPath, `[Minecraft-Server ERROR] ${data.toString()}\n`);
+			logFile.write(`[Minecraft-Server ERROR] ${data.toString()}\n`);
+			console.error(`[Minecraft-Server ERROR] ${data}`);
+		});
 
-  async stopServer(plugin, config, projectAlias) {
-	let status = await PluginManager.save(plugin, config);
-    if (!status.saved) {
-        return status;
-    }
+		// Wenn der Minecraft-Server beendet wird, schreibe das Ende der Datei
+		mcProcess.on('exit', (code) => {
+			log(targetFolderPath, `Minecraft-Server beendet mit Code: ${code}\n`);
+			logFile.write(`Minecraft-Server beendet mit Code: ${code}\n`);
+			console.log(`Minecraft-Server beendet mit Code: ${code}`);
+		});
 
-    const targetFolderPath = path.join(__dirname, '../../..', 'MinecraftCurseForge', projectAlias, plugin.botId, plugin.id);
-    const isWindows = process.platform === 'win32';
-    const scriptName = isWindows ? 'run.ps1' : 'run.sh';
-    const scriptPath = path.join(targetFolderPath, scriptName);
-
-    if (!fs.existsSync(scriptPath)) {
-        console.error(`❌ ${scriptName} fehlt unter: ${scriptPath}`);
-        return { saved: false, error: `${scriptName} fehlt` };
-    }
-
-    console.log("🛑 Versuche Server zu stoppen...");
-    console.log(mcProcess);
-
-    if (mcProcess && !mcProcess.killed) {
-        // Sende "stop" Befehl über stdin
-        mcProcess.stdin.write('stop\n');
-
-        // Timeout: falls nach 10 Sekunden nicht beendet, dann force kill
-        setTimeout(() => {
-            if (!mcProcess.killed) {
-                console.log('⏱️ Prozess lebt noch – erzwinge Beendigung...');
-                if (isWindows) {
-                    spawn('taskkill', ['/PID', mcProcess.pid.toString(), '/T', '/F']);
-                } else {
-                    //mcProcess.kill('SIGKILL');
-
-					exec(`pkill -P ${mcProcess.pid}`, (err) => {
-						if (err) console.error("Fehler bei pkill:", err);
-						try {
-							process.kill(mcProcess.pid, 'SIGKILL'); // fallback
-						} catch (e) {
-							console.error("Fehler bei SIGKILL:", e);
-						}
-					});
-                }
-            }
-        }, 10000);
-
-        return { saved: true, infoMessage: "Stop-Befehl gesendet", infoStatus: "Info" };
-    } else {
-        console.warn("⚠️ Kein laufender Minecraft-Prozess gefunden.");
-        return { saved: false, infoMessage: "Kein laufender Server gefunden", infoStatus: "Warning" };
-    }
-  }
-
-  async startServer(plugin, config, projectAlias) {
-    let status = await PluginManager.save(plugin, config);
-    if (!status.saved) {
-      return status;
-    }
-
-	
-	const fileName = plugin.var.file;
-
-	const sourcePath = path.join(__dirname, '../../..', 'uploads', projectAlias, plugin.botId, plugin.id, fileName);
-    const targetFolderPath = path.join(__dirname, '../../..', 'MinecraftCurseForge', projectAlias, plugin.botId, plugin.id);
-	const targetFilePath = path.join(targetFolderPath, fileName);
-
-	// Log-Datei bei jedem Start zurücksetzen
-	fs.writeFileSync(path.join(targetFolderPath, 'console.txt'), '');
-
-	const isWindows = process.platform === 'win32';
-	const scriptName = isWindows ? 'run.ps1' : 'run.sh';
-	const scriptPath = path.join(targetFolderPath, scriptName);
-
-	if (!fs.existsSync(scriptPath)) {
-		console.error(`❌ ${scriptName} fehlt unter: ${scriptPath}`);
-		return { saved: false, error: `${scriptName} fehlt` };
-	}
-
-	console.log("🟢 Starte Minecraft-Server...");
-	console.log(process.env);
-
-	const command = isWindows ? 'powershell.exe' : '/bin/bash';
-	const args = isWindows
-		? ['-ExecutionPolicy', 'Bypass', '-File', scriptPath] 
-		: [scriptPath];
-	const options = {
-		cwd: targetFolderPath,
-		env: process.env,
-		shell: true
-	};
-
-
-	// Erstelle einen Write Stream für die Datei 'cmd.txt'
-	const logFile = fs.createWriteStream('cmd.txt', { flags: 'a' }); // 'a' bedeutet anhängen an die Datei
-
-	//createServerProperties(targetFolderPath) //TODO überarbeiten
-	createEula(targetFolderPath)
-
-	mcProcess = spawn(command, args, options);
-
-	console.log(`Minecraft-Server gestartet mit PID ${mcProcess.pid}`);
-
-	// Schreibe die Standardausgabe in die Datei
-	mcProcess.stdout.on('data', (data) => {
-		log(targetFolderPath, `[Minecraft-Server] ${data.toString()}\n`);
-		logFile.write(`[Minecraft-Server] ${data.toString()}\n`);
-		console.log(`[Minecraft-Server] ${data}`);
-
-		const output = data.toString();
-		if (output.includes('Done')) {
-			console.log('✅ Server ist jetzt bereit!');
-			// Hier kannst du weitere Logik starten, z. B. Spieler OP geben
-
-			if(plugin['var'].op){
-				sendToServer(mcProcess, 'op '+plugin['var'].op);
-			}
-		}
-	});
-	  
-	// Schreibe Fehlerausgabe in die Datei
-	mcProcess.stderr.on('data', (data) => {
-		log(targetFolderPath, `[Minecraft-Server ERROR] ${data.toString()}\n`);
-		logFile.write(`[Minecraft-Server ERROR] ${data.toString()}\n`);
-		console.error(`[Minecraft-Server ERROR] ${data}`);
-	});
-
-	// Wenn der Minecraft-Server beendet wird, schreibe das Ende der Datei
-	mcProcess.on('exit', (code) => {
-		log(targetFolderPath, `Minecraft-Server beendet mit Code: ${code}\n`);
-		logFile.write(`Minecraft-Server beendet mit Code: ${code}\n`);
-		console.log(`Minecraft-Server beendet mit Code: ${code}`);
-	});
-
-	// Optional: Bei Exit von Node auch Kindprozess killen
-	process.on('exit', () => {
-		log(targetFolderPath, 'Node-Prozess wird beendet, Minecraft-Server wird gestoppt.');
-		console.log('Node-Prozess wird beendet, Minecraft-Server wird gestoppt.');
-		mcProcess.kill('SIGTERM');
-	});/*
+		// Optional: Bei Exit von Node auch Kindprozess killen
+		process.on('exit', () => {
+			log(targetFolderPath, 'Node-Prozess wird beendet, Minecraft-Server wird gestoppt.');
+			console.log('Node-Prozess wird beendet, Minecraft-Server wird gestoppt.');
+			mcProcess.kill('SIGTERM');
+		});/*
 	process.on('SIGINT', () => process.exit()); // Ctrl+C
 	process.on('SIGUSR1', () => process.exit()); // z.B. Restart durch Nodemon
 	process.on('SIGUSR2', () => process.exit());
 	process.on('uncaughtException', () => process.exit());*/
 
-	return { saved: true, infoMessage: "gestartet", infoStatus: "Info" };
-  }
+		return { saved: true, infoMessage: "gestartet", infoStatus: "Info" };
+	}
 
-  
+
 }
 
 function sendToServer(process, command) {
 	if (process && !process.killed) {
 		process.stdin.write(command + '\n');
-	  console.log(`[Command sent] ${command}`);
+		console.log(`[Command sent] ${command}`);
 	} else {
-	  console.error('Server läuft nicht!');
+		console.error('Server läuft nicht!');
 	}
 }
 
-function createServerProperties(targetFolderPath){
+function createServerProperties(targetFolderPath) {
 	const propertiesContent = `#Minecraft server properties
 	#${new Date().toUTCString()}
 	accepts-transfers=false
@@ -366,27 +366,27 @@ function createServerProperties(targetFolderPath){
 	const targetPath = path.join(targetFolderPath, 'server.properties');
 
 	fs.writeFile(targetPath, propertiesContent, (err) => {
-	if (err) {
-		console.error('❌ Fehler beim Erstellen der server.properties:', err);
-	} else {
-		console.log('✅ Datei "server.properties" wurde erfolgreich erstellt!');
-	}
+		if (err) {
+			console.error('❌ Fehler beim Erstellen der server.properties:', err);
+		} else {
+			console.log('✅ Datei "server.properties" wurde erfolgreich erstellt!');
+		}
 	});
 }
 
 
-function createEula(targetFolderPath){
+function createEula(targetFolderPath) {
 	const propertiesContent = `#By changing the setting below to TRUE you are indicating your agreement to our EULA (https://aka.ms/MinecraftEULA).
 	eula=true`;
 
 	const targetPath = path.join(targetFolderPath, 'eula.txt');
 
 	fs.writeFile(targetPath, propertiesContent, (err) => {
-	if (err) {
-		console.error('❌ Fehler beim Erstellen der eula.txt:', err);
-	} else {
-		console.log('✅ Datei "eula.txt" wurde erfolgreich erstellt!');
-	}
+		if (err) {
+			console.error('❌ Fehler beim Erstellen der eula.txt:', err);
+		} else {
+			console.log('✅ Datei "eula.txt" wurde erfolgreich erstellt!');
+		}
 	});
 }
 
