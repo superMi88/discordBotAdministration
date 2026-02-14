@@ -14,6 +14,8 @@ const options = {
   keepExtensions: true, // Behält die Dateiendung bei (z.B. .zip)
   maxFileSize: 5 * 1024 * 1024 * 1024,       // 5 GB für einzelne Datei
   maxTotalFileSize: 5 * 1024 * 1024 * 1024,  // 5 GB insgesamt
+  allowEmptyFiles: true,
+  minFileSize: 0,
 };
 
 export default async (req, res) => {
@@ -29,8 +31,16 @@ export default async (req, res) => {
         console.error("❌ Datei zu groß");
         return res.status(413).json({ message: 'Die Datei ist zu groß. Maximal erlaubt: 5 GB.' });
       }
+      if (err.code === 1012) {
+        console.error("❌ Upload abgebrochen (Code 1012)");
+        return res.status(400).json({ message: 'Upload wurde abgebrochen.', code: 1012 });
+      }
+      if (err.code === 1016) {
+        console.error("❌ Fehler beim Parsen: Unexpected end of form (Code 1016)");
+        return res.status(400).json({ message: 'Upload fehlerhaft (unvollständig).', code: 1016 });
+      }
       console.error("❌ Fehler beim Parsen:", err);
-      return res.status(500).json({ message: 'Fehler beim Verarbeiten der Datei', error: err });
+      return res.status(500).json({ message: 'Fehler beim Verarbeiten der Datei', error: err, code: err.code });
     }
 
     console.log("📦 Felder erhalten:", fields);

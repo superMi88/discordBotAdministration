@@ -76,7 +76,7 @@ export default function component(props) {
 
     // Chunked upload helper
     async function uploadFileInChunks(file) {
-        const chunkSize = 10 * 1024 * 1024; // 10 MB
+        const chunkSize = 4 * 1024 * 1024; // 4 MB
         const totalChunks = Math.ceil(file.size / chunkSize);
         console.log("total chunk sizes: " + totalChunks)
         for (let index = 0; index < totalChunks; index++) {
