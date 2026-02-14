@@ -22,6 +22,7 @@ module.exports = {
 					type: "file", //definiert wie die felder heißen text und icon
 					name: "file", //datenbank name
 					required: true,
+					accept: ".jar"
 				}
 			]
 		},
