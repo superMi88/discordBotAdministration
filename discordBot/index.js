@@ -104,4 +104,22 @@ async function main() {
     }
 }
 
+// Graceful Custom Shutdown
+async function cleanup() {
+    console.log("Shutting down... killing all child processes.");
+    const bots = botManager.getAllBots();
+    for (const botProcess of bots) {
+        if (botProcess && !botProcess.killed) {
+            botProcess.kill('SIGTERM');
+        }
+    }
+    // Give them a moment to close
+    setTimeout(() => {
+        process.exit(0);
+    }, 500);
+}
+
+process.on('SIGINT', cleanup);
+process.on('SIGTERM', cleanup);
+
 main();
