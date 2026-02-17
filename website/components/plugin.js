@@ -9,7 +9,8 @@ import BotMenu from '@/components/helper/botMenu';
 import cookie from 'js-cookie'
 
 /*components plugins*/
-import PluginComponent from '@/components/pluginComponent/pluginComponent';
+import PluginLoader from '@/components/pluginComponent/PluginLoader';
+
 
 /*Styles*/
 import utilStyles from '@/styles/utils.module.css'
@@ -44,27 +45,27 @@ export default function bot({ botexist, botId, pluginTag }) {
   //const projectAlias = useSelector(state => state.project.value)
 
   const router = useRouter()
-  const {projectAlias} = router.query
+  const { projectAlias } = router.query
 
   const [hashValue, setHashValue] = useState(false);
 
   useEffect(() => {
     // Prüfen, ob die URL einen Hash enthält
     if (router.asPath.includes('#')) {
-        const hash = router.asPath.split('#')[1]; // Alles nach dem #
-        setHashValue(hash);
+      const hash = router.asPath.split('#')[1]; // Alles nach dem #
+      setHashValue(hash);
 
-        
-    }else{
+
+    } else {
       setHashValue(true);
     }
   }, [router.asPath]); // Trigger bei Änderungen der Route
 
 
-  
 
 
-  cookie.set(projectAlias+"-selectedBotId", botId)
+
+  cookie.set(projectAlias + "-selectedBotId", botId)
 
   //will be set to true if plugin tag exists
   var pluginTagExists = false
@@ -93,18 +94,18 @@ export default function bot({ botexist, botId, pluginTag }) {
   useEffect(() => {
     // Prüfen, ob die URL einen Hash enthält
     if (router.asPath.includes('#')) {
-        const hash = router.asPath.split('#')[1]; // Alles nach dem #
-        
-        const element = document.getElementById(hash);
-        if (element && dataPlugins && dataAllPlugins && hashValue) {
-            
+      const hash = router.asPath.split('#')[1]; // Alles nach dem #
 
-            setTimeout(() => {
-              element.scrollIntoView({ behavior: 'smooth', block: 'start' });
-          }, 300); // 100ms Verzögerung
-        }
+      const element = document.getElementById(hash);
+      if (element && dataPlugins && dataAllPlugins && hashValue) {
+
+
+        setTimeout(() => {
+          element.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }, 300); // 100ms Verzögerung
+      }
     }
-  }, [dataPlugins, dataAllPlugins, hashValue ]); // Trigger bei Änderungen der Route
+  }, [dataPlugins, dataAllPlugins, hashValue]); // Trigger bei Änderungen der Route
 
 
 
@@ -117,7 +118,7 @@ export default function bot({ botexist, botId, pluginTag }) {
     })
   }
 
-  if(!botexist){
+  if (!botexist) {
     console.log("Bot exist ERROR")
   }
   console.log(botexist)
@@ -142,107 +143,107 @@ export default function bot({ botexist, botId, pluginTag }) {
         <>
           <div className="content">
             {test}
-            
+
           </div>
 
           <div>
             <div className="content">
-            {
-              !dataPlugins || !dataAllPlugins || (dataAllPlugins.statusCode === "Error") ? <div>loading...</div> :
-              <>
-                <Flexbox>
-                  <FlexItem>
-                    {dataAllPlugins.response.map((plugin, i)=>{
-                      if (plugin.name != pluginTag) return ""
-                      return (<div key={i}>{plugin.shortDescription}</div>)
-                    })}
-                  </FlexItem>
-                  <FlexItem type="spaceLeft">
-                    <Button icon={<IconPlus />} color="color" onClick={
-                      async () => {
-                        await apiFetcher('/plugins/add', {
-                          botId: botId,
-                          name: pluginTag,
-                          projectAlias: projectAlias
-                        })
-                        mutatePlugins();
-                      }}
-                    />
-                  </FlexItem>
-                </Flexbox>
-                
-                  <Flexbox>
-                    <FlexItem type="max">
-                      <div className={utilStyles.textausgabe}>
-                        {dataAllPlugins.response.map((plugin, i)=>{
+              {
+                !dataPlugins || !dataAllPlugins || (dataAllPlugins.statusCode === "Error") ? <div>loading...</div> :
+                  <>
+                    <Flexbox>
+                      <FlexItem>
+                        {dataAllPlugins.response.map((plugin, i) => {
                           if (plugin.name != pluginTag) return ""
-                          return (<div key={i}>{plugin.description}</div>)
+                          return (<div key={i}>{plugin.shortDescription}</div>)
                         })}
-                      </div>
-                    </FlexItem>
-                  </Flexbox>
-                </>
+                      </FlexItem>
+                      <FlexItem type="spaceLeft">
+                        <Button icon={<IconPlus />} color="color" onClick={
+                          async () => {
+                            await apiFetcher('/plugins/add', {
+                              botId: botId,
+                              name: pluginTag,
+                              projectAlias: projectAlias
+                            })
+                            mutatePlugins();
+                          }}
+                        />
+                      </FlexItem>
+                    </Flexbox>
+
+                    <Flexbox>
+                      <FlexItem type="max">
+                        <div className={utilStyles.textausgabe}>
+                          {dataAllPlugins.response.map((plugin, i) => {
+                            if (plugin.name != pluginTag) return ""
+                            return (<div key={i}>{plugin.description}</div>)
+                          })}
+                        </div>
+                      </FlexItem>
+                    </Flexbox>
+                  </>
               }
 
-            
-
-            {!pluginTagExists ?
-              <div className="content">
-                Plugin dont exist
-              </div>
-              :
-              <>
-                {
-                  !dataPlugins || !dataAllPlugins || !hashValue ? <div>loading...</div> :
-
-                    dataPlugins.data.plugins.length !== 0 ?
 
 
+              {!pluginTagExists ?
+                <div className="content">
+                  Plugin dont exist
+                </div>
+                :
+                <>
+                  {
+                    !dataPlugins || !dataAllPlugins || !hashValue ? <div>loading...</div> :
 
-                      <>
+                      dataPlugins.data.plugins.length !== 0 ?
 
-                        {dataPlugins.data.plugins.map(function (plugin, i) {
-                          if (plugin.pluginTag != pluginTag) return ""
 
-                          const getElement = () => {
-                            for (let i = 0; i < dataAllPlugins.response.length; i++) {
-                              const element = dataAllPlugins.response[i];
-                              if (element.name == plugin.pluginTag) {
-                                return (element)
+
+                        <>
+
+                          {dataPlugins.data.plugins.map(function (plugin, i) {
+                            if (plugin.pluginTag != pluginTag) return ""
+
+                            const getElement = () => {
+                              for (let i = 0; i < dataAllPlugins.response.length; i++) {
+                                const element = dataAllPlugins.response[i];
+                                if (element.name == plugin.pluginTag) {
+                                  return (element)
+                                }
                               }
                             }
-                          }
-                          const activePlugin = getElement()
+                            const activePlugin = getElement()
 
-                          console.log("plugin:"+ plugin)
+                            console.log("plugin:" + plugin)
 
 
-                          let open = false
-                          console.log("hashValue")
-                          console.log(hashValue)
-                          console.log(plugin.pluginId)
-                          if(hashValue == plugin.pluginId){
+                            let open = false
+                            console.log("hashValue")
+                            console.log(hashValue)
+                            console.log(plugin.pluginId)
+                            if (hashValue == plugin.pluginId) {
                               open = true
-                          }
-                          
-                          return (
-                            <div key={plugin.pluginId} id={plugin.pluginId} className={utilStyles.pluginWrapper}>
-                              <PluginComponent botId={botId} activePlugin={activePlugin} plugin={plugin} mutatePlugins={mutatePlugins} openFromStart={open} />
-                            </div>
-                          )
-                        })}
+                            }
+
+                            return (
+                              <div key={plugin.pluginId} id={plugin.pluginId} className={utilStyles.pluginWrapper}>
+                                <PluginLoader botId={botId} activePlugin={activePlugin} plugin={plugin} mutatePlugins={mutatePlugins} openFromStart={open} projectAlias={projectAlias} />
+                              </div>
+                            )
+                          })}
 
 
-                      </>
-                      :
+                        </>
+                        :
 
-                      <div> keine Plugins </div>
+                        <div> keine Plugins </div>
 
 
-                }
-              </>
+                  }
+                </>
 
-            }
+              }
             </div>
 
           </div>
