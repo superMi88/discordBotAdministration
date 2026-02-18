@@ -28,16 +28,21 @@ module.exports = async function (client, plugin, config, projectAlias, data) {
         return { saved: false, infoMessage: "File does not exist.", infoStatus: "Error" };
     }
 
-    // Stop existing process if running?
-    if (plugin.mcProcess && !plugin.mcProcess.killed) {
-        return { saved: false, infoMessage: "Process already running. Stop it first.", infoStatus: "Warning" };
+    if (!plugin.processes) plugin.processes = {};
+
+    // Stop existing process if running for THIS file
+    if (plugin.processes[filename] && !plugin.processes[filename].killed) {
+        return { saved: false, infoMessage: `Process ${filename} already running. Stop it first.`, infoStatus: "Warning" };
     }
 
-    // Log-Datei bei jedem Start zurücksetzen? 
-    // Maybe append? Or clear? Usually server logs append, but user might want fresh start.
-    // Let's clear for now as per previous logic.
-    const logFileStream = fs.createWriteStream(path.join(targetFolderPath, 'console.txt'), { flags: 'w' });
-    logFileStream.close();
+    // Prepare separate log file
+    const logFileName = `console_${filename}.txt`;
+    const logFilePath = path.join(targetFolderPath, logFileName);
+
+    // Clear log file
+    try {
+        fs.writeFileSync(logFilePath, '');
+    } catch (e) { console.error("Error defining log file", e) }
 
     const isWindows = process.platform === 'win32';
 
@@ -68,41 +73,40 @@ module.exports = async function (client, plugin, config, projectAlias, data) {
         stdio: ['pipe', 'pipe', 'pipe']
     };
 
-    // Create new log stream for appending
-    const logFile = fs.createWriteStream('cmd.txt', { flags: 'a' });
-
     createEula(targetFolderPath);
 
     const mcProcess = spawn(command, args, options);
-    plugin.mcProcess = mcProcess; // Store process on plugin object
+    plugin.processes[filename] = mcProcess; // Store process on plugin object specific to file
 
     console.log(`Process started with PID ${mcProcess.pid}`);
 
-    mcProcess.stdout.on('data', (data) => {
-        log(targetFolderPath, `[${filename}] ${data.toString()}`);
-
+    const appendLog = (msg) => {
         try {
-            fs.appendFileSync('cmd.txt', `[${filename}] ${data.toString()}`);
+            fs.appendFileSync(logFilePath, msg); // msg already has newline or comes from data which might have it? Usually data is chunk.
+            // also append to global cmd.txt for debugging
+            fs.appendFileSync(path.join(targetFolderPath, 'cmd.txt'), `[${filename}] ${msg}`);
         } catch (e) { }
+    }
 
-        console.log(`[${filename}] ${data}`);
+    mcProcess.stdout.on('data', (data) => {
+        const msg = data.toString();
+        appendLog(msg);
+        console.log(`[${filename}] ${msg}`);
     });
 
     mcProcess.stderr.on('data', (data) => {
-        log(targetFolderPath, `[${filename} ERROR] ${data.toString()}`);
-        try {
-            fs.appendFileSync('cmd.txt', `[${filename} ERROR] ${data.toString()}`);
-        } catch (e) { }
-        console.error(`[${filename} ERROR] ${data}`);
+        const msg = data.toString();
+        appendLog(msg);
+        console.error(`[${filename} ERROR] ${msg}`);
     });
 
     mcProcess.on('exit', (code) => {
-        log(targetFolderPath, `${filename} finished with code: ${code}\n`);
-        try {
-            fs.appendFileSync('cmd.txt', `${filename} finished with code: ${code}\n`);
-        } catch (e) { }
-        console.log(`${filename} finished with code: ${code}`);
-        plugin.mcProcess = null;
+        const msg = `\n${filename} finished with code: ${code}\n`;
+        appendLog(msg);
+        console.log(`[${filename}] finished with code: ${code}`);
+        if (plugin.processes[filename] === mcProcess) {
+            delete plugin.processes[filename];
+        }
     });
 
     return { saved: true, infoMessage: `Started ${filename}`, infoStatus: "Info" };

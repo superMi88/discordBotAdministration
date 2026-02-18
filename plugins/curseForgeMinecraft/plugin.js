@@ -140,6 +140,16 @@ class Plugin {
 		}
 	}
 
+	async sendInput(plugin, config, projectAlias, data) {
+		const input = data?.input || "";
+		if (mcProcess && !mcProcess.killed) {
+			sendToServer(mcProcess, input);
+			return { saved: true, infoMessage: "Befehl gesendet", infoStatus: "Info" };
+		} else {
+			return { saved: false, infoMessage: "Server läuft nicht", infoStatus: "Warning" };
+		}
+	}
+
 	async stopServer(plugin, config, projectAlias) {
 		let status = await PluginManager.save(plugin, config);
 		if (!status.saved) {

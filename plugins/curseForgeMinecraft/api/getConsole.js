@@ -2,8 +2,11 @@ const path = require('path');
 const fs = require('fs');
 
 module.exports = async function (client, plugin, config, projectAlias, data) {
+    const { filename } = data;
+    if (!filename) return "No filename specified.";
+
     const targetFolderPath = path.join(__dirname, '../../../', 'MinecraftCurseForge', projectAlias, plugin.botId, plugin.id);
-    const LOG_FILE = path.join(targetFolderPath, 'console.txt');
+    const LOG_FILE = path.join(targetFolderPath, `console_${filename}.txt`);
 
     try {
         if (!fs.existsSync(LOG_FILE)) {

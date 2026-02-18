@@ -49,6 +49,9 @@ module.exports = {
 
             if (fs.existsSync(apiPath)) {
                 try {
+                    if (require.cache[require.resolve(apiPath)]) {
+                        delete require.cache[require.resolve(apiPath)];
+                    }
                     const apiModule = require(apiPath);
 
                     let config = null;

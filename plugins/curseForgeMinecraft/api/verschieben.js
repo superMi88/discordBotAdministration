@@ -58,7 +58,22 @@ module.exports = async function (client, plugin, config, projectAlias, data) {
             }
         });
 
+        // Speichere Setup-Status
+        plugin.var = { ...plugin.var, setupComplete: true };
+
+        // Schreibe Änderungen in Cache-Datei, damit PluginManager.save sie übernimmt
+        const cacheDir = `./cache/bot-${client.user.id}`;
+        const cacheFile = `${cacheDir}/plugin-${plugin.id}.txt`;
+
+        if (!fs.existsSync(cacheDir)) {
+            fs.mkdirSync(cacheDir, { recursive: true });
+        }
+        fs.writeFileSync(cacheFile, JSON.stringify(plugin.var));
+
+        await PluginManager.save(plugin, config);
+
         console.log("ZIP-Datei wurde erfolgreich entpackt.");
+
         return { saved: true, infoMessage: "Entpacken erfolgreich", infoStatus: "Info" };
     } catch (err) {
         console.error("Fehler beim Entpacken der Datei: ", err);

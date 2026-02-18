@@ -1,9 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import useSWR from 'swr';
-import InputServer from '../../website/components/inputfields/server.js';
 import InputFile from '../../website/components/inputfields/file.js';
 import InputText from '../../website/components/inputfields/text.js';
-import InputConsole from '../../website/components/inputfields/console.js';
 import Button from '../../website/components/button/button.js';
 import { apiFetcher, getApiFetcher } from '../../website/lib/apifetcher.js';
 import utilStyles from '../../website/styles/utils.module.css';
@@ -16,6 +14,8 @@ import IconExpandMore from '../../website/components/icons/expandMore.js';
 import IconExpandLess from '../../website/components/icons/expandLess.js';
 import IconDelete from '../../website/components/icons/delete.js';
 import IconClose from '../../website/components/icons/close.js';
+import IconPlay from '../../website/components/icons/play.js';
+import IconStop from '../../website/components/icons/stop.js';
 import PluginName from '../../website/components/pluginComponent/pluginName.js';
 import PopupBoxSmall from '../../website/components/button/popupBoxSmall.js';
 import * as Lib from "../../website/lib/index.js";
@@ -25,24 +25,268 @@ function getSavedStatus(plugin, pluginOld) {
     return Lib.equal(plugin.var, pluginOld.var)
 }
 
+function ProcessControl({ filename, isRunning, botId, projectAlias, pluginId, pluginTag, setGlobalInfoMessage }) {
+    const [consoleOpen, setConsoleOpen] = useState(false);
+    const [commandInput, setCommandInput] = useState("");
+    const consoleRef = useRef(null);
+
+    // Fetch console only if open
+    const { data: consoleData } = useSWR(
+        (consoleOpen && projectAlias) ? ['/api/plugins/botRequest', {
+            botId: botId,
+            command: "pluginApi",
+            pluginTag: pluginTag,
+            apiEndpoint: "getConsole",
+            pluginId: pluginId,
+            projectAlias: projectAlias,
+            filename: filename
+        }] : null,
+        getApiFetcher(),
+        { refreshInterval: 2000 }
+    );
+
+    useEffect(() => {
+        if (consoleRef.current) {
+            consoleRef.current.scrollTop = consoleRef.current.scrollHeight;
+        }
+    }, [consoleData]);
+
+    const handleAction = async (action, additionalData = {}) => {
+        try {
+            if (!pluginId) {
+                console.error("Plugin ID is undefined");
+                if (setGlobalInfoMessage) setGlobalInfoMessage({ infoMessage: "Plugin ID missing", infoStatus: "Error" });
+                return;
+            }
+            const data = await apiFetcher('/plugins/botRequest', {
+                botId: botId,
+                command: "pluginApi",
+                pluginTag: pluginTag,
+                apiEndpoint: action,
+                pluginId: pluginId,
+                projectAlias: projectAlias,
+                filename: filename,
+                ...additionalData
+            });
+            const response = (await data.json()).response;
+            if (setGlobalInfoMessage && response) setGlobalInfoMessage(response);
+            return response;
+        } catch (e) {
+            console.error(e);
+            if (setGlobalInfoMessage) setGlobalInfoMessage({ infoMessage: "Error executing action", infoStatus: "Error" });
+        }
+    };
+
+    const handleStart = () => handleAction('executeFile', { filename });
+    const handleStop = () => handleAction('stopServer', { filename });
+    const handleSendInput = async () => {
+        await handleAction('sendInput', { input: commandInput });
+        setCommandInput("");
+    };
+
+    return (
+        <div style={{ marginBottom: '15px', padding: '10px', border: '1px solid #444', borderRadius: '5px', backgroundColor: '#2a2a2a' }}>
+            <Flexbox>
+                <FlexItem type="max">
+                    <div style={{ fontWeight: 'bold', color: '#fff' }}>{filename}</div>
+                </FlexItem>
+                <FlexItem>
+                    <div style={{
+                        padding: '5px 10px',
+                        borderRadius: '4px',
+                        backgroundColor: isRunning ? '#2ecc71' : '#7f8c8d',
+                        color: 'white',
+                        fontSize: '0.8em',
+                        fontWeight: 'bold',
+                        marginRight: '10px'
+                    }}>
+                        {isRunning ? 'Running' : 'Stopped'}
+                    </div>
+                </FlexItem>
+                <FlexItem>
+                    {isRunning ? (
+                        <Button icon={<IconStop />} color="delete" onClick={handleStop} />
+                    ) : (
+                        <Button icon={<IconPlay />} color="success" onClick={handleStart} />
+                    )}
+                </FlexItem>
+                <FlexItem>
+                    <Button
+                        icon={{ false: <IconExpandMore />, true: <IconExpandLess /> }}
+                        state={consoleOpen}
+                        onClick={() => setConsoleOpen(!consoleOpen)}
+                        color="light"
+                        text={consoleOpen ? "Hide Console" : "Console"}
+                    />
+                </FlexItem>
+            </Flexbox>
+
+            {consoleOpen && (
+                <div style={{ marginTop: '10px' }}>
+                    <textarea
+                        ref={consoleRef}
+                        className={utilStyles.textfield}
+                        style={{
+                            height: '200px',
+                            fontFamily: 'monospace',
+                            whiteSpace: 'pre-wrap',
+                            backgroundColor: '#1e1e1e',
+                            color: '#d4d4d4',
+                            resize: 'vertical',
+                            marginBottom: '10px',
+                            width: '100%',
+                            boxSizing: 'border-box'
+                        }}
+                        value={consoleData?.response ?? "Loading logs..."}
+                        readOnly
+                    />
+                    <Flexbox>
+                        <FlexItem type="max">
+                            <input
+                                type="text"
+                                className={utilStyles.textfield}
+                                value={commandInput}
+                                onChange={(e) => setCommandInput(e.target.value)}
+                                onKeyDown={(e) => { if (e.key === 'Enter') handleSendInput() }}
+                                placeholder={`Command for ${filename}...`}
+                                disabled={!isRunning}
+                            />
+                        </FlexItem>
+
+                    </Flexbox>
+                </div>
+            )}
+        </div>
+    );
+}
+
+
+function ServerPropertiesEditor({ botId, projectAlias, pluginId, pluginTag, setGlobalInfoMessage }) {
+    const [content, setContent] = useState("");
+    const [loading, setLoading] = useState(false);
+    const [isOpen, setIsOpen] = useState(false);
+    const [message, setMessage] = useState("");
+
+    // Fetch only when open
+    const { data: propertiesData, mutate } = useSWR(
+        (isOpen && projectAlias) ? ['/api/plugins/botRequest', {
+            botId: botId,
+            command: "pluginApi",
+            pluginTag: pluginTag,
+            apiEndpoint: "getServerProperties",
+            pluginId: pluginId,
+            projectAlias: projectAlias
+        }] : null,
+        getApiFetcher()
+    );
+
+    useEffect(() => {
+        if (propertiesData?.response?.content !== undefined) {
+            setContent(propertiesData.response.content);
+        }
+    }, [propertiesData]);
+
+    const handleSave = async () => {
+        setLoading(true);
+        try {
+            const data = await apiFetcher('/plugins/botRequest', {
+                botId: botId,
+                command: "pluginApi",
+                pluginTag: pluginTag,
+                apiEndpoint: "saveServerProperties",
+                pluginObj: { id: pluginId, pluginTag: pluginTag, botId: botId },
+                pluginId: pluginId,
+                projectAlias: projectAlias,
+                content: content
+            });
+            const response = (await data.json()).response;
+            if (setGlobalInfoMessage && response) setGlobalInfoMessage(response);
+            mutate(); // Refresh data
+        } catch (e) {
+            console.error("Error saving properties:", e);
+            if (setGlobalInfoMessage) setGlobalInfoMessage({ infoMessage: "Error saving properties", infoStatus: "Error" });
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    return (
+        <div style={{ marginBottom: '20px', padding: '10px', border: '1px solid #333', borderRadius: '5px' }}>
+            <Flexbox>
+                <FlexItem type="max">
+                    <h3 style={{ margin: 0 }}>Server Properties</h3>
+                </FlexItem>
+                <FlexItem>
+                    <Button
+                        icon={{ false: <IconExpandMore />, true: <IconExpandLess /> }}
+                        state={isOpen}
+                        onClick={() => setIsOpen(!isOpen)}
+                        color="light"
+                        text={isOpen ? "Hide" : "Edit"}
+                    />
+                </FlexItem>
+            </Flexbox>
+
+            {isOpen && (
+                <div style={{ marginTop: '10px' }}>
+                    <textarea
+                        className={utilStyles.textfield}
+                        style={{
+                            height: '400px',
+                            fontFamily: 'monospace',
+                            whiteSpace: 'pre',
+                            backgroundColor: '#1e1e1e',
+                            color: '#d4d4d4',
+                            resize: 'vertical',
+                            marginBottom: '10px',
+                            width: '100%',
+                            boxSizing: 'border-box'
+                        }}
+                        value={content || ""}
+                        onChange={(e) => setContent(e.target.value)}
+                        placeholder="Loading..."
+                    />
+                    <Flexbox>
+                        <FlexItem type="max"></FlexItem>
+                        <FlexItem>
+                            <Button text="Save Properties" color="success" onClick={handleSave} disabled={loading} icon={<IconSave />} />
+                        </FlexItem>
+                    </Flexbox>
+                </div>
+            )}
+        </div>
+    );
+}
+
 export default function MinecraftCurseForgeUI(props) {
     const {
         plugin: initialPlugin,
         botId,
         projectAlias,
-        mutatePlugins, // Function to refresh the list of all plugins
+        mutatePlugins,
         openFromStart
     } = props;
 
-    // Local state for UI
     const [open, setOpen] = useState(openFromStart);
     const [infoMessage, setInfoMessage] = useState("");
     const [deleteWindow, setDeleteWindow] = useState(false);
-    const [commandInput, setCommandInput] = useState("");
 
     const {
+        data: pluginWrapper,
+        mutate: mutatePlugin
+    } = useSWR(
+        projectAlias
+            ? ['/api/plugins/botRequest', { botId: botId, command: "getOnePlugin", projectAlias: projectAlias, pluginId: initialPlugin.pluginId }]
+            : null,
+        getApiFetcher()
+    );
+
+    const plugin = pluginWrapper?.data || initialPlugin;
+
+    // Fetch Status (Running Processes)
+    const {
         data: statusData,
-        error: statusError
+        mutate: mutateStatus
     } = useSWR(
         projectAlias ? ['/api/plugins/botRequest', {
             botId: botId,
@@ -56,23 +300,7 @@ export default function MinecraftCurseForgeUI(props) {
         { refreshInterval: 2000 }
     );
 
-    const isOnline = statusData?.response?.status === "Online";
-
-    // Console logs fetching
-    const {
-        data: consoleData
-    } = useSWR(
-        projectAlias ? ['/api/plugins/botRequest', {
-            botId: botId,
-            command: "pluginApi",
-            pluginTag: initialPlugin.pluginTag,
-            apiEndpoint: "getConsole",
-            pluginId: initialPlugin.pluginId,
-            projectAlias: projectAlias
-        }] : null,
-        getApiFetcher(),
-        { refreshInterval: 2000 }
-    );
+    const runningProcesses = statusData?.response?.runningProcesses || [];
 
     // Fetch Executables
     const {
@@ -89,27 +317,6 @@ export default function MinecraftCurseForgeUI(props) {
         }] : null,
         getApiFetcher()
     );
-
-    const consoleRef = useRef(null);
-    useEffect(() => {
-        if (consoleRef.current) {
-            consoleRef.current.scrollTop = consoleRef.current.scrollHeight;
-        }
-    }, [consoleData]);
-
-    const {
-        data: pluginWrapper,
-        mutate: mutatePlugin
-    } = useSWR(
-        projectAlias
-            ? ['/api/plugins/botRequest', { botId: botId, command: "getOnePlugin", projectAlias: projectAlias, pluginId: initialPlugin.pluginId }]
-            : null,
-        getApiFetcher()
-    );
-
-    if (!pluginWrapper) return <div>Loading Plugin Data...</div>;
-
-    const plugin = pluginWrapper.data;
 
     const editPlugin = async (key, value, arrayId, arrayKey, command) => {
         let newPlugin = plugin;
@@ -147,7 +354,7 @@ export default function MinecraftCurseForgeUI(props) {
         mutatePlugin();
     };
 
-    const handleButtonClick = async (action, additionalData = {}) => {
+    const handleGeneralAction = async (action, additionalData = {}) => {
         let returnValue = await apiFetcher('/plugins/botRequest', {
             botId: botId,
             command: "pluginApi",
@@ -159,19 +366,16 @@ export default function MinecraftCurseForgeUI(props) {
         }).then(async (data) => {
             return (await data.json()).response
         });
-        mutatePlugin();
+        if (action === 'verschieben' && returnValue?.saved) {
+            await mutatePlugin(current => ({ ...current, data: { ...current.data, var: { ...current.data.var, setupComplete: true } } }), false);
+            mutateExecutables();
+        }
+        await mutatePlugin();
         setInfoMessage(returnValue);
     };
 
-    const handleExecuteFile = async (filename) => {
-        handleButtonClick('executeFile', { filename });
-    };
 
-    const handleSendCommand = async () => {
-        if (!commandInput) return;
-        await handleButtonClick('sendInput', { input: commandInput });
-        setCommandInput("");
-    };
+    if (!pluginWrapper) return <div>Loading Plugin Data...</div>;
 
     return (
         <>
@@ -273,24 +477,20 @@ export default function MinecraftCurseForgeUI(props) {
                     {/* CUSTOM UI CONTENT STARTS HERE */}
                     <div className={utilStyles.pluginContainer}>
 
-                        {/* Server Selection */}
-                        <div style={{ marginBottom: '20px', padding: '10px', border: '1px solid #333', borderRadius: '5px' }}>
-                            <h3 style={{ marginBottom: '10px' }}>Server Configuration</h3>
-                            <InputServer
-                                editPlugin={editPlugin}
-                                mutatePluginsWrapper={mutatePlugin}
-                                botId={botId}
-                                pluginId={initialPlugin.pluginId}
-                                databaseObject={plugin.var}
-                                databasename="server"
-                                block={{ description: "Select Server", type: "alone", name: "server_block" }}
-                                field={{ name: "server" }}
-                            />
-                        </div>
-
                         {/* File Upload */}
                         <div style={{ marginBottom: '20px', padding: '10px', border: '1px solid #333', borderRadius: '5px' }}>
-                            <h3 style={{ marginBottom: '10px' }}>Upload File</h3>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
+                                <h3 style={{ margin: 0 }}>Upload File</h3>
+                                <div style={{
+                                    padding: '5px 10px',
+                                    borderRadius: '5px',
+                                    backgroundColor: plugin.var.setupComplete ? '#2ecc71' : '#e74c3c',
+                                    color: 'white',
+                                    fontWeight: 'bold'
+                                }}>
+                                    {plugin.var.setupComplete ? 'Eingerichtet' : 'Noch nicht eingerichtet'}
+                                </div>
+                            </div>
                             <InputFile
                                 editPlugin={editPlugin}
                                 mutatePlugin={mutatePlugin}
@@ -300,109 +500,65 @@ export default function MinecraftCurseForgeUI(props) {
                                 databasename="file"
                                 block={{ description: "File Upload", type: "alone", name: "file_block" }}
                             />
-                        </div>
-
-                        {/* Owner OP Name */}
-                        <div style={{ marginBottom: '20px', padding: '10px', border: '1px solid #333', borderRadius: '5px' }}>
-                            <h3 style={{ marginBottom: '10px' }}>Owner Ingame Name</h3>
-                            <InputText
-                                editPlugin={editPlugin}
-                                mutatePluginsWrapper={mutatePlugin}
-                                botId={botId}
-                                pluginId={initialPlugin.pluginId}
-                                databaseObject={plugin.var}
-                                databasename="op"
-                                block={{ description: "Owner Name", type: "alone", name: "op_block" }}
-                                fieldoptions={{}}
-                            />
-                        </div>
-
-                        {/* Executables List */}
-                        <div style={{ marginBottom: '20px', padding: '10px', border: '1px solid #333', borderRadius: '5px' }}>
-                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
-                                <h3 style={{ margin: 0 }}>Executables</h3>
-                                <Button text="Refresh" onClick={() => mutateExecutables()} />
+                            <div style={{ marginTop: '10px' }}>
+                                <Button text="Einrichten" color="color" onClick={() => handleGeneralAction('verschieben')} />
                             </div>
-
-                            <Flexbox>
-                                {executablesData?.response?.files?.length > 0 ? (
-                                    executablesData.response.files.map((file, i) => (
-                                        <FlexItem key={i}>
-                                            <Button text={file} color="success" onClick={() => handleExecuteFile(file)} />
-                                        </FlexItem>
-                                    ))
-                                ) : (
-                                    <div style={{ padding: '10px' }}>No executable files found (.sh, .ps1, .bat)</div>
-                                )}
-                            </Flexbox>
                         </div>
 
-                        {/* Actions */}
-                        <div style={{ marginBottom: '20px', padding: '10px', border: '1px solid #333', borderRadius: '5px' }}>
-                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
-                                <h3 style={{ margin: 0 }}>Actions</h3>
-                                {/* Status Indicator */}
-                                <div style={{
-                                    padding: '5px 10px',
-                                    borderRadius: '5px',
-                                    backgroundColor: isOnline ? '#2ecc71' : '#e74c3c',
-                                    color: 'white',
-                                    fontWeight: 'bold'
-                                }}>
-                                    Status: {isOnline ? 'Online' : 'Offline'}
-                                </div>
-                            </div>
-                            <Flexbox>
-                                <FlexItem>
-                                    <Button text="Verschieben" color="color" onClick={() => handleButtonClick('verschieben')} />
-                                </FlexItem>
-                                <FlexItem type="spaceLeft">
-                                    <Button text="Stop Server" color="delete" onClick={() => handleButtonClick('stopServer')} />
-                                </FlexItem>
-                                <FlexItem type="spaceLeft">
-                                    <Button text="Kill Process" color="delete" onClick={() => handleButtonClick('stopServer')} />
-                                </FlexItem>
-                            </Flexbox>
-                        </div>
-
-                        {/* Console */}
-                        <div style={{ marginBottom: '20px', padding: '10px', border: '1px solid #333', borderRadius: '5px' }}>
-                            <h3 style={{ marginBottom: '10px' }}>Server Console (Last 50 lines)</h3>
-                            <textarea
-                                ref={consoleRef}
-                                className={utilStyles.textfield} // reusing textfield styles
-                                style={{
-                                    height: '300px',
-                                    fontFamily: 'monospace',
-                                    whiteSpace: 'pre-wrap',
-                                    backgroundColor: '#1e1e1e',
-                                    color: '#d4d4d4',
-                                    resize: 'vertical',
-                                    marginBottom: '10px'
-                                }}
-                                value={consoleData?.response ?? "Loading logs..."}
-                                readOnly
-                            />
-
-                            {/* Input Field for Console */}
-                            <Flexbox>
-                                <FlexItem type="max">
-                                    <input
-                                        type="text"
-                                        className={utilStyles.textfield}
-                                        value={commandInput}
-                                        onChange={(e) => setCommandInput(e.target.value)}
-                                        onKeyDown={(e) => { if (e.key === 'Enter') handleSendCommand() }}
-                                        placeholder="Send command to server..."
+                        {plugin.var?.setupComplete && (
+                            <>
+                                {/* Owner OP Name */}
+                                <div style={{ marginBottom: '20px', padding: '10px', border: '1px solid #333', borderRadius: '5px' }}>
+                                    <h3 style={{ marginBottom: '10px' }}>Owner Ingame Name</h3>
+                                    <InputText
+                                        editPlugin={editPlugin}
+                                        mutatePluginsWrapper={mutatePlugin}
+                                        botId={botId}
+                                        pluginId={initialPlugin.pluginId}
+                                        databaseObject={plugin.var}
+                                        databasename="op"
+                                        block={{ description: "Owner Name", type: "alone", name: "op_block" }}
+                                        fieldoptions={{}}
                                     />
-                                </FlexItem>
-                                <FlexItem>
-                                    <Button text="Send" color="color" onClick={handleSendCommand} />
-                                </FlexItem>
-                            </Flexbox>
-                        </div>
+                                </div>
+
+                                {/* Programs Lists */}
+                                <div style={{ marginBottom: '20px', padding: '10px', border: '1px solid #333', borderRadius: '5px' }}>
+                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
+                                        <h3 style={{ margin: 0 }}>Programs & Executables</h3>
+                                        <Button text="Refresh List" onClick={() => mutateExecutables()} />
+                                    </div>
+
+                                    {executablesData?.response?.files?.length > 0 ? (
+                                        executablesData.response.files.map((file, i) => (
+                                            <ProcessControl
+                                                key={file}
+                                                filename={file}
+                                                isRunning={runningProcesses.includes(file)}
+                                                botId={botId}
+                                                projectAlias={projectAlias}
+                                                pluginId={initialPlugin.pluginId}
+                                                pluginTag={plugin.pluginTag}
+                                                setGlobalInfoMessage={setInfoMessage}
+                                            />
+                                        ))
+                                    ) : (
+                                        <div style={{ padding: '10px', color: '#888' }}>
+                                            No executable files found (.sh, .ps1, .bat). Upload a zip with executables inside.
+                                        </div>
+                                    )}
+                                </div>
+
+                                <ServerPropertiesEditor
+                                    botId={botId}
+                                    projectAlias={projectAlias}
+                                    pluginId={initialPlugin.pluginId}
+                                    pluginTag={plugin.pluginTag}
+                                    setGlobalInfoMessage={setInfoMessage}
+                                />
+                            </>
+                        )}
                     </div>
-                    {/* CUSTOM UI CONTENT ENDS HERE */}
                 </div>
             </PopupBoxSmall>
         </>

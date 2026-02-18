@@ -10,29 +10,33 @@ module.exports = async function (client, plugin, config, projectAlias, data) {
         return status;
     }
 
-    const targetFolderPath = path.join(__dirname, '../../../', 'MinecraftCurseForge', projectAlias, plugin.botId, plugin.id);
-    const isWindows = process.platform === 'win32';
-    const scriptName = isWindows ? 'run.ps1' : 'run.sh';
-    const scriptPath = path.join(targetFolderPath, scriptName);
+    const { filename } = data;
 
-    if (!fs.existsSync(scriptPath)) {
-        console.error(`❌ ${scriptName} fehlt unter: ${scriptPath}`);
-        return { saved: false, error: `${scriptName} fehlt` };
+    if (!filename) {
+        return { saved: false, infoMessage: "No file specified.", infoStatus: "Error" };
     }
 
-    const mcProcess = plugin.mcProcess; // Get process from plugin object
+    if (!plugin.processes || !plugin.processes[filename]) {
+        return { saved: false, infoMessage: `No running process found for ${filename}`, infoStatus: "Warning" };
+    }
 
-    console.log("🛑 Versuche Server zu stoppen...");
-    //console.log(mcProcess);
+    const mcProcess = plugin.processes[filename];
+    const isWindows = process.platform === 'win32';
+
+    console.log(`🛑 Versuche Prozess ${filename} zu stoppen...`);
 
     if (mcProcess && !mcProcess.killed) {
-        // Stop command
-        mcProcess.stdin.write('stop\n');
+        // Stop command (graceful attempt)
+        try {
+            mcProcess.stdin.write('stop\n');
+        } catch (e) {
+            console.warn(`Could not write stop to ${filename}:`, e);
+        }
 
         // Timeout
         setTimeout(() => {
             if (mcProcess && !mcProcess.killed) {
-                console.log('⏱️ Prozess lebt noch – erzwinge Beendigung...');
+                console.log(`⏱️ Prozess ${filename} lebt noch – erzwinge Beendigung...`);
                 if (isWindows) {
                     spawn('taskkill', ['/PID', mcProcess.pid.toString(), '/T', '/F']);
                 } else {
@@ -48,9 +52,13 @@ module.exports = async function (client, plugin, config, projectAlias, data) {
             }
         }, 10000);
 
-        return { saved: true, infoMessage: "Stop-Befehl gesendet", infoStatus: "Info" };
+        return { saved: true, infoMessage: `Stop-Befehl an ${filename} gesendet`, infoStatus: "Info" };
     } else {
-        console.warn("⚠️ Kein laufender Minecraft-Prozess gefunden.");
-        return { saved: false, infoMessage: "Kein laufender Server gefunden", infoStatus: "Warning" };
+        console.warn(`⚠️ Prozess ${filename} scheint nicht mehr zu laufen.`);
+        // Cleanup just in case
+        if (plugin.processes && plugin.processes[filename]) {
+            delete plugin.processes[filename];
+        }
+        return { saved: false, infoMessage: "Prozess läuft nicht mehr", infoStatus: "Warning" };
     }
 }
