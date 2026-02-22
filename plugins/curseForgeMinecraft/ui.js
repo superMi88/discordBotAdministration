@@ -507,20 +507,7 @@ export default function MinecraftCurseForgeUI(props) {
 
                         {plugin.var?.setupComplete && (
                             <>
-                                {/* Owner OP Name */}
-                                <div style={{ marginBottom: '20px', padding: '10px', border: '1px solid #333', borderRadius: '5px' }}>
-                                    <h3 style={{ marginBottom: '10px' }}>Owner Ingame Name</h3>
-                                    <InputText
-                                        editPlugin={editPlugin}
-                                        mutatePluginsWrapper={mutatePlugin}
-                                        botId={botId}
-                                        pluginId={initialPlugin.pluginId}
-                                        databaseObject={plugin.var}
-                                        databasename="op"
-                                        block={{ description: "Owner Name", type: "alone", name: "op_block" }}
-                                        fieldoptions={{}}
-                                    />
-                                </div>
+
 
                                 {/* Programs Lists */}
                                 <div style={{ marginBottom: '20px', padding: '10px', border: '1px solid #333', borderRadius: '5px' }}>
