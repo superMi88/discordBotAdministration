@@ -54,7 +54,7 @@ async function discordBot() {
     await DatabaseManager.create(botStruct.projectAlias)
 
     let db = DatabaseManager.get()
-    
+
 
     ipc.config.id = 'discordBot' + botStruct.clientId;
     ipc.config.retry = 1500;
@@ -73,6 +73,12 @@ async function discordBot() {
 
     }));
     ipc.server.start();
+
+    // Kill this bot process if the parent process (index.js) dies/disconnects
+    process.on('disconnect', () => {
+        console.log(`[Bot ${botStruct.clientId}] Parent disconnected! Exiting process...`);
+        process.exit(0);
+    });
 
     process.on('message', async (data) => {
         //console.log('Message from parent:', data.command);
@@ -120,7 +126,7 @@ async function discordBot() {
 
 async function createClient(db) {
 
-    
+
     //add all Intents
     const myIntents = new IntentsBitField()
     myIntents.add(
@@ -156,8 +162,8 @@ async function createClient(db) {
     require("./error_handler.js")(client, db)
 
 
-    
-    
+
+
 
     client.on('ready', async () => {
 
@@ -170,61 +176,62 @@ async function createClient(db) {
 
         let allUserInDatabase = await collection.find({}).toArray()
 
-        
+
 
 
         OAuth2GuildArray.forEach(async (OAuth2Guild) => {
             let guild = await OAuth2Guild.fetch()
             let memberArray = await guild.members.fetch()
 
-            let isOnServer = async function (){
+            let isOnServer = async function () {
 
                 for (const databaseUser of allUserInDatabase) {
-                    
-        
+
+
                     let x = false
                     for (const member of memberArray) {
-                        
-                        if(member[1].user.id === databaseUser.discordId){
+
+                        if (member[1].user.id === databaseUser.discordId) {
                             x = true
                         }
                     }
 
-                    if(!x){
+                    if (!x) {
                         const collection = db.collection('userCollection');
                         var ObjectId = require('mongodb').ObjectId;
-    
+
                         let result = await collection.findOneAndUpdate(
-                            { discordId: databaseUser.discordId, ["guilds.guildId"]: guild.id},
-                            {$set: {["guilds.$.onServer"]: false}}
+                            { discordId: databaseUser.discordId, ["guilds.guildId"]: guild.id },
+                            { $set: { ["guilds.$.onServer"]: false } }
                         );
-    
-                        if(result.value === null){
+
+                        if (result.value === null) {
                             let result = await collection.findOneAndUpdate(
-                                { discordId: databaseUser.discordId},
-                                {$push: {
-                                    ["guilds"]: {
-                                        guildId: guild.id,
-                                        onServer: false
+                                { discordId: databaseUser.discordId },
+                                {
+                                    $push: {
+                                        ["guilds"]: {
+                                            guildId: guild.id,
+                                            onServer: false
+                                        }
                                     }
-                                }
                                 }
                             );
                         }
                     }
                 }//)
 
-                
+
             }
 
             let boolIsOnServer = await isOnServer()
 
             memberArray.forEach(async (member) => {
-                if(!member.user.bot){
+                if (!member.user.bot) {
 
                     //console.log(member)
-                    
-                    if(member.user){
+
+                    if (member.user) {
 
                         let newUser = await member.user.fetch()
                         await userUpdate(newUser, db)
@@ -244,14 +251,14 @@ async function createClient(db) {
 
         //PluginManager muss bereits erstellt sein
         await PluginManager.reloadSlashCommands()
-		await PluginManager.reloadEvents()
+        await PluginManager.reloadEvents()
 
     });
 
     client.on('userUpdate', async (oldUser, newUser) => {
 
         //force fetch to get banner
-        if(newUser.user){
+        if (newUser.user) {
 
             newUser = await newUser.user.fetch()
             await userUpdate(newUser, db)
@@ -273,7 +280,7 @@ async function createClient(db) {
     });
 
 
-    
+
 
     return client;
 }
@@ -284,21 +291,22 @@ async function guildMemberUpdate(newMember, db, onServer) {
     var ObjectId = require('mongodb').ObjectId;
 
     let result = await collection.findOneAndUpdate(
-        { discordId: newMember.user.id, ["guilds.guildId"]: newMember.guild.id},
-        {$set: {["guilds.$.nickname"]: newMember.nickname, ["guilds.$.onServer"]: onServer}},
+        { discordId: newMember.user.id, ["guilds.guildId"]: newMember.guild.id },
+        { $set: { ["guilds.$.nickname"]: newMember.nickname, ["guilds.$.onServer"]: onServer } },
     );
 
-    if(result.value === null){
-        
+    if (result.value === null) {
+
         let result = await collection.findOneAndUpdate(
-            { discordId: newMember.user.id},
-            {$push: {
-                ["guilds"]: {
-                    guildId: newMember.guild.id,
-                    nickname: newMember.nickname,
-                    onServer: onServer
+            { discordId: newMember.user.id },
+            {
+                $push: {
+                    ["guilds"]: {
+                        guildId: newMember.guild.id,
+                        nickname: newMember.nickname,
+                        onServer: onServer
+                    }
                 }
-            }
             }
         );
 
@@ -313,14 +321,16 @@ async function userUpdate(newUser, db) {
 
     let result = await collection.updateOne(
         { discordId: newUser.id },
-        { $set: { 
-            username: newUser.username,
-            globalName: newUser.globalName,
-            discriminator: newUser.discriminator,
-            avatar: newUser.avatar,
-            banner: newUser.banner,
-            accentColor: newUser.accentColor
-        } },
+        {
+            $set: {
+                username: newUser.username,
+                globalName: newUser.globalName,
+                discriminator: newUser.discriminator,
+                avatar: newUser.avatar,
+                banner: newUser.banner,
+                accentColor: newUser.accentColor
+            }
+        },
         { upsert: true }
     );
 
@@ -354,7 +364,7 @@ async function saveLiaDaten(id, username, discriminator, avatar, token, ownerId,
                 token: token
             }
         )
-        
+
         log.write("Bot Information added")
 
     } else {

@@ -9,8 +9,8 @@ module.exports = {
     {
       name: 'discordBot',
       cwd: './',
-      script: 'npm',
-      args: 'run bot:dev',
+      script: 'discordBot/index.js',
+      node_args: '--max-old-space-size=8192 --no-warnings',
     },
   ],
 };
