@@ -840,6 +840,8 @@ module.exports = {
             }
         })
 
+        await ExtensionManager.onBerryCollected(interaction.client, plugin, interaction, db, discordUserId, collectedBerrysWithBonus);
+
         await interaction.reply({ content: '<@' + interaction.user.id + '> hat ' + collectedBerrys + ' Beeren geerntet' + roleText + boosterText })
     },
 
