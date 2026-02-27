@@ -210,6 +210,23 @@ module.exports = {
 		},
 		{
 			type: "alone", //definiert wie die felder heißen text und icon
+			description: "Kategorie für das Freundschaftsevent",
+			fields: [
+				{  //name abhängig von type
+					type: "channel", //definiert wie die felder heißen text und icon
+					name: "eventCategory", //datenbank name
+					options: { //nicht vorhanden = false
+						voice: false,
+						text: false,
+						category: true
+					},
+					required: true,
+					//optionen für das text feld
+				}
+			]
+		},
+		{
+			type: "alone", //definiert wie die felder heißen text und icon
 			description: "eventChannel",
 			fields: [
 				{  //name abhängig von type
