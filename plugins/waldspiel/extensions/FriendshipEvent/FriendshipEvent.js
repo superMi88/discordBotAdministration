@@ -5,18 +5,49 @@ const sharp = require('sharp');
 const axios = require('axios');
 
 class FriendshipEvent {
-    isExtensionActive() {
-        return true; // Testweise immer aktiv
+    isExtensionActive(plugin) {
+        if (plugin && plugin['var'] && plugin['var'].eventFreundschaft === false) {
+            return false;
+        }
+
+        const now = new Date();
+        const month = now.getMonth(); // 0-indexed, 2 = März
+        const date = now.getDate(); // 1-31
+
+        // Event läuft nur im März (2) zwischen dem 1. und 7. Tag der ersten Woche
+        return month === 2 && date >= 1 && date <= 7;
     }
 
     async preExecute(client, plugin) {
-        if (!this.isExtensionActive()) return;
-        console.log('[FriendshipEvent-Extension] started');
-        await this.initEventChannel(client, plugin);
+        console.log('[FriendshipEvent-Extension] checked event channel');
+        await this.checkAndHandleEventChannel(client, plugin);
     }
 
     async onDailyTick(client, plugin, db) {
-        if (!this.isExtensionActive()) return;
+        await this.checkAndHandleEventChannel(client, plugin);
+    }
+
+    async checkAndHandleEventChannel(client, plugin) {
+        if (!this.isExtensionActive(plugin)) {
+            let guildId = plugin['var'].server;
+            if (!guildId) return;
+
+            let guild = client.guilds.cache.get(guildId);
+            if (!guild) return;
+
+            let channelName = "freundschaftsevent";
+            let channel = guild.channels.cache.find(c => c.name === channelName);
+
+            if (channel) {
+                try {
+                    await channel.delete();
+                    console.log("[FriendshipEvent] Event beendet. Channel gelöscht.");
+                } catch (err) {
+                    console.error("Fehler beim Löschen des Freundschaftsevent Channels:", err);
+                }
+            }
+            return;
+        }
         await this.initEventChannel(client, plugin);
     }
 
@@ -119,7 +150,7 @@ class FriendshipEvent {
     }
 
     async onInteraction(interaction, client, plugin, db) {
-        if (!this.isExtensionActive()) return;
+        if (!this.isExtensionActive(plugin)) return;
 
         const isButton = (customId, target) => customId === target || customId.startsWith(target + "-");
 
@@ -235,7 +266,7 @@ class FriendshipEvent {
     }
 
     async onBerryCollected(client, plugin, interaction, db, discordUserId, amount) {
-        if (!this.isExtensionActive()) return;
+        if (!this.isExtensionActive(plugin)) return;
 
         let discordUserDatabase = await getUserCurrencyFromDatabase(discordUserId, db);
         if (!discordUserDatabase) return;
