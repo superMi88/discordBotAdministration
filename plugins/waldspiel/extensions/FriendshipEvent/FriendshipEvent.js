@@ -33,10 +33,15 @@ class FriendshipEvent {
 
         if (!channel) {
             try {
-                // Finde Parent ID vom Postchannel
-                let postChannelId = plugin['var'].postChannel;
-                let postChannel = guild.channels.cache.get(postChannelId);
-                let parentId = postChannel ? postChannel.parentId : null;
+                // Finde Parent ID von der Event Kategorie oder Fallback vom Postchannel
+                let parentId = null;
+                if (plugin['var'].eventCategory) {
+                    parentId = plugin['var'].eventCategory;
+                } else {
+                    let postChannelId = plugin['var'].postChannel;
+                    let postChannel = guild.channels.cache.get(postChannelId);
+                    parentId = postChannel ? postChannel.parentId : null;
+                }
 
                 channel = await guild.channels.create({
                     name: channelName,
@@ -62,16 +67,23 @@ class FriendshipEvent {
         // Bild erstellen
         let mergeArray = [];
         try {
-            let emptyAnimal = await sharp('plugins/waldspiel/images/tiere/Empty.png').resize(200).toBuffer();
-            mergeArray.push({ input: emptyAnimal, left: 100, top: 50 });
+            let emptyAnimal = await sharp('plugins/waldspiel/images/tiere/Empty.png').resize(160).toBuffer();
 
-            // Item, fangen falls es nicht existiert (wird später implementiert/auf dem server abgelegt)
+            // Linkes Tier (Yin)
+            mergeArray.push({ input: emptyAnimal, left: 45, top: 60 });
             try {
-                let itemImage = await sharp('./plugins/waldspiel/extensions/FriendshipEvent/images/friendship_item.png').resize(200).toBuffer();
-                mergeArray.push({ input: itemImage, left: 100, top: 50 });
+                let itemImageYin = await sharp('./plugins/waldspiel/extensions/FriendshipEvent/images/friendship_item_yin.png').resize(160).toBuffer();
+                mergeArray.push({ input: itemImageYin, left: 45, top: 60 });
             } catch (ignore) { }
 
-            await sharp('plugins/waldspiel/images/itemBackground.png') // ein background
+            // Rechtes Tier (Yang)
+            mergeArray.push({ input: emptyAnimal, left: 195, top: 60 });
+            try {
+                let itemImageYang = await sharp('./plugins/waldspiel/extensions/FriendshipEvent/images/friendship_item_yang.png').resize(160).toBuffer();
+                mergeArray.push({ input: itemImageYang, left: 195, top: 60 });
+            } catch (ignore) { }
+
+            await sharp('./plugins/waldspiel/extensions/FriendshipEvent/images/friendship_background.png') // ein background
                 .resize(400, 300)
                 .composite(mergeArray)
                 .toFile('temp/friendshipevent.png');
@@ -142,9 +154,9 @@ class FriendshipEvent {
                     if (avatarUrl) {
                         let avatarRes = await axios.get(avatarUrl, { responseType: 'arraybuffer' });
                         roundedAvatar = await sharp(Buffer.from(avatarRes.data))
-                            .resize(50, 50)
+                            .resize(24, 24)
                             .composite([{
-                                input: Buffer.from('<svg xmlns="http://www.w3.org/2000/svg" width="50" height="50"><circle cx="25" cy="25" r="25" fill="white" /></svg>'),
+                                input: Buffer.from('<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24"><circle cx="12" cy="12" r="12" fill="white" /></svg>'),
                                 blend: 'dest-in'
                             }])
                             .png()
@@ -154,31 +166,40 @@ class FriendshipEvent {
                     roundedAvatar = null;
                 }
 
-                let svg = `<svg width="550" height="130" xmlns="http://www.w3.org/2000/svg">
-                    <text x="${roundedAvatar ? 85 : 20}" y="42" fill="#ffffff" font-size="20" font-family="Arial" font-weight="bold">Event-Partner: ${friendName}</text>
-                    <!-- Foreground bar (progress) mapped to 530px maximum width -->
-                    <rect x="10" y="90" width="${5.3 * percent}" height="30" fill="#E84545" rx="10"/>
-                    <text x="275" y="111" fill="#ffffff" font-size="16" font-family="Arial" text-anchor="middle" font-weight="bold">${currentPoints} / ${maxPoints}</text>
+                let progressSvg = `<svg width="400" height="100" xmlns="http://www.w3.org/2000/svg">
+                    <!-- Foreground bar (progress) mapped to 380px maximum width -->
+                    <rect x="10" y="60" width="${3.8 * percent}" height="30" fill="#E84545"/>
                 </svg>`;
 
-                let compositeArr = [
-                    { input: './plugins/waldspiel/extensions/FriendshipEvent/images/background_progressbar.png', left: 0, top: 80 }
-                ];
+                let textSvg = `<svg width="400" height="100" xmlns="http://www.w3.org/2000/svg">
+                    <text x="15" y="24" fill="#ffffff" font-size="14" font-family="Arial" font-weight="bold">Event Partner</text>
+                    <text x="${roundedAvatar ? 150 : 120}" y="24" fill="#ffffff" font-size="14" font-family="Arial" font-weight="bold">${friendName}</text>
+                    <text x="15" y="48" fill="#ffffff" font-size="14" font-family="Arial" font-weight="normal">Geteilte Beeren mit einem Freund</text>
+                    <text x="200" y="81" fill="#ffffff" font-size="16" font-family="Arial" text-anchor="middle" font-weight="bold">${currentPoints} / ${maxPoints}</text>
+                </svg>`;
 
-                if (roundedAvatar) {
-                    compositeArr.push({ input: roundedAvatar, left: 20, top: 15 });
+                let compositeArr = [];
+
+                // 1. Progress Bar Balken (ohne Rundungen)
+                compositeArr.push({ input: Buffer.from(progressSvg), left: 0, top: 0 });
+
+                // 2. Overlay Bild
+                const overlayPath = './plugins/waldspiel/extensions/FriendshipEvent/images/background_progressbar_overlay.png';
+                if (require('fs').existsSync(overlayPath)) {
+                    let overlayBuffer = await sharp(overlayPath).resize(400, 100, { fit: 'fill' }).png().toBuffer();
+                    compositeArr.push({ input: overlayBuffer, left: 0, top: 0 });
                 }
 
-                compositeArr.push({ input: Buffer.from(svg), left: 0, top: 0 });
+                // 3. Profilbild
+                if (roundedAvatar) {
+                    compositeArr.push({ input: roundedAvatar, left: 120, top: 8 });
+                }
 
-                await sharp({
-                    create: {
-                        width: 550,
-                        height: 140, // Platz nach unten und oben
-                        channels: 4,
-                        background: { r: 0, g: 0, b: 0, alpha: 0 }
-                    }
-                })
+                // 4. Texte (Name und Punkte)
+                compositeArr.push({ input: Buffer.from(textSvg), left: 0, top: 0 });
+
+                await sharp('./plugins/waldspiel/extensions/FriendshipEvent/images/background_progressbar.png')
+                    .resize(400, 100, { fit: 'fill' })
                     .composite(compositeArr)
                     .toFile('temp/friendshipprogress.png');
 
@@ -241,22 +262,32 @@ class FriendshipEvent {
                 $set: { ["currency.friendshipEventPoints"]: newPoints }
             });
 
-            // Grant item if reaching 200
+            // Grant items if reaching 200
             if (currentEventPoints < 200 && newPoints >= 200) {
                 let itemlist = discordUserDatabase.itemlist;
                 if (!itemlist) itemlist = [];
 
-                let itemId = 'FRIENDSHIP_CROWN'; // Wichtig: Dieses Item sollte existieren
+                let itemIdYin = 'FRIENDSHIP_YIN';
+                let itemIdYang = 'FRIENDSHIP_YANG';
+                let updated = false;
 
-                if (!itemlist.includes(itemId)) {
-                    itemlist.push(itemId);
+                if (!itemlist.includes(itemIdYin)) {
+                    itemlist.push(itemIdYin);
+                    updated = true;
+                }
+                if (!itemlist.includes(itemIdYang)) {
+                    itemlist.push(itemIdYang);
+                    updated = true;
+                }
+
+                if (updated) {
                     await updateUserFromDatabase(db, discordUserId, {
                         $set: { ["currency.itemlist"]: itemlist }
                     });
 
                     try {
                         let userOption = await client.users.fetch(discordUserId);
-                        userOption.send("Du hast 200 Punkte beim Freundschaftsevent erreicht und ein neues Kleidungsstück erhalten!");
+                        userOption.send("Du hast 200 Punkte beim Freundschaftsevent erreicht und ZWEI neue Kleidungsstücke erhalten (Yin & Yang)!");
                     } catch (ignore) { }
                 }
             }
