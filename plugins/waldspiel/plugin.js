@@ -281,13 +281,13 @@ class Plugin {
 				let discordUserDatabase = await getUserCurrencyFromDatabase(user.id, db)
 
 				if (discordUserDatabase) {
-					await ImageCreator.createMeinWald(discordUserDatabase)
+					let filename = await ImageCreator.createMeinWald(discordUserDatabase)
 
 
 					let postChannel = await client.channels.fetch(plugin['var'].postChannel)
 
 					await postChannel.send({
-						files: ['temp/finalpicture.png'],
+						files: [filename],
 						content: "Wald von <@" + user.id + ">"
 					})
 
@@ -383,6 +383,23 @@ class Plugin {
 				await collection.updateOne(
 					{ _id: ObjectId(animalObjId) },
 					{ $set: { customization: itemId } }
+				);
+
+				await waldspiel.showMeinWald(client, plugin, db, interaction.user, interaction, true)
+
+			}
+
+			if (isButton(interaction, 'selectedAnimation')) {
+				let animalObjId = getButtonParameter(interaction.customId)[1]
+				let animationId = getButtonParameter(interaction.customId)[2]
+
+				if (animationId == "ABBRECHEN") animationId = 0
+
+				const collection = db.collection('animals');
+
+				await collection.updateOne(
+					{ _id: ObjectId(animalObjId) },
+					{ $set: { animation: animationId } }
 				);
 
 				await waldspiel.showMeinWald(client, plugin, db, interaction.user, interaction, true)
@@ -629,58 +646,176 @@ class Plugin {
 				await waldspiel.showMeinWald(client, plugin, db, interaction.user, interaction, true)
 			}
 
-			//setCustomization-idPlazierung-offsetItemliste
+			//setCustomization-idPlazierung-page
 			if (isButton(interaction, 'setCustomization')) {
 				let animalObjId = getButtonParameter(interaction.customId)[1]
-				let offset = parseInt(getButtonParameter(interaction.customId)[2])
-
+				let page = parseInt(getButtonParameter(interaction.customId)[2]) || 0;
 
 				let discordUserId = interaction.user.id
 				let discordUserDatabase = await getUserCurrencyFromDatabase(discordUserId, db)
 
-				let itemliste = discordUserDatabase["itemlist"]
-				if (!itemliste) itemliste = []
+				let ownedItems = discordUserDatabase["itemlist"] || []
 
-				itemliste.unshift("ABBRECHEN")//add item ABBRECHEN first of the array, item 0 means no item
+				const { StringSelectMenuBuilder, StringSelectMenuOptionBuilder } = require('discord.js');
+				let ItemlistObj = require('./obj/ItemList.js');
+				let Itemlist = new ItemlistObj().getListAll();
+				let allItems = Object.keys(Itemlist);
 
+				allItems = allItems.filter(a => a !== "ABBRECHEN");
+				allItems.unshift("ABBRECHEN");
 
-				const sharp = require('sharp')
+				const itemsPerPage = 24;
+				const maxPages = Math.ceil(allItems.length / itemsPerPage);
 
+				if (page < 0) page = maxPages - 1;
+				if (page >= maxPages) page = 0;
 
-				let button1offset = offset - 1
-				if (button1offset < 0) button1offset = itemliste.length - 1
+				let nextOffset = page + 1;
+				if (nextOffset >= maxPages) nextOffset = 0;
+				let prevOffset = page - 1;
+				if (prevOffset < 0) prevOffset = maxPages - 1;
 
-				let button2offset = offset + 1
-				if (button2offset >= itemliste.length) button2offset = 0
+				const startIdx = page * itemsPerPage;
+				const currentItems = allItems.slice(startIdx, startIdx + itemsPerPage);
 
-				const rowItemliste = new ActionRowBuilder()
-					.addComponents(
-						waldspiel.getZuMeinemWaldButton(),
-						new ButtonBuilder()
-							.setCustomId('Button1setCustomization-' + animalObjId + '-' + button1offset)
-							.setLabel('<-')
-							.setStyle(ButtonStyle.Primary),
-						new ButtonBuilder()
-							.setCustomId('selectedCustomization-' + animalObjId + '-' + itemliste[offset]) //hier wieder back zu meinem wald mit dme entsprechenden ausgewälten ding da 
-							.setLabel('Auswählen')
-							.setStyle(ButtonStyle.Primary),
-						new ButtonBuilder()
-							.setCustomId('Button2setCustomization-' + animalObjId + '-' + button2offset)
-							.setLabel('->')
-							.setStyle(ButtonStyle.Primary),
+				let selectMenu = new StringSelectMenuBuilder()
+					.setCustomId('selectCustomizationDropdown-' + animalObjId + '-' + page)
+					.setPlaceholder('Wähle eine Dekoration (Seite ' + (page + 1) + '/' + maxPages + ')')
+					.setMinValues(1)
+					.setMaxValues(1);
+
+				for (let i = 0; i < currentItems.length; i++) {
+					let itemKey = currentItems[i];
+					let itemName = Itemlist[itemKey] ? Itemlist[itemKey].name : "Unknown";
+
+					let isOwned = itemKey === "ABBRECHEN" || ownedItems.includes(itemKey);
+					let label = isOwned ? `${startIdx + i + 1}. ${itemName}` : `🔒 ${startIdx + i + 1}. ${itemName}`;
+
+					selectMenu.addOptions(
+						new StringSelectMenuOptionBuilder()
+							.setLabel(label)
+							.setValue(itemKey)
 					);
+				}
 
-				//.resize(80)
+				const rowDropdown = new ActionRowBuilder().addComponents(selectMenu);
+				let buttons = [waldspiel.getZuMeinemWaldButton()];
 
-				await ImageCreator.createSetCustomization(itemliste, offset)
+				if (maxPages > 1) {
+					buttons.push(
+						new ButtonBuilder()
+							.setCustomId('setCustomization-' + animalObjId + '-' + prevOffset)
+							.setLabel('<- Vorherige Seite')
+							.setStyle(ButtonStyle.Primary),
+						new ButtonBuilder()
+							.setCustomId('setCustomization-' + animalObjId + '-' + nextOffset)
+							.setLabel('Nächste Seite ->')
+							.setStyle(ButtonStyle.Primary)
+					);
+				}
+				const rowButtons = new ActionRowBuilder().addComponents(...buttons);
+
+				const outPath = await ImageCreator.createSetCustomization(currentItems, ownedItems, startIdx);
 
 				return await interaction.update({
-					files: ['temp/finalpicture.png'],
-					components: [rowItemliste],
+					files: [outPath],
+					components: [rowDropdown, rowButtons],
 					ephemeral: true
 				});
+			}
 
+			if (isButton(interaction, 'selectCustomizationDropdown')) {
+				let animalObjId = getButtonParameter(interaction.customId)[1];
+				let page = getButtonParameter(interaction.customId)[2];
+				let itemId = interaction.values[0];
 
+				let discordUserId = interaction.user.id;
+				let discordUserDatabase = await getUserCurrencyFromDatabase(discordUserId, db);
+				let ownedItems = discordUserDatabase["itemlist"] || [];
+
+				if (itemId !== "ABBRECHEN" && !ownedItems.includes(itemId)) {
+					return await interaction.reply({ content: "Du hast diese Dekoration noch nicht freigeschaltet!", ephemeral: true });
+				}
+
+				if (itemId == "ABBRECHEN") itemId = 0;
+
+				const collection = db.collection('animals');
+				await collection.updateOne(
+					{ _id: ObjectId(animalObjId) },
+					{ $set: { customization: itemId } }
+				);
+
+				await waldspiel.showMeinWald(client, plugin, db, interaction.user, interaction, true);
+			}
+
+			if (isButton(interaction, 'setAnimation')) {
+				let animalObjId = getButtonParameter(interaction.customId)[1]
+
+				let discordUserId = interaction.user.id
+				let discordUserDatabase = await getUserCurrencyFromDatabase(discordUserId, db)
+
+				let animationliste = discordUserDatabase["animationlist"]
+				if (!animationliste) animationliste = ["WACKELN", "ATMEN", "SPRINGEN"] // currently everyone has all basic 3
+
+				// Remove ABBRECHEN if exists so we can unshift cleanly
+				animationliste = animationliste.filter(a => a !== "ABBRECHEN")
+				animationliste.unshift("ABBRECHEN")
+
+				const { StringSelectMenuBuilder, StringSelectMenuOptionBuilder } = require('discord.js');
+				let AnimationListObj = require('./obj/AnimationList.js');
+				let AnimationList = new AnimationListObj().getListAll();
+
+				let selectMenu = new StringSelectMenuBuilder()
+					.setCustomId('selectAnimationDropdown-' + animalObjId)
+					.setPlaceholder('Wähle eine Animation (Maximal 25)')
+					.setMinValues(1)
+					.setMaxValues(1);
+
+				// Discord erlaubt maximal 25 Elemente pro SelectMenu
+				let count = 0;
+				for (let i = 0; i < animationliste.length; i++) {
+					if (count >= 25) break;
+
+					let animKey = animationliste[i];
+					let animName = "Aus / Keine";
+					if (animKey !== "ABBRECHEN" && AnimationList[animKey]) {
+						animName = AnimationList[animKey].name;
+					}
+
+					selectMenu.addOptions(
+						new StringSelectMenuOptionBuilder()
+							.setLabel(`${i + 1}. ${animName}`)
+							.setValue(animKey)
+					);
+					count++;
+				}
+
+				const rowAnimationlist = new ActionRowBuilder().addComponents(selectMenu);
+				const rowBack = new ActionRowBuilder().addComponents(waldspiel.getZuMeinemWaldButton());
+
+				const outPath = await ImageCreator.createSetAnimation(animationliste);
+
+				return await interaction.update({
+					files: [outPath],
+					components: [rowAnimationlist, rowBack],
+					ephemeral: true
+				});
+			}
+
+			if (isButton(interaction, 'selectAnimationDropdown')) {
+				let animalObjId = getButtonParameter(interaction.customId)[1]
+				let animationId = interaction.values[0]
+
+				if (animationId == "ABBRECHEN") animationId = 0
+
+				const collection = db.collection('animals');
+
+				await collection.updateOne(
+					{ _id: ObjectId(animalObjId) },
+					{ $set: { animation: animationId } }
+				);
+
+				await waldspiel.showMeinWald(client, plugin, db, interaction.user, interaction, true)
 			}
 
 			if (isButton(interaction, 'buyItem')) {

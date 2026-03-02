@@ -330,13 +330,13 @@ module.exports = {
             if (shouldUpdate) {
                 if (user.id == interaction.user.id) {
                     return await interaction.update({
-                        files: ['temp/finalpicture.png'],
+                        files: [filename],
                         components: [row1, row2],
                         ephemeral: true
                     });
                 } else {
                     return await interaction.update({
-                        files: ['temp/finalpicture.png'],
+                        files: [filename],
                         ephemeral: true
                     });
                 }
@@ -344,13 +344,13 @@ module.exports = {
             } else {
                 if (user.id == interaction.user.id) {
                     return await interaction.reply({
-                        files: ['temp/finalpicture.png'],
+                        files: [filename],
                         components: [row1, row2],
                         ephemeral: true
                     });
                 } else {
                     return await interaction.reply({
-                        files: ['temp/finalpicture.png'],
+                        files: [filename],
                         ephemeral: true
                     });
                 }
@@ -379,6 +379,7 @@ module.exports = {
             //const currencyIdKarma = pluginOptions.berry //ändern
 
             const row2 = new ActionRowBuilder()
+            let row3 = null;
 
             let animalObjId = discordUserDatabase["animalId" + animalId].toString()
 
@@ -390,17 +391,24 @@ module.exports = {
                         .setLabel('Tier einkleiden')
                         .setStyle(ButtonStyle.Primary),
                     new ButtonBuilder()
+                        .setCustomId('setAnimation-' + animalObjId + '-0')
+                        .setLabel('Tier animieren')
+                        .setStyle(ButtonStyle.Primary),
+                    new ButtonBuilder()
                         .setCustomId('editAnimalName-' + animalObjId)//editAnimalName-animalId
                         .setLabel('Name bearbeiten')
                         .setStyle(ButtonStyle.Primary),
                     new ButtonBuilder()
-                        .setCustomId('sendToStorage-' + animalId)//editAnimalName-animalId
+                        .setCustomId('sendToStorage-' + animalId)
                         .setLabel('In Box schieben')
-                        .setStyle(ButtonStyle.Secondary),
+                        .setStyle(ButtonStyle.Secondary)
+                )
+
+                row3 = new ActionRowBuilder().addComponents(
                     new ButtonBuilder()
-                        .setCustomId('removeAnimal-' + animalObjId)//editAnimalName-animalId
+                        .setCustomId('removeAnimal-' + animalObjId)
                         .setLabel('Tier Freilassen')
-                        .setStyle(ButtonStyle.Danger),
+                        .setStyle(ButtonStyle.Danger)
                 )
             } else {
                 row2.addComponents(
@@ -416,18 +424,21 @@ module.exports = {
 
 
 
-            await ImageCreator.createMeinWaldOneAnimal(discordUserDatabase, animalId)
+            const filename = await ImageCreator.createMeinWaldOneAnimal(discordUserDatabase, animalId)
+
+            let componentsArr = [row2];
+            if (row3) componentsArr.push(row3);
 
             if (shouldUpdate) {
                 return await interaction.update({
-                    files: ['temp/finalpicture.png'],
-                    components: [row2],
+                    files: [filename],
+                    components: componentsArr,
                     ephemeral: true
                 });
             } else {
                 return await interaction.reply({
-                    files: ['temp/finalpicture.png'],
-                    components: [row2],
+                    files: [filename],
+                    components: componentsArr,
                     ephemeral: true
                 });
             }
