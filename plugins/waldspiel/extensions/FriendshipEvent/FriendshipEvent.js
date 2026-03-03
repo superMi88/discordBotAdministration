@@ -256,8 +256,7 @@ class FriendshipEvent {
 
             await updateUserFromDatabase(db, interaction.user.id, {
                 $set: {
-                    ["currency.friendshipSelectedFriend"]: friendId,
-                    ["currency.friendshipEventPoints"]: 0
+                    ["currency.friendshipSelectedFriend"]: friendId
                 }
             });
 
