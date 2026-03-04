@@ -41,13 +41,14 @@ module.exports = async function (client, plugin, config, projectAlias, data) {
 
         fs.mkdirSync(worldPath, { recursive: true });
 
-        entries.forEach(entry => {
+        for (let i = 0; i < entries.length; i++) {
+            const entry = entries[i];
             let relativePath = entry.entryName;
 
             if (hasRootFolder && firstEntryPart) {
                 relativePath = relativePath.slice(firstEntryPart.length + 1);
             }
-            if (!relativePath) return;
+            if (!relativePath) continue;
 
             const fullPath = path.join(worldPath, relativePath);
 
@@ -57,7 +58,18 @@ module.exports = async function (client, plugin, config, projectAlias, data) {
                 fs.mkdirSync(path.dirname(fullPath), { recursive: true });
                 fs.writeFileSync(fullPath, entry.getData());
             }
-        });
+
+            // Update Progress
+            plugin.extractionProgress = Math.round(((i + 1) / entries.length) * 100);
+
+            // Allow event loop to process other requests (e.g. getStatus)
+            if (i % 5 === 0) {
+                await new Promise(resolve => setImmediate(resolve));
+            }
+        }
+
+        // Reset progress when done
+        delete plugin.extractionProgress;
 
         return { saved: true, infoMessage: "Welt erfolgreich hochgeladen und entpackt", infoStatus: "Info" };
     } catch (err) {

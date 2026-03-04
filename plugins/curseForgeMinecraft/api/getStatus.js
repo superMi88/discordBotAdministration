@@ -9,5 +9,8 @@ module.exports = async function (client, plugin, config, projectAlias, data) {
             }
         }
     }
-    return { runningProcesses: running };
+    return {
+        runningProcesses: running,
+        extractionProgress: plugin.extractionProgress || 0
+    };
 }

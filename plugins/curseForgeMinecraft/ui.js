@@ -16,6 +16,10 @@ import IconDelete from '../../website/components/icons/delete.js';
 import IconClose from '../../website/components/icons/close.js';
 import IconPlay from '../../website/components/icons/play.js';
 import IconStop from '../../website/components/icons/stop.js';
+import IconRefresh from '../../website/components/icons/refresh.js';
+import IconPublic from '../../website/components/icons/public.js';
+import IconPublicOff from '../../website/components/icons/publicOff.js';
+import IconDownload from '../../website/components/icons/download.js';
 import PluginName from '../../website/components/pluginComponent/pluginName.js';
 import PopupBoxSmall from '../../website/components/button/popupBoxSmall.js';
 import * as Lib from "../../website/lib/index.js";
@@ -85,7 +89,7 @@ function ProcessControl({ filename, isRunning, botId, projectAlias, pluginId, pl
     };
 
     return (
-        <div style={{ marginBottom: '15px', padding: '10px', border: '1px solid #444', borderRadius: '5px', backgroundColor: '#2a2a2a' }}>
+        <div style={{ margin: '6px', marginBottom: '15px', padding: '10px', border: '1px solid var(--dark4)', borderRadius: '5px', backgroundColor: 'var(--dark1)' }}>
             <Flexbox>
                 <FlexItem type="max">
                     <div style={{ fontWeight: 'bold', color: '#fff' }}>{filename}</div>
@@ -105,9 +109,9 @@ function ProcessControl({ filename, isRunning, botId, projectAlias, pluginId, pl
                 </FlexItem>
                 <FlexItem>
                     {isRunning ? (
-                        <Button icon={<IconStop />} color="delete" onClick={handleStop} />
+                        <Button icon={<IconStop />} color="transparent" onClick={handleStop} />
                     ) : (
-                        <Button icon={<IconPlay />} color="success" onClick={handleStart} />
+                        <Button icon={<IconPlay />} color="transparent" onClick={handleStart} />
                     )}
                 </FlexItem>
                 <FlexItem>
@@ -115,31 +119,33 @@ function ProcessControl({ filename, isRunning, botId, projectAlias, pluginId, pl
                         icon={{ false: <IconExpandMore />, true: <IconExpandLess /> }}
                         state={consoleOpen}
                         onClick={() => setConsoleOpen(!consoleOpen)}
-                        color="light"
-                        text={consoleOpen ? "Hide Console" : "Console"}
+                        color="transparent"
                     />
                 </FlexItem>
             </Flexbox>
 
             {consoleOpen && (
                 <div style={{ marginTop: '10px' }}>
-                    <textarea
-                        ref={consoleRef}
-                        className={utilStyles.textfield}
-                        style={{
-                            height: '200px',
-                            fontFamily: 'monospace',
-                            whiteSpace: 'pre-wrap',
-                            backgroundColor: '#1e1e1e',
-                            color: '#d4d4d4',
-                            resize: 'vertical',
-                            marginBottom: '10px',
-                            width: '100%',
-                            boxSizing: 'border-box'
-                        }}
-                        value={consoleData?.response ?? "Loading logs..."}
-                        readOnly
-                    />
+                    <Flexbox>
+                        <FlexItem type="max">
+                            <textarea
+                                ref={consoleRef}
+                                className={utilStyles.textfield}
+                                style={{
+                                    height: '200px',
+                                    fontFamily: 'monospace',
+                                    whiteSpace: 'pre-wrap',
+                                    backgroundColor: 'var(--input)',
+                                    color: 'var(--white)',
+                                    resize: 'vertical',
+                                    width: '100%',
+                                    boxSizing: 'border-box'
+                                }}
+                                value={consoleData?.response ?? "Loading logs..."}
+                                readOnly
+                            />
+                        </FlexItem>
+                    </Flexbox>
                     <Flexbox>
                         <FlexItem type="max">
                             <input
@@ -211,45 +217,47 @@ function ServerPropertiesEditor({ botId, projectAlias, pluginId, pluginTag, setG
     };
 
     return (
-        <div style={{ marginBottom: '20px', padding: '10px', border: '1px solid #333', borderRadius: '5px' }}>
+        <div style={{ margin: '6px', padding: '10px', border: '1px solid var(--dark4)', borderRadius: '5px', backgroundColor: 'var(--dark2)' }}>
             <Flexbox>
                 <FlexItem type="max">
-                    <h3 style={{ margin: 0 }}>Server Properties</h3>
+                    <h3 style={{ margin: 0, color: '#fff' }}>Server Properties</h3>
                 </FlexItem>
                 <FlexItem>
                     <Button
                         icon={{ false: <IconExpandMore />, true: <IconExpandLess /> }}
                         state={isOpen}
                         onClick={() => setIsOpen(!isOpen)}
-                        color="light"
-                        text={isOpen ? "Hide" : "Edit"}
+                        color="transparent"
                     />
                 </FlexItem>
             </Flexbox>
 
             {isOpen && (
                 <div style={{ marginTop: '10px' }}>
-                    <textarea
-                        className={utilStyles.textfield}
-                        style={{
-                            height: '400px',
-                            fontFamily: 'monospace',
-                            whiteSpace: 'pre',
-                            backgroundColor: '#1e1e1e',
-                            color: '#d4d4d4',
-                            resize: 'vertical',
-                            marginBottom: '10px',
-                            width: '100%',
-                            boxSizing: 'border-box'
-                        }}
-                        value={content || ""}
-                        onChange={(e) => setContent(e.target.value)}
-                        placeholder="Loading..."
-                    />
+                    <Flexbox>
+                        <FlexItem type="max">
+                            <textarea
+                                className={utilStyles.textfield}
+                                style={{
+                                    height: '400px',
+                                    fontFamily: 'monospace',
+                                    whiteSpace: 'pre',
+                                    backgroundColor: 'var(--input)',
+                                    color: 'var(--white)',
+                                    resize: 'vertical',
+                                    width: '100%',
+                                    boxSizing: 'border-box'
+                                }}
+                                value={content || ""}
+                                onChange={(e) => setContent(e.target.value)}
+                                placeholder="Loading..."
+                            />
+                        </FlexItem>
+                    </Flexbox>
                     <Flexbox>
                         <FlexItem type="max"></FlexItem>
                         <FlexItem>
-                            <Button text="Save Properties" color="success" onClick={handleSave} disabled={loading} icon={<IconSave />} />
+                            <Button text="Speichern" color="success" onClick={handleSave} disabled={loading} icon={<IconSave />} />
                         </FlexItem>
                     </Flexbox>
                 </div>
@@ -270,6 +278,7 @@ export default function MinecraftCurseForgeUI(props) {
     const [open, setOpen] = useState(openFromStart);
     const [infoMessage, setInfoMessage] = useState("");
     const [deleteWindow, setDeleteWindow] = useState(false);
+    const [deleteWorldWindow, setDeleteWorldWindow] = useState(false);
 
     const {
         data: pluginWrapper,
@@ -301,6 +310,7 @@ export default function MinecraftCurseForgeUI(props) {
     );
 
     const runningProcesses = statusData?.response?.runningProcesses || [];
+    const extractionProgress = statusData?.response?.extractionProgress || 0;
 
     // Fetch Executables
     const {
@@ -336,6 +346,30 @@ export default function MinecraftCurseForgeUI(props) {
 
     const worldExists = worldStatusData?.response?.worldExists || false;
 
+    const handleWorldAction = async (action) => {
+        let returnValue = await apiFetcher('/plugins/botRequest', {
+            botId: botId,
+            command: "pluginApi",
+            pluginTag: plugin.pluginTag,
+            apiEndpoint: action,
+            pluginId: initialPlugin.pluginId,
+            projectAlias: projectAlias
+        }).then(async (data) => {
+            return (await data.json()).response
+        });
+
+        if (action === 'uploadWorld' || action === 'deleteWorld') {
+            mutateWorldStatus();
+            mutatePlugin();
+        }
+
+        if (action === 'downloadWorld' && returnValue?.url) {
+            window.open(returnValue.url, '_blank');
+        }
+
+        setInfoMessage(returnValue);
+    };
+
     const editPlugin = async (key, value, arrayId, arrayKey, command) => {
         let newPlugin = plugin;
 
@@ -369,7 +403,17 @@ export default function MinecraftCurseForgeUI(props) {
             pluginObj: plugin,
             botId: botId,
         });
-        mutatePlugin();
+        await mutatePlugin();
+
+        // Automatisch nach dem Datei-Upload (Welt)
+        if (key === 'worldFile' && value && value !== "") {
+            handleWorldAction('uploadWorld');
+        }
+
+        // Automatisch nach dem Datei-Upload (Initial Setup)
+        if (key === 'file' && value && value !== "") {
+            handleGeneralAction('verschieben');
+        }
     };
 
     const handleGeneralAction = async (action, additionalData = {}) => {
@@ -389,29 +433,6 @@ export default function MinecraftCurseForgeUI(props) {
             mutateExecutables();
         }
         await mutatePlugin();
-        setInfoMessage(returnValue);
-    };
-
-    const handleWorldAction = async (action) => {
-        let returnValue = await apiFetcher('/plugins/botRequest', {
-            botId: botId,
-            command: "pluginApi",
-            pluginTag: plugin.pluginTag,
-            apiEndpoint: action,
-            pluginId: initialPlugin.pluginId,
-            projectAlias: projectAlias
-        }).then(async (data) => {
-            return (await data.json()).response
-        });
-
-        if (action === 'uploadWorld' || action === 'deleteWorld') {
-            mutateWorldStatus();
-        }
-
-        if (action === 'downloadWorld' && returnValue?.url) {
-            window.open(returnValue.url, '_blank');
-        }
-
         setInfoMessage(returnValue);
     };
 
@@ -492,6 +513,28 @@ export default function MinecraftCurseForgeUI(props) {
                     </Flexbox>
                 </div>}
 
+            {!deleteWorldWindow ? "" :
+                <div className={pluginComponentStyles.deleteWindow}>
+                    <div className={pluginComponentStyles.deleteWindowDiv}>
+                        Welt löschen?
+                        <br />
+                        Bist du sicher, dass du die Welt löschen möchtest? Alle Welt-Daten gehen verloren.
+                    </div>
+                    <Flexbox>
+                        <FlexItem type="spaceLeft">
+                            <Button text={"Abbrechen"} color={"light"} onClick={() => setDeleteWorldWindow(false)} />
+                        </FlexItem>
+                        <FlexItem>
+                            <Button icon={<IconDelete />} text={"Welt unwiderruflich löschen"} color={"delete"} onClick={
+                                async () => {
+                                    setDeleteWorldWindow(false);
+                                    handleWorldAction('deleteWorld');
+                                }}
+                            />
+                        </FlexItem>
+                    </Flexbox>
+                </div>}
+
             <PopupBoxSmall open={open}>
                 {!infoMessage ? "" :
                     <div className={`
@@ -517,21 +560,21 @@ export default function MinecraftCurseForgeUI(props) {
                 <div className={pluginComponentStyles.channelName}>
                     {/* CUSTOM UI CONTENT STARTS HERE */}
                     <div className={utilStyles.pluginContainer}>
+                        {extractionProgress > 0 && (
+                            <div style={{ marginBottom: '20px', padding: '15px', backgroundColor: '#2a2a2a', border: '1px solid #444', borderRadius: '5px' }}>
+                                <div style={{ marginBottom: '10px', fontWeight: 'bold', color: '#fff' }}>Entpacken auf dem Server...</div>
+                                <div style={{ width: '100%', height: '12px', backgroundColor: 'var(--dark1)', borderRadius: '6px', overflow: 'hidden' }}>
+                                    <div style={{ width: `${extractionProgress}%`, height: '100%', background: 'linear-gradient(90deg, #3498db, #2ecc71)', transition: 'width 0.3s ease' }}></div>
+                                </div>
+                                <div style={{ textAlign: 'center', marginTop: '5px', color: '#fff', fontSize: '14px' }}>{extractionProgress}%</div>
+                            </div>
+                        )}
 
                         {/* File Upload */}
                         {!plugin.var?.setupComplete && (
-                            <div style={{ marginBottom: '20px', padding: '10px', border: '1px solid #333', borderRadius: '5px' }}>
+                            <div style={{ margin: '6px', padding: '10px', border: '1px solid var(--dark4)', borderRadius: '5px', backgroundColor: 'var(--dark2)' }}>
                                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
-                                    <h3 style={{ margin: 0 }}>Upload File</h3>
-                                    <div style={{
-                                        padding: '5px 10px',
-                                        borderRadius: '5px',
-                                        backgroundColor: '#e74c3c',
-                                        color: 'white',
-                                        fontWeight: 'bold'
-                                    }}>
-                                        Noch nicht eingerichtet
-                                    </div>
+                                    <h3 style={{ margin: 0, color: '#fff' }}>Upload File (Setup)</h3>
                                 </div>
                                 <InputFile
                                     editPlugin={editPlugin}
@@ -542,9 +585,6 @@ export default function MinecraftCurseForgeUI(props) {
                                     databasename="file"
                                     block={{ description: "File Upload", type: "alone", name: "file_block" }}
                                 />
-                                <div style={{ marginTop: '10px' }}>
-                                    <Button text="Einrichten" color="color" onClick={() => handleGeneralAction('verschieben')} />
-                                </div>
                             </div>
                         )}
 
@@ -552,27 +592,33 @@ export default function MinecraftCurseForgeUI(props) {
                             <>
 
                                 {/* World Management */}
-                                <div style={{ marginBottom: '20px', padding: '10px', border: '1px solid #333', borderRadius: '5px' }}>
+                                <div style={{ margin: '6px', padding: '10px', border: '1px solid var(--dark4)', borderRadius: '5px', backgroundColor: 'var(--dark2)' }}>
                                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
-                                        <h3 style={{ margin: 0 }}>World Management</h3>
+                                        <h3 style={{ margin: 0, color: '#fff' }}>World Management</h3>
                                         <div style={{
-                                            padding: '5px 10px',
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            justifyContent: 'center',
+                                            padding: '4px',
+                                            margin: '6px',
                                             borderRadius: '5px',
                                             backgroundColor: worldExists ? '#2ecc71' : '#e74c3c',
-                                            color: 'white',
-                                            fontWeight: 'bold'
-                                        }}>
-                                            {worldExists ? 'Welt Vorhanden' : 'Keine Welt gefunden'}
+                                            color: 'white'
+                                        }} title={worldExists ? 'Welt Vorhanden' : 'Keine Welt gefunden'}>
+                                            <div style={{ width: '24px', height: '24px' }}>
+                                                {worldExists ? <IconPublic /> : <IconPublicOff />}
+                                            </div>
                                         </div>
                                     </div>
 
                                     {worldExists ? (
                                         <Flexbox>
+                                            <FlexItem type="max"></FlexItem>
                                             <FlexItem>
-                                                <Button text="Welt Herunterladen (ZIP)" color="success" onClick={() => handleWorldAction('downloadWorld')} />
+                                                <Button icon={<IconDownload />} text="Download" color="success" onClick={() => handleWorldAction('downloadWorld')} />
                                             </FlexItem>
                                             <FlexItem>
-                                                <Button text="Welt Löschen" color="delete" onClick={() => handleWorldAction('deleteWorld')} />
+                                                <Button icon={<IconDelete />} text="Löschen" color="delete" onClick={() => setDeleteWorldWindow(true)} />
                                             </FlexItem>
                                         </Flexbox>
                                     ) : (
@@ -586,19 +632,16 @@ export default function MinecraftCurseForgeUI(props) {
                                                 databasename="worldFile"
                                                 block={{ description: "Als Welt hochladen (ZIP)", type: "alone", name: "worldFile_block" }}
                                             />
-                                            <div style={{ marginTop: '10px' }}>
-                                                <Button text="Welt Hochladen" color="color" onClick={() => handleWorldAction('uploadWorld')} />
-                                            </div>
                                         </div>
                                     )}
                                 </div>
 
 
                                 {/* Programs Lists */}
-                                <div style={{ marginBottom: '20px', padding: '10px', border: '1px solid #333', borderRadius: '5px' }}>
+                                <div style={{ margin: '6px', padding: '10px', border: '1px solid var(--dark4)', borderRadius: '5px', backgroundColor: 'var(--dark2)' }}>
                                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
-                                        <h3 style={{ margin: 0 }}>Programs & Executables</h3>
-                                        <Button text="Refresh List" onClick={() => mutateExecutables()} />
+                                        <h3 style={{ margin: 0, color: '#fff' }}>Programs & Executables</h3>
+                                        <Button icon={<IconRefresh />} color="transparent" onClick={() => mutateExecutables()} />
                                     </div>
 
                                     {executablesData?.response?.files?.length > 0 ? (

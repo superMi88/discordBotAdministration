@@ -41,12 +41,13 @@ module.exports = async function (client, plugin, config, projectAlias, data) {
         const entries = zip.getEntries();
         const rootFolder = entries[0].entryName.split('/')[0];
 
-        entries.forEach(entry => {
+        for (let i = 0; i < entries.length; i++) {
+            const entry = entries[i];
             let relativePath = entry.entryName;
             if (relativePath.startsWith(rootFolder + '/')) {
                 relativePath = relativePath.slice(rootFolder.length + 1);
             }
-            if (!relativePath) return;
+            if (!relativePath) continue;
 
             const fullPath = path.join(targetFolderPath, relativePath);
 
@@ -56,7 +57,18 @@ module.exports = async function (client, plugin, config, projectAlias, data) {
                 fs.mkdirSync(path.dirname(fullPath), { recursive: true });
                 fs.writeFileSync(fullPath, entry.getData());
             }
-        });
+
+            // Update Progress
+            plugin.extractionProgress = Math.round(((i + 1) / entries.length) * 100);
+
+            // Allow event loop to breathe
+            if (i % 5 === 0) {
+                await new Promise(resolve => setImmediate(resolve));
+            }
+        }
+
+        // Reset progress when done
+        delete plugin.extractionProgress;
 
         // Speichere Setup-Status
         plugin.var = { ...plugin.var, setupComplete: true };
