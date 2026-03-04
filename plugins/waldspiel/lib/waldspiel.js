@@ -788,34 +788,31 @@ module.exports = {
         boosterText = ''
 
         if (interaction.member.roles.cache.has(plugin['var'].baerRole)) {
-            roleBonus = 3
+            roleBonus = Math.max(roleBonus, 3)
         }
         if (interaction.member.roles.cache.has(plugin['var'].wildschweinRole)) {
-            roleBonus = 3
+            roleBonus = Math.max(roleBonus, 3)
         }
         if (interaction.member.roles.cache.has(plugin['var'].wolfRole)) {
-            roleBonus = 3
+            roleBonus = Math.max(roleBonus, 3)
         }
         if (interaction.member.roles.cache.has(plugin['var'].hirschRole)) {
-            roleBonus = 3
+            roleBonus = Math.max(roleBonus, 3)
         }
         if (interaction.member.roles.cache.has(plugin['var'].wildkuhRole)) {
-            roleBonus = 2
+            roleBonus = Math.max(roleBonus, 2)
         }
         if (interaction.member.roles.cache.has(plugin['var'].fuchsRole)) {
-            roleBonus = 2
+            roleBonus = Math.max(roleBonus, 2)
         }
         if (interaction.member.roles.cache.has(plugin['var'].euleRole)) {
-            roleBonus = 2
+            roleBonus = Math.max(roleBonus, 2)
         }
         if (interaction.member.roles.cache.has(plugin['var'].waschbaerRole)) {
-            roleBonus = 2
+            roleBonus = Math.max(roleBonus, 1)
         }
         if (interaction.member.roles.cache.has(plugin['var'].eichhoernchenRole)) {
-            roleBonus = 1
-        }
-        if (interaction.member.roles.cache.has(plugin['var'].froschRole)) {
-            roleBonus = 1
+            roleBonus = Math.max(roleBonus, 1)
         }
         if (interaction.member.premiumSinceTimestamp) {
             boosterBonus = 2
