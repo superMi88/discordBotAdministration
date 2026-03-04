@@ -164,6 +164,18 @@ class ExtensionManager {
         }
     }
 
+    async onBerryCollected(client, plugin, interaction, db, discordUserId, amount) {
+        for (const ext of this.extensions) {
+            if (typeof ext.onBerryCollected === 'function') {
+                try {
+                    await ext.onBerryCollected(client, plugin, interaction, db, discordUserId, amount);
+                } catch (err) {
+                    console.warn(`[ExtensionManager] Fehler bei onBerryCollected in ${ext.constructor.name}:`, err.message);
+                }
+            }
+        }
+    }
+
     async onDailyTick(client, plugin, db) {
         for (const ext of this.extensions) {
             if (typeof ext.onDailyTick === 'function') {

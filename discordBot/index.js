@@ -26,6 +26,14 @@ function ensureDirectories() {
  */
 function startBotProcess(id, token, ownerId, projectAlias) {
 
+    // Prüfe, ob der Bot bereits läuft
+    const existingBot = botManager.getBot(id);
+    if (existingBot && !existingBot.killed) {
+        console.log(`[BotManager] Bot ${id} läuft bereits. Beende den alten Prozess...`);
+        existingBot.kill('SIGTERM');
+        botManager.removeBot(id);
+    }
+
     const child = fork(path.join(__dirname, `discordBot.js`), [id, token, ownerId, projectAlias]);
 
     child.on("message", async (message) => {
@@ -43,6 +51,13 @@ function startBotProcess(id, token, ownerId, projectAlias) {
                 message.oldValue,
                 message.newValue
             );
+        }
+    });
+
+    child.on('exit', () => {
+        console.log(`[BotManager] Bot ${id} Prozess beendet.`);
+        if (botManager.getBot(id) === child) {
+            botManager.removeBot(id);
         }
     });
 

@@ -19,31 +19,31 @@ const DatabaseManager = require("../../discordBot/lib/DatabaseManager.js");
 
 // Ganz oben, z.B. direkt nach den Imports oder als konstante Variable in der Plugin-Klasse:
 const RANKS = [
-  { name: "maus", xp: 0, label: "Maus", roleIdKey: "rolesMaus", descriptionKey: "descriptionRankupMaus", image: 'plugins/rolesystem/images/maus.png' },
-  { name: "frosch", xp: 30, label: "Frosch", roleIdKey: "rolesFrosch", descriptionKey: "descriptionRankupFrosch", image: 'plugins/rolesystem/images/frosch.png' },
-  { name: "eichhoernchen", xp: 500, label: "Eichhörnchen", roleIdKey: "rolesEichhoernchen", descriptionKey: "descriptionRankupEichhoernchen", image: 'plugins/rolesystem/images/eichhoernchen.png' },
-  { name: "waschbaer", xp: 2000, label: "Waschbär", roleIdKey: "rolesWaschbaer", descriptionKey: "descriptionRankupWaschbaer", image: 'plugins/rolesystem/images/waschbaer.png' },
-  { name: "eule", xp: 7500, label: "Eule", roleIdKey: "rolesEule", descriptionKey: "descriptionRankupEule", image: 'plugins/rolesystem/images/eule.png' }, 
-  { name: "fuchs", xp: 15000, label: "Fuchs", roleIdKey: "rolesFuchs", descriptionKey: "descriptionRankupFuchs", image: 'plugins/rolesystem/images/fuchs.png' },
-  { name: "wildkuh", xp: 25000, label: "Wildkuh", roleIdKey: "rolesWildkuh", descriptionKey: "descriptionRankupWildkuh", image: 'plugins/rolesystem/images/wildkuh.png' },
-  { name: "hirsch", xp: 40000, label: "Hirsch", roleIdKey: "rolesHirsch", descriptionKey: "descriptionRankupHirsch", image: 'plugins/rolesystem/images/hirsch.png' },
-  { name: "wolf", xp: 50000, label: "Wolf", roleIdKey: "rolesWolf", descriptionKey: "descriptionRankupWolf", image: 'plugins/rolesystem/images/wolf.png' },
-  { name: "wildschwein", xp: 60000, label: "Wildschwein", roleIdKey: "rolesWildschwein", descriptionKey: "descriptionRankupWildschwein", image: 'plugins/rolesystem/images/wildschwein.png' },
-  { name: "baer", xp: 100000, label: "Bär", roleIdKey: "rolesBaer", descriptionKey: "descriptionRankupBaer", image: 'plugins/rolesystem/images/baer.png' },
+	{ name: "maus", xp: 0, label: "Maus", roleIdKey: "rolesMaus", descriptionKey: "descriptionRankupMaus", image: 'plugins/rolesystem/images/maus.png' },
+	{ name: "frosch", xp: 30, label: "Frosch", roleIdKey: "rolesFrosch", descriptionKey: "descriptionRankupFrosch", image: 'plugins/rolesystem/images/frosch.png' },
+	{ name: "eichhoernchen", xp: 500, label: "Eichhörnchen", roleIdKey: "rolesEichhoernchen", descriptionKey: "descriptionRankupEichhoernchen", image: 'plugins/rolesystem/images/eichhoernchen.png' },
+	{ name: "waschbaer", xp: 2000, label: "Waschbär", roleIdKey: "rolesWaschbaer", descriptionKey: "descriptionRankupWaschbaer", image: 'plugins/rolesystem/images/waschbaer.png' },
+	{ name: "eule", xp: 7500, label: "Eule", roleIdKey: "rolesEule", descriptionKey: "descriptionRankupEule", image: 'plugins/rolesystem/images/eule.png' },
+	{ name: "fuchs", xp: 15000, label: "Fuchs", roleIdKey: "rolesFuchs", descriptionKey: "descriptionRankupFuchs", image: 'plugins/rolesystem/images/fuchs.png' },
+	{ name: "wildkuh", xp: 25000, label: "Wildkuh", roleIdKey: "rolesWildkuh", descriptionKey: "descriptionRankupWildkuh", image: 'plugins/rolesystem/images/wildkuh.png' },
+	{ name: "hirsch", xp: 40000, label: "Hirsch", roleIdKey: "rolesHirsch", descriptionKey: "descriptionRankupHirsch", image: 'plugins/rolesystem/images/hirsch.png' },
+	{ name: "wolf", xp: 50000, label: "Wolf", roleIdKey: "rolesWolf", descriptionKey: "descriptionRankupWolf", image: 'plugins/rolesystem/images/wolf.png' },
+	{ name: "wildschwein", xp: 60000, label: "Wildschwein", roleIdKey: "rolesWildschwein", descriptionKey: "descriptionRankupWildschwein", image: 'plugins/rolesystem/images/wildschwein.png' },
+	{ name: "baer", xp: 100000, label: "Bär", roleIdKey: "rolesBaer", descriptionKey: "descriptionRankupBaer", image: 'plugins/rolesystem/images/baer.png' },
 ];
 
 function getRanksWithPluginVar(pluginVar) {
-  let total = 0;
+	let total = 0;
 
-  return RANKS.map(rank => {
-    total += rank.xp;
-    return {
-      ...rank,
-      roleId: pluginVar[rank.roleIdKey],
-      description: pluginVar[rank.descriptionKey],
-      cumulativeXp: total,
-    };
-  });
+	return RANKS.map(rank => {
+		total += rank.xp;
+		return {
+			...rank,
+			roleId: pluginVar[rank.roleIdKey],
+			description: pluginVar[rank.descriptionKey],
+			cumulativeXp: total,
+		};
+	});
 }
 
 class Plugin {
@@ -71,13 +71,13 @@ class Plugin {
 				//wurde kein user gefunden nicht ausführen
 				if (discordUserDatabase) {
 
-					
+
 					const sharp = require('sharp')
 
 					let mergeArray = []
 
 					//füge background hinzu
-					mergeArray.push({ input: 'plugins/rolesystem/images/background3.png' , left: 0, top: 0 })
+					mergeArray.push({ input: 'plugins/rolesystem/images/background3.png', left: 0, top: 0 })
 
 					var voiceActivity = discordUserDatabase[plugin['var'].voiceActivity]
 					if (!voiceActivity) voiceActivity = 0
@@ -131,11 +131,11 @@ class Plugin {
 					const progressLength = circumference * progress;
 
 					const svgXpKreis = Buffer.from(`
-					<svg width="${radius*2+strokeWidth}" height="${radius*2+strokeWidth}" viewBox="0 0 ${radius*2+strokeWidth} ${radius*2+strokeWidth}" xmlns="http://www.w3.org/2000/svg">
+					<svg width="${radius * 2 + strokeWidth}" height="${radius * 2 + strokeWidth}" viewBox="0 0 ${radius * 2 + strokeWidth} ${radius * 2 + strokeWidth}" xmlns="http://www.w3.org/2000/svg">
 					<!-- Hintergrund-Kreis -->
 					<circle
-						cx="${radius+(strokeWidth/2)}"
-						cy="${radius+(strokeWidth/2)}"
+						cx="${radius + (strokeWidth / 2)}"
+						cy="${radius + (strokeWidth / 2)}"
 						r="${radius}"
 						stroke="${backgroundColor}"
 						stroke-width="${strokeWidth}"
@@ -144,21 +144,21 @@ class Plugin {
 
 					<!-- Fortschritts-Kreis -->
 					<circle
-						cx="${radius+(strokeWidth/2)}"
-						cy="${radius+(strokeWidth/2)}"
+						cx="${radius + (strokeWidth / 2)}"
+						cy="${radius + (strokeWidth / 2)}"
 						r="${radius}"
 						stroke="${strokeColor}"
 						stroke-width="${strokeWidth}"
 						fill="none"
 						stroke-dasharray="${progressLength} ${circumference - progressLength}"
-						transform="rotate(90 ${radius+(strokeWidth/2)} ${radius+(strokeWidth/2)})"
+						transform="rotate(90 ${radius + (strokeWidth / 2)} ${radius + (strokeWidth / 2)})"
 					/>
 					</svg>
 					`);
-					
+
 
 					let nameToShow = discordUser.nickname
-					if(!nameToShow) nameToShow = discordUser.user.globalName
+					if (!nameToShow) nameToShow = discordUser.user.globalName
 
 					mergeArray.push({ input: getTextBuffer(nameToShow, 135, 125, 22), left: 0, top: 0 }) //name des Users
 
@@ -182,7 +182,7 @@ class Plugin {
 					});
 
 
-					
+
 
 					//wenn booster
 					if (discordUser.premiumSinceTimestamp) {
@@ -193,31 +193,31 @@ class Plugin {
 							top: 199 - 6,
 						});
 						//mergeArray.push({ input: imageToPush, left: getTextStartX("Flower-Booster", 135)-24+10/*wegen icon 20px groß*/, top: 175-6 })
-						mergeArray.push({ input: getTextBuffer("Flower-Booster", 135 +10/*wegen icon 20px groß*/, 199), left: 0, top: 0 }) //Name der Rolle
+						mergeArray.push({ input: getTextBuffer("Flower-Booster", 135 + 10/*wegen icon 20px groß*/, 199), left: 0, top: 0 }) //Name der Rolle
 					}
 
 
 					//obere Leiste
-					mergeArray.push({ input: getTextBufferLinks("Nachrichten", 50, 216+22, 13), left: 0, top: 0 })
-					mergeArray.push({ input: getTextBufferLinks(formatWithK(chatActivity), 50, 234+22, 13), left: 0, top: 0 })
+					mergeArray.push({ input: getTextBufferLinks("Nachrichten", 50, 216 + 22, 13), left: 0, top: 0 })
+					mergeArray.push({ input: getTextBufferLinks(formatWithK(chatActivity), 50, 234 + 22, 13), left: 0, top: 0 })
 
-					mergeArray.push({ input: getTextBufferLinks("Voice/min", 179, 216+22, 13), left: 0, top: 0 })
-					mergeArray.push({ input: getTextBufferLinks(formatWithK(voiceActivity), 179, 234+22, 13), left: 0, top: 0 })
+					mergeArray.push({ input: getTextBufferLinks("Voice/min", 179, 216 + 22, 13), left: 0, top: 0 })
+					mergeArray.push({ input: getTextBufferLinks(formatWithK(voiceActivity), 179, 234 + 22, 13), left: 0, top: 0 })
 
 
 					let berryUser = discordUserDatabase[plugin['var'].berry]
 					if (!berryUser) berryUser = 0
 
 					//untere Leiste
-					mergeArray.push({ input: getTextBufferLinks("Beeren", 50, 216+83, 13), left: 0, top: 0 })
-					mergeArray.push({ input: getTextBufferLinks(formatWithK(berryUser), 50, 234+83, 13), left: 0, top: 0 }) //TODO: anzahl von der Datenbank holen
+					mergeArray.push({ input: getTextBufferLinks("Beeren", 50, 216 + 83, 13), left: 0, top: 0 })
+					mergeArray.push({ input: getTextBufferLinks(formatWithK(berryUser), 50, 234 + 83, 13), left: 0, top: 0 }) //TODO: anzahl von der Datenbank holen
 
-					mergeArray.push({ input: getTextBufferLinks("Tiere", 179, 216+83, 13), left: 0, top: 0 })
+					mergeArray.push({ input: getTextBufferLinks("Tiere", 179, 216 + 83, 13), left: 0, top: 0 })
 
 					let animalCount = await db.collection('animals').countDocuments({ ownerDiscordId: discordId });
 
 
-					mergeArray.push({ input: getTextBufferLinks(formatWithK(animalCount), 179, 234+83, 13), left: 0, top: 0 }) //TODO: anzahl von der Datenbank holen
+					mergeArray.push({ input: getTextBufferLinks(formatWithK(animalCount), 179, 234 + 83, 13), left: 0, top: 0 }) //TODO: anzahl von der Datenbank holen
 
 
 					//download function
@@ -254,18 +254,18 @@ class Plugin {
 					var uuid = uuidv4()
 
 					//download Image and save them in temp folder
-					await downloadImage(discordUser.displayAvatarURL(), './temp/profileImage-' + discordUser.user.id + '-'+uuid+'.webp')
-					let profileImage = await sharp('temp/profileImage-' + discordUser.user.id + '-'+uuid+'.webp').resize(size).composite([
+					await downloadImage(discordUser.displayAvatarURL(), './temp/profileImage-' + discordUser.user.id + '-' + uuid + '.webp')
+					let profileImage = await sharp('temp/profileImage-' + discordUser.user.id + '-' + uuid + '.webp').resize(size).composite([
 						{ input: roundedCorners, blend: "dest-in" }
 					]).png().toBuffer()
-					
+
 					mergeArray.push({ input: await sharp(svgXpKreis).toBuffer(), left: 86, top: 14 })
 
-					mergeArray.push({ input: profileImage, left: (270-size)/2, top: 14+strokeWidth })
-					
+					mergeArray.push({ input: profileImage, left: (270 - size) / 2, top: 14 + strokeWidth })
+
 
 					// Leeres transparentes Bild erstellen
-					const baseImage  = sharp({
+					const baseImage = sharp({
 						create: {
 							width: 270,
 							height: 350,
@@ -284,15 +284,15 @@ class Plugin {
 						ephemeral: true
 					})
 
-					
+
 					fs.unlink('./temp/finalpicture.png', function (err, result) {
 						if (err) console.log('error', err);
 					})
-					fs.unlink('./temp/profileImage-' + discordUser.user.id + '-'+uuid+'.webp', function (err, result) {
+					fs.unlink('./temp/profileImage-' + discordUser.user.id + '-' + uuid + '.webp', function (err, result) {
 						if (err) console.log('error', err);
 					})
 
-					return 
+					return
 
 
 				} else {
@@ -313,7 +313,7 @@ class Plugin {
 	async save(plugin, config) {
 
 		let status = await PluginManager.save(plugin, config)
-		if(!status.saved){
+		if (!status.saved) {
 			return status
 		}
 
@@ -348,7 +348,7 @@ class Plugin {
 
 		console.log(`Alle Mitglieder durchgegangen.`);
 	}
-	async addEvents(plugin, eventsArray){
+	async addEvents(plugin, eventsArray) {
 
 		eventsArray.push(
 			{
@@ -391,20 +391,20 @@ class Plugin {
 
 		helper.addToCommandMap(commandMap, plugin['var'].server,
 			new SlashCommandBuilder()
-			.setName(plugin['var'].name1)
-			.setDescription(plugin['var'].description1)
-			.addUserOption(option =>
-				option
-					.setName('user')
-					.setDescription('The user')
-					.setRequired(false)
-			)
+				.setName(plugin['var'].name1)
+				.setDescription(plugin['var'].description1)
+				.addUserOption(option =>
+					option
+						.setName('user')
+						.setDescription('The user')
+						.setRequired(false)
+				)
 		)
 
 	}
-	async triggerEvent(client, plugin, db, discordUserId, currencyId, oldValue, newValue){
+	async triggerEvent(client, plugin, db, discordUserId, currencyId, oldValue, newValue) {
 
-		console.log("Hier wird der trigger ausgeführt von: "+currencyId )
+		console.log("Hier wird der trigger ausgeführt von: " + currencyId)
 		console.log(oldValue)
 		console.log(newValue)
 
@@ -473,8 +473,8 @@ async function messageCounterAdd(plugin, client, discordUserId, currencyId, oldA
 			.setColor('#12ba69')
 			.setTitle(`${capitalize(nextRank.label)} [Rolesystem]`)
 			.setDescription(nextRank.description)
-		discordUser.send({embeds:[exampleEmbed]})
-		
+		discordUser.send({ embeds: [exampleEmbed] })
+
 		// Log senden
 		const embed = new EmbedBuilder()
 			.setColor('#12ba69')
@@ -551,14 +551,14 @@ function capitalize(str) {
 }
 
 function formatWithK(number) {
-    if (number >= 1000) {
-        return Math.floor(number / 1000) + "k";
-    }
-    return number.toString();
+	if (number >= 1000) {
+		return Math.floor(number / 1000) + "k";
+	}
+	return number.toString();
 }
 
 function formatWithDots(number) {
-    return number.toLocaleString("de-DE"); // Deutsches Format: Punkt als Tausendertrenner
+	return number.toLocaleString("de-DE"); // Deutsches Format: Punkt als Tausendertrenner
 }
 
 
@@ -569,36 +569,36 @@ const fs = require('fs');
 
 
 function getTextStartX(text, x, fontsizeInPixel = 16) {
-  const textToSVG = TextToSVG.loadSync('./fonts/Quicksand-Bold.ttf');
-  const metrics = textToSVG.getMetrics(text, { fontSize: fontsizeInPixel });
+	const textToSVG = TextToSVG.loadSync('./discordBot/fonts/Quicksand-Bold.ttf');
+	const metrics = textToSVG.getMetrics(text, { fontSize: fontsizeInPixel });
 
-  // Da der Text zentriert ist, beginnt er bei x - width / 2
-  return Math.round(x - metrics.width / 2);
+	// Da der Text zentriert ist, beginnt er bei x - width / 2
+	return Math.round(x - metrics.width / 2);
 }
 
 function getTextBuffer(text, x, y, fontsizeInPixel = 16) {
-  const textToSVG = TextToSVG.loadSync('./fonts/Quicksand-Bold.ttf');
+	const textToSVG = TextToSVG.loadSync('./discordBot/fonts/Quicksand-Bold.ttf');
 
-  // Metriken für Breite und Höhe
-  const metrics = textToSVG.getMetrics(text, { fontSize: fontsizeInPixel });
+	// Metriken für Breite und Höhe
+	const metrics = textToSVG.getMetrics(text, { fontSize: fontsizeInPixel });
 
-  // Berechne Verschiebung, damit der Text mittig bei x steht
-  // Der Pfad startet links, deshalb verschieben wir um die halbe Breite nach links
-  const translateX = x - metrics.width / 2;
+	// Berechne Verschiebung, damit der Text mittig bei x steht
+	// Der Pfad startet links, deshalb verschieben wir um die halbe Breite nach links
+	const translateX = x - metrics.width / 2;
 
-  // Vertikale Verschiebung: y = baseline, wir wollen vertikale Mitte, deshalb y + halbe Höhe
-  const translateY = y + (metrics.ascender - metrics.descender) / 2;
+	// Vertikale Verschiebung: y = baseline, wir wollen vertikale Mitte, deshalb y + halbe Höhe
+	const translateY = y + (metrics.ascender - metrics.descender) / 2;
 
-  const options = {
-    x: 0,
-    y: 0,
-    fontSize: fontsizeInPixel,
-  };
+	const options = {
+		x: 0,
+		y: 0,
+		fontSize: fontsizeInPixel,
+	};
 
-  // Pfad an Ursprung generieren
-  const svgPath = textToSVG.getD(text, options);
+	// Pfad an Ursprung generieren
+	const svgPath = textToSVG.getD(text, options);
 
-  return Buffer.from(`
+	return Buffer.from(`
     <svg width="270" height="350" xmlns="http://www.w3.org/2000/svg">
       <path d="${svgPath}" fill="white" transform="translate(${translateX},${translateY})" />
     </svg>`);
@@ -606,7 +606,7 @@ function getTextBuffer(text, x, y, fontsizeInPixel = 16) {
 
 
 function getTextBufferLinks(text, x, y, fontsizeInPixel = 16) {
-	const textToSVG = TextToSVG.loadSync('./fonts/Quicksand-Bold.ttf');
+	const textToSVG = TextToSVG.loadSync('./discordBot/fonts/Quicksand-Bold.ttf');
 
 	const metrics = textToSVG.getMetrics(text, { fontSize: fontsizeInPixel });
 
