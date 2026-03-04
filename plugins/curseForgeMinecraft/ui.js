@@ -318,6 +318,24 @@ export default function MinecraftCurseForgeUI(props) {
         getApiFetcher()
     );
 
+    // Fetch World Status
+    const {
+        data: worldStatusData,
+        mutate: mutateWorldStatus
+    } = useSWR(
+        (projectAlias && plugin.var?.setupComplete) ? ['/api/plugins/botRequest', {
+            botId: botId,
+            command: "pluginApi",
+            pluginTag: initialPlugin.pluginTag,
+            apiEndpoint: "checkWorld",
+            pluginId: initialPlugin.pluginId,
+            projectAlias: projectAlias
+        }] : null,
+        getApiFetcher()
+    );
+
+    const worldExists = worldStatusData?.response?.worldExists || false;
+
     const editPlugin = async (key, value, arrayId, arrayKey, command) => {
         let newPlugin = plugin;
 
@@ -371,6 +389,29 @@ export default function MinecraftCurseForgeUI(props) {
             mutateExecutables();
         }
         await mutatePlugin();
+        setInfoMessage(returnValue);
+    };
+
+    const handleWorldAction = async (action) => {
+        let returnValue = await apiFetcher('/plugins/botRequest', {
+            botId: botId,
+            command: "pluginApi",
+            pluginTag: plugin.pluginTag,
+            apiEndpoint: action,
+            pluginId: initialPlugin.pluginId,
+            projectAlias: projectAlias
+        }).then(async (data) => {
+            return (await data.json()).response
+        });
+
+        if (action === 'uploadWorld' || action === 'deleteWorld') {
+            mutateWorldStatus();
+        }
+
+        if (action === 'downloadWorld' && returnValue?.url) {
+            window.open(returnValue.url, '_blank');
+        }
+
         setInfoMessage(returnValue);
     };
 
@@ -478,35 +519,79 @@ export default function MinecraftCurseForgeUI(props) {
                     <div className={utilStyles.pluginContainer}>
 
                         {/* File Upload */}
-                        <div style={{ marginBottom: '20px', padding: '10px', border: '1px solid #333', borderRadius: '5px' }}>
-                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
-                                <h3 style={{ margin: 0 }}>Upload File</h3>
-                                <div style={{
-                                    padding: '5px 10px',
-                                    borderRadius: '5px',
-                                    backgroundColor: plugin.var.setupComplete ? '#2ecc71' : '#e74c3c',
-                                    color: 'white',
-                                    fontWeight: 'bold'
-                                }}>
-                                    {plugin.var.setupComplete ? 'Eingerichtet' : 'Noch nicht eingerichtet'}
+                        {!plugin.var?.setupComplete && (
+                            <div style={{ marginBottom: '20px', padding: '10px', border: '1px solid #333', borderRadius: '5px' }}>
+                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
+                                    <h3 style={{ margin: 0 }}>Upload File</h3>
+                                    <div style={{
+                                        padding: '5px 10px',
+                                        borderRadius: '5px',
+                                        backgroundColor: '#e74c3c',
+                                        color: 'white',
+                                        fontWeight: 'bold'
+                                    }}>
+                                        Noch nicht eingerichtet
+                                    </div>
+                                </div>
+                                <InputFile
+                                    editPlugin={editPlugin}
+                                    mutatePlugin={mutatePlugin}
+                                    botId={botId}
+                                    pluginId={initialPlugin.pluginId}
+                                    databaseObject={plugin.var}
+                                    databasename="file"
+                                    block={{ description: "File Upload", type: "alone", name: "file_block" }}
+                                />
+                                <div style={{ marginTop: '10px' }}>
+                                    <Button text="Einrichten" color="color" onClick={() => handleGeneralAction('verschieben')} />
                                 </div>
                             </div>
-                            <InputFile
-                                editPlugin={editPlugin}
-                                mutatePlugin={mutatePlugin}
-                                botId={botId}
-                                pluginId={initialPlugin.pluginId}
-                                databaseObject={plugin.var}
-                                databasename="file"
-                                block={{ description: "File Upload", type: "alone", name: "file_block" }}
-                            />
-                            <div style={{ marginTop: '10px' }}>
-                                <Button text="Einrichten" color="color" onClick={() => handleGeneralAction('verschieben')} />
-                            </div>
-                        </div>
+                        )}
 
                         {plugin.var?.setupComplete && (
                             <>
+
+                                {/* World Management */}
+                                <div style={{ marginBottom: '20px', padding: '10px', border: '1px solid #333', borderRadius: '5px' }}>
+                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
+                                        <h3 style={{ margin: 0 }}>World Management</h3>
+                                        <div style={{
+                                            padding: '5px 10px',
+                                            borderRadius: '5px',
+                                            backgroundColor: worldExists ? '#2ecc71' : '#e74c3c',
+                                            color: 'white',
+                                            fontWeight: 'bold'
+                                        }}>
+                                            {worldExists ? 'Welt Vorhanden' : 'Keine Welt gefunden'}
+                                        </div>
+                                    </div>
+
+                                    {worldExists ? (
+                                        <Flexbox>
+                                            <FlexItem>
+                                                <Button text="Welt Herunterladen (ZIP)" color="success" onClick={() => handleWorldAction('downloadWorld')} />
+                                            </FlexItem>
+                                            <FlexItem>
+                                                <Button text="Welt Löschen" color="delete" onClick={() => handleWorldAction('deleteWorld')} />
+                                            </FlexItem>
+                                        </Flexbox>
+                                    ) : (
+                                        <div>
+                                            <InputFile
+                                                editPlugin={editPlugin}
+                                                mutatePlugin={mutatePlugin}
+                                                botId={botId}
+                                                pluginId={initialPlugin.pluginId}
+                                                databaseObject={plugin.var}
+                                                databasename="worldFile"
+                                                block={{ description: "Als Welt hochladen (ZIP)", type: "alone", name: "worldFile_block" }}
+                                            />
+                                            <div style={{ marginTop: '10px' }}>
+                                                <Button text="Welt Hochladen" color="color" onClick={() => handleWorldAction('uploadWorld')} />
+                                            </div>
+                                        </div>
+                                    )}
+                                </div>
 
 
                                 {/* Programs Lists */}
