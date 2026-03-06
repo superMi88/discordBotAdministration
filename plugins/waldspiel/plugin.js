@@ -654,6 +654,10 @@ class Plugin {
 				let discordUserId = interaction.user.id
 				let discordUserDatabase = await getUserCurrencyFromDatabase(discordUserId, db)
 
+				const collectionAnimal = db.collection('animals');
+				const animal = await collectionAnimal.findOne({ _id: ObjectId(animalObjId) });
+				const animalType = animal ? animal.type : null;
+
 				let ownedItems = discordUserDatabase["itemlist"] || []
 
 				const { StringSelectMenuBuilder, StringSelectMenuOptionBuilder } = require('discord.js');
@@ -664,7 +668,7 @@ class Plugin {
 				allItems = allItems.filter(a => a !== "ABBRECHEN");
 				allItems.unshift("ABBRECHEN");
 
-				const itemsPerPage = 24;
+				const itemsPerPage = 15;
 				const maxPages = Math.ceil(allItems.length / itemsPerPage);
 
 				if (page < 0) page = maxPages - 1;
@@ -715,7 +719,7 @@ class Plugin {
 				}
 				const rowButtons = new ActionRowBuilder().addComponents(...buttons);
 
-				const outPath = await ImageCreator.createSetCustomization(currentItems, ownedItems, startIdx);
+				const outPath = await ImageCreator.createSetCustomization(currentItems, ownedItems, startIdx, animalType);
 
 				return await interaction.update({
 					files: [outPath],
@@ -754,37 +758,44 @@ class Plugin {
 				let discordUserId = interaction.user.id
 				let discordUserDatabase = await getUserCurrencyFromDatabase(discordUserId, db)
 
-				let animationliste = discordUserDatabase["animationlist"]
-				if (!animationliste) animationliste = ["WACKELN", "ATMEN", "SPRINGEN"] // currently everyone has all basic 3
+				const collectionAnimal = db.collection('animals');
+				const animal = await collectionAnimal.findOne({ _id: ObjectId(animalObjId) });
+				const animalType = animal ? animal.type : null;
 
-				// Remove ABBRECHEN if exists so we can unshift cleanly
-				animationliste = animationliste.filter(a => a !== "ABBRECHEN")
-				animationliste.unshift("ABBRECHEN")
+				let ownedAnimations = discordUserDatabase["animationlist"] || ["WACKELN"]
 
 				const { StringSelectMenuBuilder, StringSelectMenuOptionBuilder } = require('discord.js');
 				let AnimationListObj = require('./obj/AnimationList.js');
 				let AnimationList = new AnimationListObj().getListAll();
+				let allAnimations = Object.keys(AnimationList);
+
+				// Ensure ABBRECHEN is at the start and not duplicated
+				allAnimations = allAnimations.filter(a => a !== "ABBRECHEN");
+				allAnimations.unshift("ABBRECHEN");
 
 				let selectMenu = new StringSelectMenuBuilder()
 					.setCustomId('selectAnimationDropdown-' + animalObjId)
-					.setPlaceholder('Wähle eine Animation (Maximal 25)')
+					.setPlaceholder('Wähle eine Animation (Maximal 15)')
 					.setMinValues(1)
 					.setMaxValues(1);
 
-				// Discord erlaubt maximal 25 Elemente pro SelectMenu
+				// Show up to 15 animations
 				let count = 0;
-				for (let i = 0; i < animationliste.length; i++) {
-					if (count >= 25) break;
+				for (let i = 0; i < allAnimations.length; i++) {
+					if (count >= 15) break;
 
-					let animKey = animationliste[i];
+					let animKey = allAnimations[i];
 					let animName = "Aus / Keine";
 					if (animKey !== "ABBRECHEN" && AnimationList[animKey]) {
 						animName = AnimationList[animKey].name;
 					}
 
+					let isOwned = animKey === "ABBRECHEN" || ownedAnimations.includes(animKey);
+					let label = isOwned ? `${i + 1}. ${animName}` : `🔒 ${i + 1}. ${animName}`;
+
 					selectMenu.addOptions(
 						new StringSelectMenuOptionBuilder()
-							.setLabel(`${i + 1}. ${animName}`)
+							.setLabel(label)
 							.setValue(animKey)
 					);
 					count++;
@@ -793,7 +804,7 @@ class Plugin {
 				const rowAnimationlist = new ActionRowBuilder().addComponents(selectMenu);
 				const rowBack = new ActionRowBuilder().addComponents(waldspiel.getZuMeinemWaldButton());
 
-				const outPath = await ImageCreator.createSetAnimation(animationliste);
+				const outPath = await ImageCreator.createSetAnimation(allAnimations, ownedAnimations, animalType);
 
 				return await interaction.update({
 					files: [outPath],
@@ -805,6 +816,14 @@ class Plugin {
 			if (isButton(interaction, 'selectAnimationDropdown')) {
 				let animalObjId = getButtonParameter(interaction.customId)[1]
 				let animationId = interaction.values[0]
+
+				let discordUserId = interaction.user.id;
+				let discordUserDatabase = await getUserCurrencyFromDatabase(discordUserId, db);
+				let ownedAnimations = discordUserDatabase["animationlist"] || ["WACKELN"];
+
+				if (animationId !== "ABBRECHEN" && !ownedAnimations.includes(animationId)) {
+					return await interaction.reply({ content: "Du hast diese Animation noch nicht freigeschaltet!", ephemeral: true });
+				}
 
 				if (animationId == "ABBRECHEN") animationId = 0
 

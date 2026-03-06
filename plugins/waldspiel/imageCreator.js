@@ -326,38 +326,42 @@ module.exports = {
 		await waldcreator.createImage()
 	},
 
-	async createSetCustomization(pageItems, ownedItems, startIdx) {
+	async createSetCustomization(pageItems, ownedItems, startIdx, animalType) {
 		const sharp = require('sharp');
 		let ItemlistObj = require('./obj/ItemList.js');
 		let Itemlist = new ItemlistObj().getListAll();
 
 		if (pageItems.length === 0) {
-			await sharp('plugins/waldspiel/images/backgrounds/animalStorage.png').toFile('temp/finalpicture.png');
+			await sharp('plugins/waldspiel/images/backgrounds/select.png').toFile('temp/finalpicture.png');
 			return 'temp/finalpicture.png';
 		}
 
-		let emptyAnimalBuf = await sharp('plugins/waldspiel/images/tiere/Empty.png').resize(80).png().toBuffer();
+		let baseAnimalPath = 'plugins/waldspiel/images/tiere/Empty.png';
+		if (animalType && Animallist[animalType]) {
+			baseAnimalPath = 'plugins/waldspiel/images/tiere/' + Animallist[animalType].filename + '.png';
+		}
+		let animalBuf = await sharp(baseAnimalPath).resize(60).png().toBuffer();
 
-		const columns = 6;
+		const width = 550;
+		const height = 300;
+		const columns = 5;
 		const itemCount = pageItems.length;
 		const rows = Math.ceil(itemCount / columns);
-		const cellW = 160;
-		const cellH = 120;
-		const width = columns * cellW;
-		const height = Math.max(rows * cellH, 300);
+		const cellW = 100;
+		const cellH = 80;
+		const offsetX = (width - (columns * cellW)) / 2; // Center items horizontally
+		const offsetY = 35; // Top offset
 
-		let bgSvg = `<svg width="${width}" height="${height}">
-			<rect width="${width}" height="${height}" fill="#2f3136" />
-		`;
+		let bgSvg = `<svg width="${width}" height="${height}">`;
 
 		let frameComposites = [];
 
 		for (let i = 0; i < itemCount; i++) {
 			let r = Math.floor(i / columns);
 			let c = i % columns;
-			let centerX = c * cellW + (cellW / 2);
-			let centerY = r * cellH + (cellH / 2) - 10;
-			let yText = r * cellH + cellH - 10;
+			let centerX = offsetX + c * cellW + (cellW / 2);
+			let centerY = offsetY + r * cellH + (cellH / 2) - 10;
+			let yText = offsetY + r * cellH + cellH - 3;
 
 			let itemKey = pageItems[i];
 			let itemName = Itemlist[itemKey] ? Itemlist[itemKey].name : "Unknown";
@@ -366,34 +370,37 @@ module.exports = {
 			let displayName = isOwned ? `${startIdx + i + 1}. ${itemName}` : `🔒 ${startIdx + i + 1}. ${itemName}`;
 			let textColor = isOwned ? "#fff" : "#aaa";
 
-			bgSvg += `<text x="${centerX}" y="${yText}" font-family="Arial, Helvetica, sans-serif" font-size="14px" fill="${textColor}" text-anchor="middle">${displayName}</text>`;
+			bgSvg += `<text x="${centerX}" y="${yText}" font-family="Arial, Helvetica, sans-serif" font-size="10px" fill="${textColor}" text-anchor="middle">${displayName}</text>`;
 
-			frameComposites.push({ input: emptyAnimalBuf, left: Math.round(centerX - 40), top: Math.round(centerY - 40) });
+			frameComposites.push({ input: animalBuf, left: Math.round(centerX - 30), top: Math.round(centerY - 30) });
 
 			if (itemKey !== "ABBRECHEN" && Itemlist[itemKey]) {
 				let decorationBuf = await sharp('plugins/waldspiel/images/items/' + Itemlist[itemKey].filename + '.png')
-					.resize(80)
+					.resize(60)
 					.png()
 					.toBuffer();
 
-				frameComposites.push({ input: decorationBuf, left: Math.round(centerX - 40), top: Math.round(centerY - 40) });
+				frameComposites.push({ input: decorationBuf, left: Math.round(centerX - 30), top: Math.round(centerY - 30) });
 
 				if (!isOwned) {
-					let overlaySvg = `<svg width="80" height="80"><rect width="80" height="80" fill="rgba(20,20,20,0.6)" rx="8" /></svg>`;
+					let overlaySvg = `<svg width="60" height="60"><rect width="60" height="60" fill="rgba(20,20,20,0.6)" rx="8" /></svg>`;
 					let overlayBuf = await sharp(Buffer.from(overlaySvg)).png().toBuffer();
-					frameComposites.push({ input: overlayBuf, left: Math.round(centerX - 40), top: Math.round(centerY - 40) });
+					frameComposites.push({ input: overlayBuf, left: Math.round(centerX - 30), top: Math.round(centerY - 30) });
 
-					let lockIconBuf = await sharp('plugins/waldspiel/images/sprites/lock_icon.svg').resize(32, 32).png().toBuffer();
-					frameComposites.push({ input: lockIconBuf, left: Math.round(centerX - 16), top: Math.round(centerY - 16) });
+					let lockIconBuf = await sharp('plugins/waldspiel/images/sprites/lock_icon.svg').resize(24, 24).png().toBuffer();
+					frameComposites.push({ input: lockIconBuf, left: Math.round(centerX - 12), top: Math.round(centerY - 12) });
 				}
 			}
 		}
 		bgSvg += `</svg>`;
 
-		let baseBgBuf = await sharp(Buffer.from(bgSvg)).png().toBuffer();
+		let textOverlayBuf = await sharp(Buffer.from(bgSvg)).png().toBuffer();
 
-		let finalBuffer = await sharp(baseBgBuf)
-			.composite(frameComposites)
+		let finalBuffer = await sharp('plugins/waldspiel/images/backgrounds/select.png')
+			.composite([
+				{ input: textOverlayBuf, left: 0, top: 0 },
+				...frameComposites
+			])
 			.toBuffer();
 
 		const outPath = 'temp/finalpicture_customization.png';
@@ -401,46 +408,55 @@ module.exports = {
 		return outPath;
 	},
 
-	async createSetAnimation(animationliste) {
+	async createSetAnimation(animationliste, ownedAnimations, animalType) {
 		const sharp = require('sharp');
 		const WebP = require('node-webpmux');
 		let AnimationListObj = require('./obj/AnimationList.js');
 		let AnimationList = new AnimationListObj().getListAll();
 
 		if (animationliste.length === 0) {
-			await sharp('plugins/waldspiel/images/backgrounds/animalStorage.png').toFile('temp/finalpicture.png');
+			await sharp('plugins/waldspiel/images/backgrounds/select.png').toFile('temp/finalpicture.png');
 			return 'temp/finalpicture.png';
 		}
 
-		let emptyAnimalBuf = await sharp('plugins/waldspiel/images/tiere/Empty.png').resize(80).png().toBuffer();
+		let baseAnimalPath = 'plugins/waldspiel/images/tiere/Empty.png';
+		if (animalType && Animallist[animalType]) {
+			baseAnimalPath = 'plugins/waldspiel/images/tiere/' + Animallist[animalType].filename + '.png';
+		}
+		let animalBuf = await sharp(baseAnimalPath).resize(60).png().toBuffer();
 
+		const width = 550;
+		const height = 300;
 		const columns = 5;
-		const itemCount = Math.min(animationliste.length, 25);
+		const itemCount = Math.min(animationliste.length, 15);
 		const rows = Math.ceil(itemCount / columns);
-		const cellW = 160;
-		const cellH = 120;
-		const width = columns * cellW;
-		const height = Math.max(rows * cellH, 300);
+		const cellW = 100;
+		const cellH = 80;
+		const offsetX = (width - (columns * cellW)) / 2;
+		const offsetY = 35;
 
-		let bgSvg = `<svg width="${width}" height="${height}">
-			<rect width="${width}" height="${height}" fill="#2f3136" />
-		`;
+		let bgSvg = `<svg width="${width}" height="${height}">`;
 		for (let i = 0; i < itemCount; i++) {
 			let r = Math.floor(i / columns);
 			let c = i % columns;
-			let x = c * cellW + (cellW / 2);
-			let y = r * cellH + cellH - 10;
+			let x = offsetX + c * cellW + (cellW / 2);
+			let y = offsetY + r * cellH + cellH - 3;
 
 			let animKey = animationliste[i];
 			let animName = "Aus / Keine";
 			if (animKey !== "ABBRECHEN" && AnimationList[animKey]) {
 				animName = AnimationList[animKey].name;
 			}
-			bgSvg += `<text x="${x}" y="${y}" font-family="Arial, Helvetica, sans-serif" font-size="14px" fill="#fff" text-anchor="middle">${i + 1}. ${animName}</text>`;
+
+			let isOwned = animKey === "ABBRECHEN" || ownedAnimations.includes(animKey);
+			let displayName = isOwned ? `${i + 1}. ${animName}` : `🔒 ${i + 1}. ${animName}`;
+			let textColor = isOwned ? "#fff" : "#aaa";
+
+			bgSvg += `<text x="${x}" y="${y}" font-family="Arial, Helvetica, sans-serif" font-size="10px" fill="${textColor}" text-anchor="middle">${displayName}</text>`;
 		}
 		bgSvg += `</svg>`;
 
-		let baseBgBuf = await sharp(Buffer.from(bgSvg)).png().toBuffer();
+		let textOverlayBuf = await sharp(Buffer.from(bgSvg)).png().toBuffer();
 		const framesCount = 20;
 		const frameBuffers = [];
 
@@ -477,27 +493,40 @@ module.exports = {
 					}
 				}
 
-				const newH = Math.round(80 * sqH);
-				const newW = Math.round(80 * sqW);
+				const newH = Math.round(60 * sqH);
+				const newW = Math.round(60 * sqW);
 				const rotDeg = rot * (180 / Math.PI);
 
-				let frameAnimalBuf = await sharp(emptyAnimalBuf)
+				let frameAnimalBuf = await sharp(animalBuf)
 					.resize(newW, newH)
 					.rotate(rotDeg, { background: { r: 0, g: 0, b: 0, alpha: 0 } })
 					.png()
 					.toBuffer();
 
 				const meta = await sharp(frameAnimalBuf).metadata();
-				let centerX = c * cellW + (cellW / 2);
-				let centerY = r * cellH + (cellH / 2) - 10;
+				let centerX = offsetX + c * cellW + (cellW / 2);
+				let centerY = offsetY + r * cellH + (cellH / 2) - 10;
 				const finalLeft = Math.round(centerX + offX - meta.width / 2);
 				const finalTop = Math.round(centerY + yOffset - meta.height / 2);
 
 				frameComposites.push({ input: frameAnimalBuf, left: finalLeft, top: finalTop });
+
+				let isOwned = animKey === "ABBRECHEN" || ownedAnimations.includes(animKey);
+				if (!isOwned) {
+					let overlaySvg = `<svg width="60" height="60"><rect width="60" height="60" fill="rgba(20,20,20,0.6)" rx="8" /></svg>`;
+					let overlayBuf = await sharp(Buffer.from(overlaySvg)).png().toBuffer();
+					frameComposites.push({ input: overlayBuf, left: Math.round(finalLeft + meta.width / 2 - 30), top: Math.round(finalTop + meta.height / 2 - 30) });
+
+					let lockIconBuf = await sharp('plugins/waldspiel/images/sprites/lock_icon.svg').resize(24, 24).png().toBuffer();
+					frameComposites.push({ input: lockIconBuf, left: Math.round(finalLeft + meta.width / 2 - 12), top: Math.round(finalTop + meta.height / 2 - 12) });
+				}
 			}
 
-			let frameBuffer = await sharp(baseBgBuf)
-				.composite(frameComposites)
+			let frameBuffer = await sharp('plugins/waldspiel/images/backgrounds/select.png')
+				.composite([
+					{ input: textOverlayBuf, left: 0, top: 0 },
+					...frameComposites
+				])
 				.webp({ quality: 80 })
 				.toBuffer();
 			frameBuffers.push({ buffer: frameBuffer, delay: 80 });
