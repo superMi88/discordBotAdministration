@@ -761,7 +761,165 @@ module.exports = {
 			.composite(mergeArrayBackground)
 			.toFile('temp/finalpictureBackground.png')
 
-	}
+	},
+
+	async createBerryCollectImage(user, collectedBerrys, roleBonus, boosterBonus, totalCollected, roleName) {
+		const sharp = require('sharp');
+
+		const width = 550;
+		const height = 100;
+
+		let mergeArray = [];
+
+		// Background card
+		const svgBackground = `<svg width="${width}" height="${height}">
+			<rect width="${width}" height="${height}" fill="#1e1e2e" rx="15" />
+			<rect width="${width}" height="${height}" fill="url(#grad1)" rx="15" opacity="0.2" />
+			<defs>
+				<linearGradient id="grad1" x1="0%" y1="0%" x2="100%" y2="100%">
+					<stop offset="0%" style="stop-color:#f38ba8;stop-opacity:1" />
+					<stop offset="100%" style="stop-color:#89b4fa;stop-opacity:1" />
+				</linearGradient>
+			</defs>
+		</svg>`;
+
+		mergeArray.push({ input: Buffer.from(svgBackground), left: 0, top: 0 });
+
+		// Berry Icon left
+		const bigBerry = await sharp('plugins/waldspiel/images/sprites/berry.png').resize(60).toBuffer();
+		mergeArray.push({ input: bigBerry, left: 20, top: 20 });
+
+		// User Name (Left aligned, shifted right)
+		const nameText = user.username.length > 20 ? user.username.substring(0, 17) + "..." : user.username;
+		mergeArray.push({
+			input: Buffer.from(`<svg width="${width}" height="40">
+				<text x="110" y="25" font-family="Arial, Helvetica, sans-serif" font-size="16px" font-weight="bold" fill="#cdd6f4" text-anchor="start">${nameText} hat Beeren geerntet!</text>
+			</svg>`),
+			left: 0, top: 10
+		});
+
+		const smallBerry = await sharp('plugins/waldspiel/images/sprites/berry.png').resize(24).toBuffer();
+		let statsY = 65;
+		let statsX = 110;
+
+		// 1. Basis
+		mergeArray.push({
+			input: Buffer.from(`<svg width="120" height="40">
+				<text x="0" y="10" font-family="Arial, Helvetica, sans-serif" font-size="10px" fill="#a6adc8">Basis</text>
+				<text x="0" y="26" font-family="Arial, Helvetica, sans-serif" font-size="16px" font-weight="bold" fill="#f9e2af">+${collectedBerrys}</text>
+			</svg>`),
+			left: statsX, top: statsY
+		});
+		statsX += 70;
+
+		// 2. Rang (if exists)
+		if (roleBonus > 0) {
+			mergeArray.push({
+				input: Buffer.from(`<svg width="120" height="40">
+					<text x="0" y="10" font-family="Arial, Helvetica, sans-serif" font-size="10px" fill="#a6adc8">Rang ${roleName || 'Bonus'}</text>
+					<text x="0" y="26" font-family="Arial, Helvetica, sans-serif" font-size="16px" font-weight="bold" fill="#a6e3a1">+${roleBonus}</text>
+				</svg>`),
+				left: statsX, top: statsY
+			});
+			statsX += 100;
+		}
+
+		// 3. Booster (if exists)
+		if (boosterBonus > 0) {
+			mergeArray.push({
+				input: Buffer.from(`<svg width="120" height="40">
+					<text x="0" y="10" font-family="Arial, Helvetica, sans-serif" font-size="10px" fill="#a6adc8">Booster Bonus</text>
+					<text x="0" y="26" font-family="Arial, Helvetica, sans-serif" font-size="16px" font-weight="bold" fill="#fab387">+${boosterBonus}</text>
+				</svg>`),
+				left: statsX, top: statsY
+			});
+			statsX += 110;
+		}
+
+		// 4. Gesamt
+		mergeArray.push({
+			input: Buffer.from(`<svg width="150" height="80">
+				<text x="0" y="20" font-family="Arial, Helvetica, sans-serif" font-size="12px" fill="#fff">Gesamt</text>
+				<text x="0" y="55" font-family="Arial, Helvetica, sans-serif" font-size="36px" font-weight="bold" fill="#fff">${totalCollected}</text>
+			</svg>`),
+			left: width - 120, top: statsY - 35
+		});
+
+		const outPath = 'temp/berry_collect.png';
+		await sharp({
+			create: {
+				width: width,
+				height: height,
+				channels: 4,
+				background: { r: 0, g: 0, b: 0, alpha: 0 }
+			}
+		}).composite(mergeArray).png().toFile(outPath);
+
+		return outPath;
+	},
+
+	async createCatchAnimalImage(user, animalId) {
+		const sharp = require('sharp');
+		const animal = Animallist[animalId];
+
+		const width = 550;
+		const height = 200;
+
+		let mergeArray = [];
+
+		// Background card
+		const svgBackground = `<svg width="${width}" height="${height}">
+			<rect width="${width}" height="${height}" fill="#181825" rx="20" />
+			<rect width="${width}" height="${height}" fill="url(#grad2)" rx="20" opacity="0.2" />
+			<defs>
+				<linearGradient id="grad2" x1="0%" y1="0%" x2="100%" y2="100%">
+					<stop offset="0%" style="stop-color:#cba6f7;stop-opacity:1" />
+					<stop offset="100%" style="stop-color:#94e2d5;stop-opacity:1" />
+				</linearGradient>
+			</defs>
+		</svg>`;
+
+		mergeArray.push({ input: Buffer.from(svgBackground), left: 0, top: 0 });
+
+		// Animal Image
+		const animalImg = await sharp('plugins/waldspiel/images/tiere/' + animal.filename + '.png').resize(150).toBuffer();
+		mergeArray.push({ input: animalImg, left: 30, top: 25 });
+
+		// Text info
+		const nameText = user.username.length > 15 ? user.username.substring(0, 12) + "..." : user.username;
+		mergeArray.push({
+			input: Buffer.from(`<svg width="350" height="50">
+				<text x="0" y="35" font-family="Arial, Helvetica, sans-serif" font-size="32px" font-weight="bold" fill="#fff">${nameText}</text>
+			</svg>`),
+			left: 200, top: 40
+		});
+
+		mergeArray.push({
+			input: Buffer.from(`<svg width="350" height="40">
+				<text x="0" y="30" font-family="Arial, Helvetica, sans-serif" font-size="22px" fill="#bac2de">hat ein Tier gefangen!</text>
+			</svg>`),
+			left: 200, top: 85
+		});
+
+		mergeArray.push({
+			input: Buffer.from(`<svg width="350" height="40">
+				<text x="0" y="30" font-family="Arial, Helvetica, sans-serif" font-size="26px" font-weight="bold" fill="#f5c2e7">${animal.name || "Abenteuer-Gefährte"}</text>
+			</svg>`),
+			left: 200, top: 125
+		});
+
+		const outPath = 'temp/animal_catch.png';
+		await sharp({
+			create: {
+				width: width,
+				height: height,
+				channels: 4,
+				background: { r: 0, g: 0, b: 0, alpha: 0 }
+			}
+		}).composite(mergeArray).png().toFile(outPath);
+
+		return outPath;
+	},
 
 
 

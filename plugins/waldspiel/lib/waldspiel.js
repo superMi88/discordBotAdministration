@@ -288,7 +288,7 @@ module.exports = {
             let row2 = null;
             if (user.id == interaction.user.id) {
                 const { StringSelectMenuBuilder, StringSelectMenuOptionBuilder } = require('discord.js');
-                
+
                 // Fetch animal names for the slots
                 let names = ["Platz 1", "Platz 2", "Platz 3"];
                 const collection = db.collection('animals');
@@ -297,12 +297,12 @@ module.exports = {
                     if (animalIdInWald) {
                         let animal = await collection.findOne({ _id: animalIdInWald });
                         if (animal && animal.name) {
-                            names[i-1] = `Platz ${i}: ${animal.name}`;
+                            names[i - 1] = `Platz ${i}: ${animal.name}`;
                         } else if (animal) {
                             // If animal exists but has no name, we could use type but sticking to Platz X for now
                         }
                     } else {
-                        names[i-1] = `Platz ${i}: Leer`;
+                        names[i - 1] = `Platz ${i}: Leer`;
                     }
                 }
 
@@ -835,8 +835,10 @@ module.exports = {
         const waldcreator = new WaldCreator(tag)
         const filename = await waldcreator.createImage()
 
+        const filenameCatch = await ImageCreator.createCatchAnimalImage(interaction.user, animalType);
+
         await interaction.update({ files: [filename], components: [] });
-        await interaction.followUp({ content: '<@' + interaction.user.id + '> hat das Tier gefangen' });
+        await interaction.followUp({ files: [filenameCatch] });
     },
 
     async collectBerry(interaction, plugin, db) {
@@ -854,51 +856,37 @@ module.exports = {
         collectedBerrys = collectedBerrys - userCountWhoCollectedBerrys
         if (collectedBerrys < 2) collectedBerrys = 2
 
-        roleBonus = 0
-        roleText = ''
-        boosterBonus = 0
-        boosterText = ''
+        let roleBonus = 0
+        let roleName = ''
+        let boosterBonus = 0
 
         if (interaction.member.roles.cache.has(plugin['var'].baerRole)) {
-            roleBonus = 3
+            roleBonus = 3; roleName = "Bär"
+        } else if (interaction.member.roles.cache.has(plugin['var'].wildschweinRole)) {
+            roleBonus = 3; roleName = "Wildschwein"
+        } else if (interaction.member.roles.cache.has(plugin['var'].wolfRole)) {
+            roleBonus = 3; roleName = "Wolf"
+        } else if (interaction.member.roles.cache.has(plugin['var'].hirschRole)) {
+            roleBonus = 3; roleName = "Hirsch"
+        } else if (interaction.member.roles.cache.has(plugin['var'].wildkuhRole)) {
+            roleBonus = 2; roleName = "Wildkuh"
+        } else if (interaction.member.roles.cache.has(plugin['var'].fuchsRole)) {
+            roleBonus = 2; roleName = "Fuchs"
+        } else if (interaction.member.roles.cache.has(plugin['var'].euleRole)) {
+            roleBonus = 2; roleName = "Eule"
+        } else if (interaction.member.roles.cache.has(plugin['var'].waschbaerRole)) {
+            roleBonus = 2; roleName = "Waschbär"
+        } else if (interaction.member.roles.cache.has(plugin['var'].eichhoernchenRole)) {
+            roleBonus = 1; roleName = "Eichhörnchen"
+        } else if (interaction.member.roles.cache.has(plugin['var'].froschRole)) {
+            roleBonus = 1; roleName = "Frosch"
         }
-        if (interaction.member.roles.cache.has(plugin['var'].wildschweinRole)) {
-            roleBonus = 3
-        }
-        if (interaction.member.roles.cache.has(plugin['var'].wolfRole)) {
-            roleBonus = 3
-        }
-        if (interaction.member.roles.cache.has(plugin['var'].hirschRole)) {
-            roleBonus = 3
-        }
-        if (interaction.member.roles.cache.has(plugin['var'].wildkuhRole)) {
-            roleBonus = 2
-        }
-        if (interaction.member.roles.cache.has(plugin['var'].fuchsRole)) {
-            roleBonus = 2
-        }
-        if (interaction.member.roles.cache.has(plugin['var'].euleRole)) {
-            roleBonus = 2
-        }
-        if (interaction.member.roles.cache.has(plugin['var'].waschbaerRole)) {
-            roleBonus = 2
-        }
-        if (interaction.member.roles.cache.has(plugin['var'].eichhoernchenRole)) {
-            roleBonus = 1
-        }
-        if (interaction.member.roles.cache.has(plugin['var'].froschRole)) {
-            roleBonus = 1
-        }
+
         if (interaction.member.premiumSinceTimestamp) {
             boosterBonus = 2
-            boosterText = ' [+' + boosterBonus + ' Booster]'
-        }
-        if (roleBonus > 0) {
-            roleText = ' [+' + roleBonus + ' Rang]'
         }
 
         let collectedBerrysWithBonus = collectedBerrys + roleBonus + boosterBonus
-
 
         let discordUserId = interaction.user.id
         let discordUserDatabase = await getUserCurrencyFromDatabase(discordUserId, db)
@@ -914,7 +902,9 @@ module.exports = {
 
         await ExtensionManager.onBerryCollected(interaction.client, plugin, interaction, db, discordUserId, collectedBerrysWithBonus);
 
-        await interaction.reply({ content: '<@' + interaction.user.id + '> hat ' + collectedBerrys + ' Beeren geerntet' + roleText + boosterText })
+        const filenameBerry = await ImageCreator.createBerryCollectImage(interaction.user, collectedBerrys, roleBonus, boosterBonus, collectedBerrysWithBonus, roleName);
+
+        await interaction.reply({ files: [filenameBerry] })
     },
 
     async collectOsterkorb(interaction, plugin, db) {
