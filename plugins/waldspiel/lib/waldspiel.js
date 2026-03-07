@@ -825,7 +825,17 @@ module.exports = {
 
         }
 
-        await interaction.update({ files: ['plugins/waldspiel/images/backgrounds/Default.png'] });
+        const dateInfo = date();
+        let tag = 'DEFAULT'
+        if (dateInfo.isSummer) tag = "SUMMER"
+        if (dateInfo.isWinter) tag = "WINTER"
+        if (dateInfo.isSpring) tag = "SPRING"
+        if (dateInfo.isAutumn) tag = "AUTUMN"
+
+        const waldcreator = new WaldCreator(tag)
+        const filename = await waldcreator.createImage()
+
+        await interaction.update({ files: [filename], components: [] });
         await interaction.followUp({ content: '<@' + interaction.user.id + '> hat das Tier gefangen' });
     },
 
