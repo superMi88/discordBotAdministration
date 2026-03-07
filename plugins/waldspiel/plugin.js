@@ -228,6 +228,11 @@ class Plugin {
 				await waldspiel.showMeinWald(client, plugin, db, interaction.user, interaction, true)
 			}
 
+			if (isButton(interaction, 'waldSettingsDropdown')) {
+				let choice = interaction.values[0];
+				interaction.customId = choice; // Route to button logic
+			}
+
 			//Tiere anzeigen
 			if (interaction.commandName == plugin['var'].name2) {
 
@@ -601,7 +606,13 @@ class Plugin {
 					{ $set: { name: newName } }
 				);
 
-				await waldspiel.showMeinWald(client, plugin, db, interaction.user, interaction, true)
+				let discordUserDatabase = await getUserCurrencyFromDatabase(interaction.user.id, db);
+				let animalId = 1;
+				if (discordUserDatabase.animalId1 && ObjectId(animalObjId).equals(discordUserDatabase.animalId1)) animalId = 1;
+				else if (discordUserDatabase.animalId2 && ObjectId(animalObjId).equals(discordUserDatabase.animalId2)) animalId = 2;
+				else if (discordUserDatabase.animalId3 && ObjectId(animalObjId).equals(discordUserDatabase.animalId3)) animalId = 3;
+
+				await waldspiel.showMeinWaldAnimal(client, plugin, db, interaction.user, interaction, true, animalId)
 			}
 
 			if (isButton(interaction, 'removeAnimal')) {
@@ -647,9 +658,25 @@ class Plugin {
 			}
 
 			//setCustomization-idPlazierung-page
+			if (isButton(interaction, 'animalSettingsDropdown')) {
+				let animalObjId = getButtonParameter(interaction.customId)[1];
+				let choice = interaction.values[0];
+
+				if (choice.startsWith('editCustomization-')) {
+					let slot = choice.split('-')[1];
+					// Update customId to fall through to setCustomization logic
+					interaction.customId = `setCustomization-${animalObjId}-0-${slot}`;
+				} else if (choice === 'editAnimation') {
+					interaction.customId = `setAnimation-${animalObjId}-0`;
+				} else if (choice === 'editName') {
+					interaction.customId = `editAnimalName-${animalObjId}`;
+				}
+			}
+
 			if (isButton(interaction, 'setCustomization')) {
 				let animalObjId = getButtonParameter(interaction.customId)[1]
 				let page = parseInt(getButtonParameter(interaction.customId)[2]) || 0;
+				let slot = getButtonParameter(interaction.customId)[3] || "1";
 
 				let discordUserId = interaction.user.id
 				let discordUserDatabase = await getUserCurrencyFromDatabase(discordUserId, db)
@@ -683,8 +710,8 @@ class Plugin {
 				const currentItems = allItems.slice(startIdx, startIdx + itemsPerPage);
 
 				let selectMenu = new StringSelectMenuBuilder()
-					.setCustomId('selectCustomizationDropdown-' + animalObjId + '-' + page)
-					.setPlaceholder('Wähle eine Dekoration (Seite ' + (page + 1) + '/' + maxPages + ')')
+					.setCustomId('selectCustomizationDropdown-' + animalObjId + '-' + page + '-' + slot)
+					.setPlaceholder('Slot ' + slot + ': Wähle eine Dekoration (Seite ' + (page + 1) + '/' + maxPages + ')')
 					.setMinValues(1)
 					.setMaxValues(1);
 
@@ -708,11 +735,11 @@ class Plugin {
 				if (maxPages > 1) {
 					buttons.push(
 						new ButtonBuilder()
-							.setCustomId('setCustomization-' + animalObjId + '-' + prevOffset)
+							.setCustomId('setCustomization-' + animalObjId + '-' + prevOffset + '-' + slot)
 							.setLabel('<- Vorherige Seite')
 							.setStyle(ButtonStyle.Primary),
 						new ButtonBuilder()
-							.setCustomId('setCustomization-' + animalObjId + '-' + nextOffset)
+							.setCustomId('setCustomization-' + animalObjId + '-' + nextOffset + '-' + slot)
 							.setLabel('Nächste Seite ->')
 							.setStyle(ButtonStyle.Primary)
 					);
@@ -731,6 +758,7 @@ class Plugin {
 			if (isButton(interaction, 'selectCustomizationDropdown')) {
 				let animalObjId = getButtonParameter(interaction.customId)[1];
 				let page = getButtonParameter(interaction.customId)[2];
+				let slot = getButtonParameter(interaction.customId)[3] || "1";
 				let itemId = interaction.values[0];
 
 				let discordUserId = interaction.user.id;
@@ -744,13 +772,25 @@ class Plugin {
 				if (itemId == "ABBRECHEN") itemId = 0;
 
 				const collection = db.collection('animals');
+				let fieldToUpdate = slot === "1" ? "customization1" : (slot === "2" ? "customization2" : "customization3");
+
+				let updateObj = { [fieldToUpdate]: itemId };
+				// Also update legacy field if it's slot 1
+				if (slot === "1") updateObj.customization = itemId;
+
 				await collection.updateOne(
 					{ _id: ObjectId(animalObjId) },
-					{ $set: { customization: itemId } }
+					{ $set: updateObj }
 				);
 
-				await waldspiel.showMeinWald(client, plugin, db, interaction.user, interaction, true);
+				let animalId = 1;
+				if (discordUserDatabase.animalId1 && ObjectId(animalObjId).equals(discordUserDatabase.animalId1)) animalId = 1;
+				else if (discordUserDatabase.animalId2 && ObjectId(animalObjId).equals(discordUserDatabase.animalId2)) animalId = 2;
+				else if (discordUserDatabase.animalId3 && ObjectId(animalObjId).equals(discordUserDatabase.animalId3)) animalId = 3;
+
+				await waldspiel.showMeinWaldAnimal(client, plugin, db, interaction.user, interaction, true, animalId);
 			}
+
 
 			if (isButton(interaction, 'setAnimation')) {
 				let animalObjId = getButtonParameter(interaction.customId)[1]
@@ -834,7 +874,12 @@ class Plugin {
 					{ $set: { animation: animationId } }
 				);
 
-				await waldspiel.showMeinWald(client, plugin, db, interaction.user, interaction, true)
+				let animalId = 1;
+				if (discordUserDatabase.animalId1 && ObjectId(animalObjId).equals(discordUserDatabase.animalId1)) animalId = 1;
+				else if (discordUserDatabase.animalId2 && ObjectId(animalObjId).equals(discordUserDatabase.animalId2)) animalId = 2;
+				else if (discordUserDatabase.animalId3 && ObjectId(animalObjId).equals(discordUserDatabase.animalId3)) animalId = 3;
+
+				await waldspiel.showMeinWaldAnimal(client, plugin, db, interaction.user, interaction, true, animalId)
 			}
 
 			if (isButton(interaction, 'buyItem')) {

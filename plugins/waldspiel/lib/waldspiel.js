@@ -3,6 +3,7 @@ let { getUserCurrencyFromDatabase, updateUserFromDatabase } = require("../../../
 
 
 const System = require("../../../discordBot/lib/system.js");
+const { ObjectId } = require("mongodb");
 
 //berry cost animal
 const BERRY_COST = 50
@@ -18,6 +19,7 @@ const { date } = require('./date.js');
 const WaldCreator = require('../imageCreator/WaldCreator.js');
 
 const ExtensionManager = require('./../ExtensionManager');
+const ItemList = require("../obj/ItemList.js");
 
 module.exports = {
 
@@ -283,55 +285,73 @@ module.exports = {
 
 
             let row1;
-            let row2;
+            let row2 = null;
             if (user.id == interaction.user.id) {
-                row1 = new ActionRowBuilder()
-                    .addComponents(
-                        new ButtonBuilderExtended()
-                            .setCustomId('editAnimal')
-                            .setParameter(1)
-                            .setLabel('Platz 1')
-                            .setStyle(ButtonStyle.Primary),
-                        new ButtonBuilder()
-                            .setCustomId('editAnimal-2')
-                            .setLabel('Platz 2')
-                            .setStyle(ButtonStyle.Primary),
-                        new ButtonBuilder()
-                            .setCustomId('editAnimal-3')
-                            .setLabel('Platz 3')
-                            .setStyle(ButtonStyle.Primary),
-                        new ButtonBuilder()
-                            .setCustomId('editBackground-0')
-                            .setLabel('Hintergrund')
-                            .setStyle(ButtonStyle.Primary),
-                        new ButtonBuilder()
-                            .setCustomId('postWald')
-                            .setLabel('Wald Posten')
-                            .setStyle(ButtonStyle.Primary),
-                    );
-
-                row2 = new ActionRowBuilder()
-                    .addComponents(
-                        new ButtonBuilderExtended()
-                            .setCustomId('showStorageWithoutEdit')
-                            .setParameter(1)
-                            .setLabel('Box anzeigen')
-                            .setStyle(ButtonStyle.Secondary)
-                    );
-                if (extraButtons.length > 0) {
-                    row2.addComponents(...extraButtons);
+                const { StringSelectMenuBuilder, StringSelectMenuOptionBuilder } = require('discord.js');
+                
+                // Fetch animal names for the slots
+                let names = ["Platz 1", "Platz 2", "Platz 3"];
+                const collection = db.collection('animals');
+                for (let i = 1; i <= 3; i++) {
+                    let animalIdInWald = discordUserDatabase["animalId" + i];
+                    if (animalIdInWald) {
+                        let animal = await collection.findOne({ _id: animalIdInWald });
+                        if (animal && animal.name) {
+                            names[i-1] = `Platz ${i}: ${animal.name}`;
+                        } else if (animal) {
+                            // If animal exists but has no name, we could use type but sticking to Platz X for now
+                        }
+                    } else {
+                        names[i-1] = `Platz ${i}: Leer`;
+                    }
                 }
 
+                let selectMenu = new StringSelectMenuBuilder()
+                    .setCustomId('waldSettingsDropdown')
+                    .setPlaceholder('Deinen Wald verwalten')
+                    .addOptions(
+                        new StringSelectMenuOptionBuilder()
+                            .setLabel(names[0])
+                            .setEmoji('1️⃣')
+                            .setValue('editAnimal-1'),
+                        new StringSelectMenuOptionBuilder()
+                            .setLabel(names[1])
+                            .setEmoji('2️⃣')
+                            .setValue('editAnimal-2'),
+                        new StringSelectMenuOptionBuilder()
+                            .setLabel(names[2])
+                            .setEmoji('3️⃣')
+                            .setValue('editAnimal-3'),
+                        new StringSelectMenuOptionBuilder()
+                            .setLabel('Hintergrund ändern')
+                            .setEmoji('🖼️')
+                            .setValue('editBackground-0'),
+                        new StringSelectMenuOptionBuilder()
+                            .setLabel('Wald Posten')
+                            .setEmoji('📤')
+                            .setValue('postWald'),
+                        new StringSelectMenuOptionBuilder()
+                            .setLabel('Box (Lager) anzeigen')
+                            .setEmoji('📦')
+                            .setValue('showStorageWithoutEdit-1')
+                    );
 
+                row1 = new ActionRowBuilder().addComponents(selectMenu);
+
+                if (extraButtons.length > 0) {
+                    row2 = new ActionRowBuilder().addComponents(...extraButtons);
+                }
             }
 
-            const filename = await ImageCreator.createMeinWald(discordUserDatabase)
+            const filename = await ImageCreator.createMeinWald(discordUserDatabase);
 
             if (shouldUpdate) {
                 if (user.id == interaction.user.id) {
+                    let components = [row1];
+                    if (row2) components.push(row2);
                     return await interaction.update({
                         files: [filename],
-                        components: [row1, row2],
+                        components: components,
                         ephemeral: true
                     });
                 } else {
@@ -343,9 +363,11 @@ module.exports = {
 
             } else {
                 if (user.id == interaction.user.id) {
+                    let components = [row1];
+                    if (row2) components.push(row2);
                     return await interaction.reply({
                         files: [filename],
-                        components: [row1, row2],
+                        components: components,
                         ephemeral: true
                     });
                 } else {
@@ -355,15 +377,11 @@ module.exports = {
                     });
                 }
             }
-
-
         } else {
-
             return await interaction.reply({
                 content: 'Ein Fehler ist aufgetreten bitte melde das Lowa',
                 ephemeral: true
             });
-
         }
     },
 
@@ -384,27 +402,60 @@ module.exports = {
             let animalObjId = discordUserDatabase["animalId" + animalId].toString()
 
             if (discordUserDatabase["animalId" + animalId]) {
-                row2.addComponents(
+                const { StringSelectMenuBuilder, StringSelectMenuOptionBuilder } = require('discord.js');
+                const collection = db.collection('animals');
+                let animal = await collection.findOne({ _id: ObjectId(animalObjId) });
+
+                let ItemlistObj = new ItemList();
+                let Itemlist = ItemlistObj.getListAll();
+                let AnimationListObj = require('./../obj/AnimationList.js');
+                let AnimationList = new AnimationListObj().getListAll();
+
+                // Mapping legacy 'customization' to slot 1 for view purposes
+                let c1 = animal.customization1 || animal.customization;
+                let c2 = animal.customization2;
+                let c3 = animal.customization3;
+
+                let c1Name = (c1 && Itemlist[c1]) ? Itemlist[c1].name : "Keine";
+                let c2Name = (c2 && Itemlist[c2]) ? Itemlist[c2].name : "Keine";
+                let c3Name = (c3 && Itemlist[c3]) ? Itemlist[c3].name : "Keine";
+
+                let animName = (animal.animation && AnimationList[animal.animation]) ? AnimationList[animal.animation].name : "Wackeln";
+
+                let selectMenu = new StringSelectMenuBuilder()
+                    .setCustomId('animalSettingsDropdown-' + animalObjId)
+                    .setPlaceholder('Einstellungen für dein Tier')
+                    .addOptions(
+                        new StringSelectMenuOptionBuilder()
+                            .setLabel(`Kleidung 1: ${c1Name}`)
+                            .setEmoji('🎩')
+                            .setValue(`editCustomization-1`),
+                        new StringSelectMenuOptionBuilder()
+                            .setLabel(`Kleidung 2: ${c2Name}`)
+                            .setEmoji('🎀')
+                            .setValue(`editCustomization-2`),
+                        new StringSelectMenuOptionBuilder()
+                            .setLabel(`Kleidung 3: ${c3Name}`)
+                            .setEmoji('👟')
+                            .setValue(`editCustomization-3`),
+                        new StringSelectMenuOptionBuilder()
+                            .setLabel(`Animation: ${animName}`)
+                            .setEmoji('✨')
+                            .setValue(`editAnimation`),
+                        new StringSelectMenuOptionBuilder()
+                            .setLabel(`Tier-Name ändern`)
+                            .setEmoji('🏷️')
+                            .setValue(`editName`)
+                    );
+
+                row2.addComponents(selectMenu);
+
+                row3 = new ActionRowBuilder().addComponents(
                     this.getZuMeinemWaldButton(),
-                    new ButtonBuilder()
-                        .setCustomId('setCustomization-' + animalObjId + '-0')//setCustomization-idPlazierung-offsetItemliste
-                        .setLabel('Tier einkleiden')
-                        .setStyle(ButtonStyle.Primary),
-                    new ButtonBuilder()
-                        .setCustomId('setAnimation-' + animalObjId + '-0')
-                        .setLabel('Tier animieren')
-                        .setStyle(ButtonStyle.Primary),
-                    new ButtonBuilder()
-                        .setCustomId('editAnimalName-' + animalObjId)//editAnimalName-animalId
-                        .setLabel('Name bearbeiten')
-                        .setStyle(ButtonStyle.Primary),
                     new ButtonBuilder()
                         .setCustomId('sendToStorage-' + animalId)
                         .setLabel('In Box schieben')
-                        .setStyle(ButtonStyle.Secondary)
-                )
-
-                row3 = new ActionRowBuilder().addComponents(
+                        .setStyle(ButtonStyle.Secondary),
                     new ButtonBuilder()
                         .setCustomId('removeAnimal-' + animalObjId)
                         .setLabel('Tier Freilassen')
@@ -414,7 +465,7 @@ module.exports = {
                 row2.addComponents(
                     this.getZuMeinemWaldButton(),
                     new ButtonBuilder()
-                        .setCustomId('showStorage-' + animalId + '-0')//editAnimalName-animalId
+                        .setCustomId('showStorage-' + animalId + '-0')
                         .setLabel('Aus Box holen')
                         .setStyle(ButtonStyle.Secondary),
                 )

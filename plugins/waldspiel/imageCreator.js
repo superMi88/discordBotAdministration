@@ -40,8 +40,9 @@ module.exports = {
 		for (let i = 1; i <= 3; i++) {
 			if (animalExist(discordUserDatabase, i)) {
 				let animalOverlays = [];
-				if (await itemExist(discordUserDatabase, i)) {
-					animalOverlays.push({ input: await sharp(await getItemFilepath(discordUserDatabase, i)).resize(150).toBuffer() });
+				let itemPaths = await getItemFilepaths(discordUserDatabase, i);
+				for (const path of itemPaths) {
+					animalOverlays.push({ input: await sharp(path).resize(150).toBuffer() });
 				}
 				const baseImgPath = await getAnimalFilepath(discordUserDatabase, i);
 				const animalBuf = await sharp(baseImgPath).resize(150).composite(animalOverlays).png().toBuffer();
@@ -217,8 +218,9 @@ module.exports = {
 
 		if (animalExist(discordUserDatabase, animalId)) {
 			let animalOverlays = [];
-			if (await itemExist(discordUserDatabase, animalId)) {
-				animalOverlays.push({ input: await sharp(await getItemFilepath(discordUserDatabase, animalId)).resize(150).toBuffer() });
+			let itemPaths = await getItemFilepaths(discordUserDatabase, animalId);
+			for (const path of itemPaths) {
+				animalOverlays.push({ input: await sharp(path).resize(150).toBuffer() });
 			}
 			const baseImgPath = await getAnimalFilepath(discordUserDatabase, animalId);
 			animalBuf = await sharp(baseImgPath).resize(150).composite(animalOverlays).png().toBuffer();
@@ -807,32 +809,39 @@ function getUserBackgroundFilepath(discordUserDatabase) {
 	return 'plugins/waldspiel/images/backgrounds/' + Background.filename + '.png'
 }
 
-async function getItemFilepath(discordUserDatabase, id) {
+async function getItemFilepaths(discordUserDatabase, id) {
 
 	var animalObjId = discordUserDatabase["animalId" + id]
 	let db = DatabaseManager.get()
 	const collection = db.collection('animals');
 	let animal = await collection.findOne({ _id: animalObjId })
 
-	if (!animal || !animal.customization) {
-		return 'plugins/waldspiel/images/items/Default.png' //return no item
+	if (!animal) {
+		return [];
 	}
 
 	let ItemlistObj = new ItemList()
 	let Itemlist = ItemlistObj.getListAll()
+	let paths = [];
+	let activeItems = new Set();
 
-	return 'plugins/waldspiel/images/items/' + Itemlist[animal.customization].filename + '.png'
+	// Support slot 1 (with legacy fallback), 2, and 3
+	let s1 = animal.customization1 || animal.customization;
+	if (s1 && Itemlist[s1]) activeItems.add(s1);
+	if (animal.customization2 && Itemlist[animal.customization2]) activeItems.add(animal.customization2);
+	if (animal.customization3 && Itemlist[animal.customization3]) activeItems.add(animal.customization3);
+
+	for (const itemId of activeItems) {
+		paths.push('plugins/waldspiel/images/items/' + Itemlist[itemId].filename + '.png');
+	}
+
+	return paths;
 }
 
 
 async function itemExist(discordUserDatabase, id) {
-	var animalObjId = discordUserDatabase["animalId" + id]
-	let db = DatabaseManager.get()
-	const collection = db.collection('animals');
-	let animal = await collection.findOne({ _id: animalObjId })
-
-	if (!animal || !animal.customization) return false
-	return true;
+	let paths = await getItemFilepaths(discordUserDatabase, id);
+	return paths.length > 0;
 }
 
 async function getAnimalFilepath(discordUserDatabase, id) {
