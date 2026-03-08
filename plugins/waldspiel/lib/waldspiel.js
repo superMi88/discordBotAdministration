@@ -428,15 +428,15 @@ module.exports = {
                     .addOptions(
                         new StringSelectMenuOptionBuilder()
                             .setLabel(`Kleidung 1: ${c1Name}`)
-                            .setEmoji('🎩')
+                            .setEmoji('👕')
                             .setValue(`editCustomization-1`),
                         new StringSelectMenuOptionBuilder()
                             .setLabel(`Kleidung 2: ${c2Name}`)
-                            .setEmoji('🎀')
+                            .setEmoji('👕')
                             .setValue(`editCustomization-2`),
                         new StringSelectMenuOptionBuilder()
                             .setLabel(`Kleidung 3: ${c3Name}`)
-                            .setEmoji('👟')
+                            .setEmoji('👕')
                             .setValue(`editCustomization-3`),
                         new StringSelectMenuOptionBuilder()
                             .setLabel(`Animation: ${animName}`)

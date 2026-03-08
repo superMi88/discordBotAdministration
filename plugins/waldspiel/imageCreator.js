@@ -53,9 +53,15 @@ module.exports = {
 		for (let i = 1; i <= 3; i++) {
 			if (animalExist(discordUserDatabase, i)) {
 				let animalOverlays = [];
-				let itemPaths = await getItemFilepaths(discordUserDatabase, i);
-				for (const path of itemPaths) {
-					animalOverlays.push({ input: await sharp(path).resize(150).toBuffer() });
+				let staticOverlays = [];
+				let itemDetails = await getItemFilepaths(discordUserDatabase, i);
+				for (const item of itemDetails) {
+					const decorationBuf = await sharp(item.path).resize(150).toBuffer();
+					if (item.animation) {
+						animalOverlays.push({ input: decorationBuf });
+					} else {
+						staticOverlays.push({ input: decorationBuf, left: 0, top: 0 });
+					}
 				}
 				const baseImgPath = await getAnimalFilepath(discordUserDatabase, i);
 				const animalBuf = await sharp(baseImgPath).resize(150).composite(animalOverlays).png().toBuffer();
@@ -63,7 +69,7 @@ module.exports = {
 				const left = i === 1 ? 30 : i === 2 ? 195 : 360;
 				const top = i === 1 ? 135 : i === 2 ? 130 : 135;
 				const animType = await getAnimalAnimation(discordUserDatabase, i);
-				animals.push({ buf: animalBuf, left, top, animType });
+				animals.push({ buf: animalBuf, left, top, animType, staticOverlays });
 			}
 		}
 
@@ -88,6 +94,8 @@ module.exports = {
 				if (animal.animType === 'ATMEN') {
 					sqH = 1 - 0.03 * Math.sin(progress * Math.PI * 2);
 				} else if (animal.animType === 'WACKELN') {
+					offX = 3 * Math.sin(progress * Math.PI * 2);
+				} else if (animal.animType === 'WOBBELN') {
 					sqH = 1 - 0.03 * Math.sin(progress * Math.PI * 4);
 					offX = 5 * Math.sin(progress * Math.PI * 2);
 					rot = 0.05 * Math.sin(progress * Math.PI * 2);
@@ -125,6 +133,10 @@ module.exports = {
 				const finalTop = Math.round(y + 75 - meta.height / 2);
 
 				frameComposites.push({ input: frameAnimalBuf, left: finalLeft, top: finalTop });
+
+				for (const sOverlay of animal.staticOverlays) {
+					frameComposites.push({ input: sOverlay.input, left: animal.left, top: animal.top });
+				}
 			}
 
 			// Composite animals over background for this frame
@@ -228,16 +240,24 @@ module.exports = {
 
 		let animalBuf = null;
 		let animType = 'WACKELN';
+		let animalStaticOverlays = [];
 
 		if (animalExist(discordUserDatabase, animalId)) {
 			let animalOverlays = [];
-			let itemPaths = await getItemFilepaths(discordUserDatabase, animalId);
-			for (const path of itemPaths) {
-				animalOverlays.push({ input: await sharp(path).resize(150).toBuffer() });
+			let staticOverlays = [];
+			let itemDetails = await getItemFilepaths(discordUserDatabase, animalId);
+			for (const item of itemDetails) {
+				const decorationBuf = await sharp(item.path).resize(150).toBuffer();
+				if (item.animation) {
+					animalOverlays.push({ input: decorationBuf });
+				} else {
+					staticOverlays.push({ input: decorationBuf });
+				}
 			}
 			const baseImgPath = await getAnimalFilepath(discordUserDatabase, animalId);
 			animalBuf = await sharp(baseImgPath).resize(150).composite(animalOverlays).png().toBuffer();
 			animType = await getAnimalAnimation(discordUserDatabase, animalId);
+			animalStaticOverlays = staticOverlays; // We need to define this variable outside or use it later
 
 			if (await animalNameExist(discordUserDatabase, animalId)) {
 				let imageToPush = await sharp('plugins/waldspiel/images/nametag.png').toBuffer()
@@ -273,6 +293,8 @@ module.exports = {
 			if (animType === 'ATMEN') {
 				sqH = 1 - 0.03 * Math.sin(progress * Math.PI * 2);
 			} else if (animType === 'WACKELN') {
+				offX = 3 * Math.sin(progress * Math.PI * 2);
+			} else if (animType === 'WOBBELN') {
 				sqH = 1 - 0.03 * Math.sin(progress * Math.PI * 4);
 				offX = 5 * Math.sin(progress * Math.PI * 2);
 				rot = 0.05 * Math.sin(progress * Math.PI * 2);
@@ -306,8 +328,13 @@ module.exports = {
 			const finalLeft = Math.round(195 + 75 + offX - meta.width / 2);
 			const finalTop = Math.round(y + 75 - meta.height / 2);
 
+			let composites = [{ input: frameAnimalBuf, left: finalLeft, top: finalTop }];
+			for (const sOverlay of animalStaticOverlays) {
+				composites.push({ input: sOverlay.input, left: 195, top: 130 });
+			}
+
 			let frameBuffer = await sharp(backgroundBuffer)
-				.composite([{ input: frameAnimalBuf, left: finalLeft, top: finalTop }])
+				.composite(composites)
 				.webp({ quality: 90 })
 				.toBuffer();
 
@@ -489,6 +516,8 @@ module.exports = {
 				if (animKey === 'ATMEN') {
 					sqH = 1 - 0.03 * Math.sin(progress * Math.PI * 2);
 				} else if (animKey === 'WACKELN') {
+					offX = 2 * Math.sin(progress * Math.PI * 2);
+				} else if (animKey === 'WOBBELN') {
 					sqH = 1 - 0.03 * Math.sin(progress * Math.PI * 4);
 					offX = 3 * Math.sin(progress * Math.PI * 2);
 					rot = 0.05 * Math.sin(progress * Math.PI * 2);
@@ -947,7 +976,7 @@ async function getItemFilepaths(discordUserDatabase, id) {
 
 	let ItemlistObj = new ItemList()
 	let Itemlist = ItemlistObj.getListAll()
-	let paths = [];
+	let items = [];
 	let activeItems = new Set();
 
 	// Support slot 1 (with legacy fallback), 2, and 3
@@ -957,10 +986,13 @@ async function getItemFilepaths(discordUserDatabase, id) {
 	if (animal.customization3 && Itemlist[animal.customization3]) activeItems.add(animal.customization3);
 
 	for (const itemId of activeItems) {
-		paths.push('plugins/waldspiel/images/items/' + Itemlist[itemId].filename + '.png');
+		items.push({
+			path: 'plugins/waldspiel/images/items/' + Itemlist[itemId].filename + '.png',
+			animation: Itemlist[itemId].animation !== false
+		});
 	}
 
-	return paths;
+	return items;
 }
 
 
