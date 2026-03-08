@@ -95,6 +95,7 @@ module.exports = {
 					sqH = 1 - 0.03 * Math.sin(progress * Math.PI * 2);
 				} else if (animal.animType === 'WACKELN') {
 					offX = 3 * Math.sin(progress * Math.PI * 2);
+					rot = 0.02 * Math.sin(progress * Math.PI * 2);
 				} else if (animal.animType === 'WOBBELN') {
 					sqH = 1 - 0.03 * Math.sin(progress * Math.PI * 4);
 					offX = 5 * Math.sin(progress * Math.PI * 2);
@@ -294,6 +295,7 @@ module.exports = {
 				sqH = 1 - 0.03 * Math.sin(progress * Math.PI * 2);
 			} else if (animType === 'WACKELN') {
 				offX = 3 * Math.sin(progress * Math.PI * 2);
+				rot = 0.02 * Math.sin(progress * Math.PI * 2);
 			} else if (animType === 'WOBBELN') {
 				sqH = 1 - 0.03 * Math.sin(progress * Math.PI * 4);
 				offX = 5 * Math.sin(progress * Math.PI * 2);
@@ -517,6 +519,7 @@ module.exports = {
 					sqH = 1 - 0.03 * Math.sin(progress * Math.PI * 2);
 				} else if (animKey === 'WACKELN') {
 					offX = 2 * Math.sin(progress * Math.PI * 2);
+					rot = 0.02 * Math.sin(progress * Math.PI * 2);
 				} else if (animKey === 'WOBBELN') {
 					sqH = 1 - 0.03 * Math.sin(progress * Math.PI * 4);
 					offX = 3 * Math.sin(progress * Math.PI * 2);
@@ -1029,7 +1032,7 @@ async function getAnimalAnimation(discordUserDatabase, id) {
 	const collection = db.collection('animals');
 	let animal = await collection.findOne({ _id: animalObjId })
 
-	if (!animal || !animal.animation || animal.animation === "0") return "WACKELN" // default
+	if (!animal || animal.animation === undefined) return "WACKELN" // default
 	return animal.animation;
 }
 

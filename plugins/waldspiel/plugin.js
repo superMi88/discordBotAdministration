@@ -233,6 +233,20 @@ class Plugin {
 				interaction.customId = choice; // Route to button logic
 			}
 
+			if (isButton(interaction, 'animalSettingsDropdown')) {
+				let animalObjId = getButtonParameter(interaction.customId)[1];
+				let choice = interaction.values[0];
+
+				if (choice.startsWith('editCustomization-')) {
+					let slot = choice.split('-')[1];
+					interaction.customId = `setCustomization-${animalObjId}-0-${slot}`;
+				} else if (choice === 'editAnimation') {
+					interaction.customId = `setAnimation-${animalObjId}-0`;
+				} else if (choice === 'editName') {
+					interaction.customId = `editAnimalName-${animalObjId}`;
+				}
+			}
+
 			//Tiere anzeigen
 			if (interaction.commandName == plugin['var'].name2) {
 
@@ -608,9 +622,9 @@ class Plugin {
 
 				let discordUserDatabase = await getUserCurrencyFromDatabase(interaction.user.id, db);
 				let animalId = 1;
-				if (discordUserDatabase.animalId1 && ObjectId(animalObjId).equals(discordUserDatabase.animalId1)) animalId = 1;
-				else if (discordUserDatabase.animalId2 && ObjectId(animalObjId).equals(discordUserDatabase.animalId2)) animalId = 2;
-				else if (discordUserDatabase.animalId3 && ObjectId(animalObjId).equals(discordUserDatabase.animalId3)) animalId = 3;
+				if (discordUserDatabase.animalId1 && ObjectId(animalObjId).equals(discordUserDatabase.animalId1.toString())) animalId = 1;
+				else if (discordUserDatabase.animalId2 && ObjectId(animalObjId).equals(discordUserDatabase.animalId2.toString())) animalId = 2;
+				else if (discordUserDatabase.animalId3 && ObjectId(animalObjId).equals(discordUserDatabase.animalId3.toString())) animalId = 3;
 
 				await waldspiel.showMeinWaldAnimal(client, plugin, db, interaction.user, interaction, true, animalId)
 			}
@@ -657,21 +671,7 @@ class Plugin {
 				await waldspiel.showMeinWald(client, plugin, db, interaction.user, interaction, true)
 			}
 
-			//setCustomization-idPlazierung-page
-			if (isButton(interaction, 'animalSettingsDropdown')) {
-				let animalObjId = getButtonParameter(interaction.customId)[1];
-				let choice = interaction.values[0];
 
-				if (choice.startsWith('editCustomization-')) {
-					let slot = choice.split('-')[1];
-					// Update customId to fall through to setCustomization logic
-					interaction.customId = `setCustomization-${animalObjId}-0-${slot}`;
-				} else if (choice === 'editAnimation') {
-					interaction.customId = `setAnimation-${animalObjId}-0`;
-				} else if (choice === 'editName') {
-					interaction.customId = `editAnimalName-${animalObjId}`;
-				}
-			}
 
 			if (isButton(interaction, 'setCustomization')) {
 				let animalObjId = getButtonParameter(interaction.customId)[1]
@@ -815,7 +815,7 @@ class Plugin {
 
 				let selectMenu = new StringSelectMenuBuilder()
 					.setCustomId('selectAnimationDropdown-' + animalObjId)
-					.setPlaceholder('Wähle eine Animation (Maximal 15)')
+					.setPlaceholder('Wähle eine Animation')
 					.setMinValues(1)
 					.setMaxValues(1);
 
