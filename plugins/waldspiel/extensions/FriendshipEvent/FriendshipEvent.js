@@ -15,7 +15,7 @@ class FriendshipEvent {
         const date = now.getDate(); // 1-31
 
         // Event läuft nur im März (2) zwischen dem 1. und 7. Tag der ersten Woche
-        return month === 2 && date >= 1 && date <= 7;
+        return month === 2 && date >= 1 && date <= 8;
     }
 
     async preExecute(client, plugin) {
