@@ -12,15 +12,15 @@ const Backgroundlist = require('./obj/BackgroundList.js');
 const ItemList = require("./obj/ItemList.js");
 
 function getQuicksandPath(text, x, y, size, color = "white", anchor = "start") {
-    const metrics = textToSVG.getMetrics(text, { fontSize: size });
-    let tx = x;
-    if (anchor === "middle") tx = x - metrics.width / 2;
-    if (anchor === "end") tx = x - metrics.width;
-    
-    const ty = y + (metrics.ascender - metrics.descender) / 2;
-    const pathData = textToSVG.getD(text, { fontSize: size });
-    
-    return `<path d="${pathData}" fill="${color}" transform="translate(${tx},${ty})" />`;
+	const metrics = textToSVG.getMetrics(text, { fontSize: size });
+	let tx = x;
+	if (anchor === "middle") tx = x - metrics.width / 2;
+	if (anchor === "end") tx = x - metrics.width;
+
+	const ty = y + (metrics.ascender - metrics.descender) / 2;
+	const pathData = textToSVG.getD(text, { fontSize: size });
+
+	return `<path d="${pathData}" fill="${color}" transform="translate(${tx},${ty})" />`;
 }
 
 module.exports = {
@@ -780,19 +780,19 @@ module.exports = {
 		const sharp = require('sharp');
 		const width = 550;
 		const height = 80;
-		
+
 		let mergeArray = [];
-		
+
 		// User Name
 		const nameText = user.username.length > 20 ? user.username.substring(0, 17) + "..." : user.username;
 		mergeArray.push({
 			input: Buffer.from(`<svg width="${width}" height="${height}" xmlns="http://www.w3.org/2000/svg">
 				${getQuicksandPath(nameText + " hat Beeren geerntet!", 30, 16, 20, "white")}
 			</svg>`),
-			left: 0, top: -4
+			left: 0, top: -1
 		});
-		
-		let statsY = 38;
+
+		let statsY = 32;
 		let statsX = 30;
 
 		// 1. Basis
@@ -824,7 +824,7 @@ module.exports = {
 					${getQuicksandPath("Booster Bonus", 0, 8, 12, "#efebe9")}
 					${getQuicksandPath("+" + boosterBonus, 0, 24, 18, "#ffd180")}
 				</svg>`),
-			left: statsX, top: statsY
+				left: statsX, top: statsY
 			});
 			statsX += 110;
 		}
@@ -833,9 +833,9 @@ module.exports = {
 		mergeArray.push({
 			input: Buffer.from(`<svg width="150" height="80" xmlns="http://www.w3.org/2000/svg">
 				${getQuicksandPath("Gesamt", 0, 10, 16, "white")}
-				${getQuicksandPath(String(totalCollected), 0, 36, 44, "white")}
+				${getQuicksandPath(String(totalCollected), 0, 35, 45, "white")}
 			</svg>`),
-			left: width - 160, top: 0
+			left: width - 155, top: 4
 		});
 
 		const outPath = 'temp/berry_collect.png';
@@ -863,7 +863,7 @@ module.exports = {
 
 		// Text info
 		const nameText = user.username.length > 15 ? user.username.substring(0, 12) + "..." : user.username;
-		
+
 		mergeArray.push({
 			input: Buffer.from(`<svg width="350" height="200" xmlns="http://www.w3.org/2000/svg">
 				${getQuicksandPath(nameText, 0, 40, 32, "white")}
