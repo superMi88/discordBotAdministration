@@ -838,7 +838,7 @@ module.exports = {
         const filenameCatch = await ImageCreator.createCatchAnimalImage(interaction.member, animalType);
 
         await interaction.update({ files: [filename], components: [] });
-        await interaction.followUp({ files: [filenameCatch] });
+        await interaction.channel.send({ files: [filenameCatch] });
     },
 
     async collectBerry(interaction, plugin, db) {
@@ -904,7 +904,8 @@ module.exports = {
 
         const filenameBerry = await ImageCreator.createBerryCollectImage(interaction.member, collectedBerrys, roleBonus, boosterBonus, collectedBerrysWithBonus, roleName);
 
-        await interaction.reply({ files: [filenameBerry] })
+        await interaction.deferUpdate();
+        await interaction.channel.send({ files: [filenameBerry] })
     },
 
     async collectOsterkorb(interaction, plugin, db) {
@@ -930,7 +931,8 @@ module.exports = {
             }
         })
 
-        await interaction.reply({ content: '<@' + interaction.user.id + '> hat Süßigkeiten erhalten' })
+        await interaction.deferUpdate();
+        await interaction.channel.send({ content: '<@' + interaction.user.id + '> hat Süßigkeiten erhalten' })
     },
 
     async sendToStorage(interaction, db, discordId, animalPlazierungsId) {
