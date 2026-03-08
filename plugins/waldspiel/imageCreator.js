@@ -853,29 +853,32 @@ module.exports = {
 		const animal = Animallist[animalId];
 
 		const width = 550;
-		const height = 200;
+		const height = 80;
 
 		let mergeArray = [];
 
-		// Animal Image
-		const animalImg = await sharp('plugins/waldspiel/images/tiere/' + animal.filename + '.png').resize(150).toBuffer();
-		mergeArray.push({ input: animalImg, left: 30, top: 25 });
-
-		// Text info
-		const nameText = user.username.length > 15 ? user.username.substring(0, 12) + "..." : user.username;
+		// User Name + Catch Message
+		const nameText = user.username.length > 20 ? user.username.substring(0, 17) + "..." : user.username;
 
 		mergeArray.push({
-			input: Buffer.from(`<svg width="350" height="200" xmlns="http://www.w3.org/2000/svg">
-				${getQuicksandPath(nameText, 0, 40, 32, "white")}
-				${getQuicksandPath("hat ein Tier gefangen!", 0, 85, 22, "#efebe9")}
-				${getQuicksandPath(animal.name || "Abenteuer-Gefährte", 0, 130, 26, "#f5c2e7")}
+			input: Buffer.from(`<svg width="${width}" height="${height}" xmlns="http://www.w3.org/2000/svg">
+				${getQuicksandPath(nameText + " hat ein Tier gefangen!", 30, 16, 20, "white")}
+				${getQuicksandPath(animal.name || "Unbekanntes Tier", 30, 46, 32, "#74cc5e")}
 			</svg>`),
-			left: 200, top: 0
+			left: 0, top: -1
 		});
 
+		// Animal Image (Large and cut off on the right)
+		const animalImg = await sharp('plugins/waldspiel/images/tiere/' + animal.filename + '.png')
+			.resize(160, 160)
+			.extract({ left: 0, top: 45, width: 80, height: 80 })
+			.toBuffer();
+
+		mergeArray.push({ input: animalImg, left: width - 80, top: 0 });
+
 		const outPath = 'temp/animal_catch.png';
-		await sharp('plugins/waldspiel/images/backgrounds/collect.png')
-			.resize(550, 200)
+		await sharp('plugins/waldspiel/images/backgrounds/collect_animal.png')
+			.resize(width, height)
 			.composite(mergeArray)
 			.png()
 			.toFile(outPath);
