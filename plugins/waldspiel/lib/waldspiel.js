@@ -97,10 +97,10 @@ module.exports = {
 
         this.addAnleitung(row)
 
-        await ImageCreator.createAnimal(animalId, dateInfo)
+        const outPath = await ImageCreator.createAnimal(animalId, dateInfo)
 
         await channel.send({
-            files: ['temp/finalpicture.png'],
+            files: [outPath],
             components: [row]
         })
     },
@@ -169,7 +169,6 @@ module.exports = {
 
         await channel.send({
             files: ['temp/finalpicture.png'],
-            //files: ['plugins/waldspiel/images/busch.png'],
             components: [rowBusch]
         })
     },

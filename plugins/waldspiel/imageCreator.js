@@ -353,21 +353,54 @@ module.exports = {
 	},
 
 	async createAnimal(animalId, dateinfo) {
+		const sharp = require('sharp');
+		const WebP = require('node-webpmux');
 
-		const sharp = require('sharp')
+		let tag = 'DEFAULT';
+		if (dateinfo.isSummer) tag = "SUMMER";
+		if (dateinfo.isWinter) tag = "WINTER";
+		if (dateinfo.isSpring) tag = "SPRING";
+		if (dateinfo.isAutumn) tag = "AUTUMN";
 
-		let tag = 'DEFAULT'
-		if (dateinfo.isSummer) tag = "SUMMER"
-		if (dateinfo.isWinter) tag = "WINTER"
-		if (dateinfo.isSpring) tag = "SPRING"
-		if (dateinfo.isAutumn) tag = "AUTUMN"
+		const waldcreator = new WaldCreator(tag);
+		const backgroundBuffer = await sharp('plugins/waldspiel/images/backgrounds/' + waldcreator.background.filename + '.png')
+			.composite(waldcreator.background.overlay ? [{ input: await sharp('plugins/waldspiel/images/backgrounds/' + waldcreator.background.overlay + '.png').toBuffer(), left: 0, top: 0 }] : [])
+			.png().toBuffer();
 
-		const waldcreator = new WaldCreator(tag)
+		const animalBuffer = await sharp('plugins/waldspiel/images/tiere/' + Animallist[animalId].filename + '.png')
+			.resize(250)
+			.toBuffer();
 
-		waldcreator.setMergeArray([
-			{ input: await sharp('plugins/waldspiel/images/tiere/' + Animallist[animalId].filename + '.png').toBuffer(), left: 120, top: 10 }
-		])
-		await waldcreator.createImage()
+		const width = 550;
+		const height = 300;
+		const frames = 20;
+		const frameBuffers = [];
+
+		for (let i = 0; i < frames; i++) {
+			const progress = i / frames;
+			let offX = 2 * Math.sin(progress * Math.PI * 2);
+			let rot = 0.01 * Math.sin(progress * Math.PI * 2);
+			const rotDeg = rot * (180 / Math.PI);
+
+			const frameAnimalBuf = await sharp(animalBuffer)
+				.rotate(rotDeg, { background: { r: 0, g: 0, b: 0, alpha: 0 } })
+				.png().toBuffer();
+
+			const meta = await sharp(frameAnimalBuf).metadata();
+			const finalLeft = Math.round(275 + offX - meta.width / 2);
+			const finalTop = Math.round(50 + 125 - meta.height / 2);
+
+			const frame = await sharp(backgroundBuffer)
+				.composite([{ input: frameAnimalBuf, left: finalLeft, top: finalTop }])
+				.webp({ quality: 90 })
+				.toBuffer();
+
+			frameBuffers.push(await WebP.Image.generateFrame({ buffer: frame, delay: 80 }));
+		}
+
+		const outPath = 'temp/finalpicture.webp';
+		await WebP.Image.save(outPath, { width, height, loops: 0, frames: frameBuffers });
+		return outPath;
 	},
 
 	async createSetCustomization(pageItems, ownedItems, startIdx, animalType) {
