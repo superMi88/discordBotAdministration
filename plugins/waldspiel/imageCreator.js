@@ -810,7 +810,7 @@ module.exports = {
 		if (roleBonus > 0) {
 			mergeArray.push({
 				input: Buffer.from(`<svg width="130" height="40" xmlns="http://www.w3.org/2000/svg">
-					${getQuicksandPath("Rang " + (roleName || 'Bonus'), 0, 8, 12, "#efebe9")}
+					${getQuicksandPath("Rang Bonus", 0, 8, 12, "#efebe9")}
 					${getQuicksandPath("+" + roleBonus, 0, 24, 18, "#ccff90")}
 				</svg>`),
 				left: statsX, top: statsY
