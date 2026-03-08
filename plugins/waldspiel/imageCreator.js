@@ -871,10 +871,10 @@ module.exports = {
 		// Animal Image (Large and cut off on the right)
 		const animalImg = await sharp('plugins/waldspiel/images/tiere/' + animal.filename + '.png')
 			.resize(160, 160)
-			.extract({ left: 0, top: 45, width: 80, height: 80 })
+			.extract({ left: 0, top: 45, width: 116, height: 80 })
 			.toBuffer();
 
-		mergeArray.push({ input: animalImg, left: width - 80, top: 0 });
+		mergeArray.push({ input: animalImg, left: width - 116, top: 0 });
 
 		const outPath = 'temp/animal_catch.png';
 		await sharp('plugins/waldspiel/images/backgrounds/collect_animal.png')
