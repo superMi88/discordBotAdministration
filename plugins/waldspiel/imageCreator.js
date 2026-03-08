@@ -94,8 +94,8 @@ module.exports = {
 				if (animal.animType === 'ATMEN') {
 					sqH = 1 - 0.03 * Math.sin(progress * Math.PI * 2);
 				} else if (animal.animType === 'WACKELN') {
-					offX = 3 * Math.sin(progress * Math.PI * 2);
-					rot = 0.02 * Math.sin(progress * Math.PI * 2);
+					offX = 2 * Math.sin(progress * Math.PI * 2);
+					rot = 0.01 * Math.sin(progress * Math.PI * 2);
 				} else if (animal.animType === 'WOBBELN') {
 					sqH = 1 - 0.03 * Math.sin(progress * Math.PI * 4);
 					offX = 5 * Math.sin(progress * Math.PI * 2);
@@ -294,8 +294,8 @@ module.exports = {
 			if (animType === 'ATMEN') {
 				sqH = 1 - 0.03 * Math.sin(progress * Math.PI * 2);
 			} else if (animType === 'WACKELN') {
-				offX = 3 * Math.sin(progress * Math.PI * 2);
-				rot = 0.02 * Math.sin(progress * Math.PI * 2);
+				offX = 2 * Math.sin(progress * Math.PI * 2);
+				rot = 0.01 * Math.sin(progress * Math.PI * 2);
 			} else if (animType === 'WOBBELN') {
 				sqH = 1 - 0.03 * Math.sin(progress * Math.PI * 4);
 				offX = 5 * Math.sin(progress * Math.PI * 2);
@@ -518,8 +518,8 @@ module.exports = {
 				if (animKey === 'ATMEN') {
 					sqH = 1 - 0.03 * Math.sin(progress * Math.PI * 2);
 				} else if (animKey === 'WACKELN') {
-					offX = 2 * Math.sin(progress * Math.PI * 2);
-					rot = 0.02 * Math.sin(progress * Math.PI * 2);
+					offX = 1 * Math.sin(progress * Math.PI * 2);
+					rot = 0.01 * Math.sin(progress * Math.PI * 2);
 				} else if (animKey === 'WOBBELN') {
 					sqH = 1 - 0.03 * Math.sin(progress * Math.PI * 4);
 					offX = 3 * Math.sin(progress * Math.PI * 2);
