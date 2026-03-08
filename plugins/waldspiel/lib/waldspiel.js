@@ -835,7 +835,7 @@ module.exports = {
         const waldcreator = new WaldCreator(tag)
         const filename = await waldcreator.createImage()
 
-        const filenameCatch = await ImageCreator.createCatchAnimalImage(interaction.user, animalType);
+        const filenameCatch = await ImageCreator.createCatchAnimalImage(interaction.member, animalType);
 
         await interaction.update({ files: [filename], components: [] });
         await interaction.followUp({ files: [filenameCatch] });
@@ -902,7 +902,7 @@ module.exports = {
 
         await ExtensionManager.onBerryCollected(interaction.client, plugin, interaction, db, discordUserId, collectedBerrysWithBonus);
 
-        const filenameBerry = await ImageCreator.createBerryCollectImage(interaction.user, collectedBerrys, roleBonus, boosterBonus, collectedBerrysWithBonus, roleName);
+        const filenameBerry = await ImageCreator.createBerryCollectImage(interaction.member, collectedBerrys, roleBonus, boosterBonus, collectedBerrysWithBonus, roleName);
 
         await interaction.reply({ files: [filenameBerry] })
     },

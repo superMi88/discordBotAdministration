@@ -776,7 +776,7 @@ module.exports = {
 
 	},
 
-	async createBerryCollectImage(user, collectedBerrys, roleBonus, boosterBonus, totalCollected, roleName) {
+	async createBerryCollectImage(member, collectedBerrys, roleBonus, boosterBonus, totalCollected, roleName) {
 		const sharp = require('sharp');
 		const width = 550;
 		const height = 80;
@@ -784,7 +784,8 @@ module.exports = {
 		let mergeArray = [];
 
 		// User Name
-		const nameText = user.username.length > 20 ? user.username.substring(0, 17) + "..." : user.username;
+		const displayName = member.displayName || (member.user ? member.user.username : 'Spieler');
+		const nameText = displayName.length > 14 ? displayName.substring(0, 12) + "..." : displayName;
 		mergeArray.push({
 			input: Buffer.from(`<svg width="${width}" height="${height}" xmlns="http://www.w3.org/2000/svg">
 				${getQuicksandPath(nameText + " hat Beeren geerntet!", 30, 16, 20, "white")}
@@ -848,7 +849,7 @@ module.exports = {
 		return outPath;
 	},
 
-	async createCatchAnimalImage(user, animalId) {
+	async createCatchAnimalImage(member, animalId) {
 		const sharp = require('sharp');
 		const animal = Animallist[animalId];
 
@@ -858,7 +859,8 @@ module.exports = {
 		let mergeArray = [];
 
 		// User Name + Catch Message
-		const nameText = user.username.length > 20 ? user.username.substring(0, 17) + "..." : user.username;
+		const displayName = member.displayName || (member.user ? member.user.username : 'Spieler');
+		const nameText = displayName.length > 14 ? displayName.substring(0, 12) + "..." : displayName;
 
 		mergeArray.push({
 			input: Buffer.from(`<svg width="${width}" height="${height}" xmlns="http://www.w3.org/2000/svg">
