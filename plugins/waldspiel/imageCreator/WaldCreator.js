@@ -1,4 +1,3 @@
-const imageCreator = require('../imageCreator.js');
 const { date } = require("../lib/date.js");
 const Backgroundlist = require('../obj/BackgroundList.js');
 

@@ -621,51 +621,78 @@ module.exports = {
 		return outPath;
 	},
 
-	async createEditBackground(discordUserDatabase, backgroundlistdatabase, offset) {
+	async createSetBackground(pageBackgrounds, startIdx, ownedBackgrounds) {
+		const sharp = require('sharp');
+		const width = 550;
+		const height = 300;
+		const columns = 3;
+		const itemCount = pageBackgrounds.length;
+		const cellW = 160;
+		const cellH = 85;
+		const offsetX = (width - (columns * cellW)) / 2;
+		const offsetY = 40;
 
-		const sharp = require('sharp')
+		let frameComposites = [];
+		let bgSvg = `<svg width="${width}" height="${height}">`;
 
-		let mergeArray = []
+		for (let i = 0; i < itemCount; i++) {
+			let r = Math.floor(i / columns);
+			let c = i % columns;
+			let left = offsetX + c * cellW + 10;
+			let top = offsetY + r * cellH;
+			let centerX = left + (cellW - 20) / 2;
+			let centerY = top + 25;
+			let yText = top + 65;
 
-		if (backgroundlistdatabase.length != 0) {
+			let tag = pageBackgrounds[i];
+			const wc = new WaldCreator(tag);
+			const backgroundData = wc.background;
+			
+			let isOwned = ownedBackgrounds.includes(tag);
+			
+			const roundedMask = Buffer.from(
+				`<svg><rect x="0" y="0" width="${cellW - 20}" height="50" rx="6" ry="6" fill="#fff" /></svg>`
+			);
 
-			const Background = getBackgroundByTag(backgroundlistdatabase[offset])
+			let cellComposites = [];
+			if (!isOwned) {
+				// Gray overlay
+				let overlaySvg = `<svg width="${cellW - 20}" height="50"><rect width="${cellW - 20}" height="50" fill="rgba(20,20,20,0.6)" /></svg>`;
+				cellComposites.push({ input: Buffer.from(overlaySvg), left: 0, top: 0 });
 
-			let imageToPush = await sharp('plugins/waldspiel/images/backgrounds/editBackground.png').toBuffer()
-			mergeArray.push({ input: imageToPush, left: 0, top: 0 })
-			mergeArray.push({ input: getTextBuffer3(Background.name, 275, 290), left: 0, top: 0 })
-
-			if (Background.overlay) {
-				let imageToPush = await sharp('plugins/waldspiel/images/backgrounds/' + Background.overlay + '.png').toBuffer()
-				mergeArray.push({ input: imageToPush, left: 0, top: 0 })
+				// Lock Icon
+				let lockIconBuf = await sharp('plugins/waldspiel/images/sprites/lock_icon.svg').resize(24, 24).png().toBuffer();
+				cellComposites.push({ input: lockIconBuf, left: Math.round((cellW - 20) / 2 - 12), top: Math.round(50 / 2 - 12) });
 			}
+			
+			// Add mask last to clip everything
+			cellComposites.push({ input: roundedMask, blend: 'dest-in' });
 
-			if (backgroundlistdatabase[offset] == "ABBRECHEN") {
-
-				await sharp('plugins/waldspiel/images/backgrounds/Default.png')
-					.composite(mergeArray)
-					.toFile('temp/finalpicture.png')
-			} else {
-
-				console.log('plugins/waldspiel/images/backgrounds/' + Background.filename + '.png')
-				await sharp('plugins/waldspiel/images/backgrounds/' + Background.filename + '.png')
-					.composite(mergeArray)
-					.toFile('temp/finalpicture.png')
-			}
-
-
-
-			/*
-			await sharp(getUserBackgroundFilepath(discordUserDatabase))
-				.composite(mergeArray)
-				.toFile('temp/finalpicture.png')*/
-		} else {
-			//sollte nicht vorkommen
-			await sharp(getUserBackgroundFilepath(discordUserDatabase))
-				.toFile('temp/finalpicture.png')
+			let bgPreviewBuffer = await sharp('plugins/waldspiel/images/backgrounds/' + backgroundData.filename + '.png')
+				.resize(cellW - 20, 50)
+				.composite(cellComposites)
+				.toBuffer();
+			
+			frameComposites.push({ input: bgPreviewBuffer, left: Math.round(left), top: Math.round(top) });
+			
+			let label = isOwned ? `${startIdx + i + 1}. ${backgroundData.name}` : `🔒 ${startIdx + i + 1}. ${backgroundData.name}`;
+			let textColor = isOwned ? "#fff" : "#aaa";
+			bgSvg += `<text x="${centerX}" y="${yText}" font-family="Arial, Helvetica, sans-serif" font-size="11px" fill="${textColor}" text-anchor="middle">${label}</text>`;
 		}
 
+		bgSvg += `</svg>`;
+		let textOverlayBuf = await sharp(Buffer.from(bgSvg)).png().toBuffer();
+
+		await sharp('plugins/waldspiel/images/backgrounds/select.png')
+			.composite([
+				...frameComposites,
+				{ input: textOverlayBuf, left: 0, top: 0 }
+			])
+			.toFile('temp/finalpicture_backgrounds.png');
+
+		return 'temp/finalpicture_backgrounds.png';
 	},
+
 
 	async createItemShop(plugin, itemId1, itemId2, itemId3) {
 

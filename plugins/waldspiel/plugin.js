@@ -6,7 +6,7 @@ const { SlashCommandBuilder } = require('@discordjs/builders');
 var CronJob = require('cron').CronJob;
 const { EmbedBuilder } = require('discord.js');
 const helper = require('../../discordBot/lib/helper.js');
-const { ActionRowBuilder, ModalBuilder, TextInputBuilder, TextInputStyle, ButtonBuilder, SelectMenuBuilder, ButtonStyle, Events } = require('discord.js');
+const { ActionRowBuilder, ModalBuilder, TextInputBuilder, TextInputStyle, ButtonBuilder, StringSelectMenuBuilder, StringSelectMenuOptionBuilder, ButtonStyle, Events } = require('discord.js');
 let { getUserCurrencyFromDatabase, updateUserFromDatabase } = require('../../discordBot/lib/helper.js')
 
 const { ObjectId } = require("mongodb");
@@ -22,6 +22,7 @@ const ItemList = require('./obj/ItemList.js');
 const Backgroundlist = require('./obj/BackgroundList.js');
 
 
+const WaldCreator = require("./imageCreator/WaldCreator.js");
 const ImageCreator = require("./imageCreator.js");
 const DatabaseManager = require("../../discordBot/lib/DatabaseManager.js");
 
@@ -230,7 +231,16 @@ class Plugin {
 
 			if (isButton(interaction, 'waldSettingsDropdown')) {
 				let choice = interaction.values[0];
-				interaction.customId = choice; // Route to button logic
+				if (choice === 'editBackground') {
+					interaction.customId = 'editBackground-0'; // Route to page 0
+				} else {
+					interaction.customId = choice; // Route to button logic
+				}
+			}
+
+			if (isButton(interaction, 'selectBackgroundDropdown')) {
+				let choice = interaction.values[0];
+				interaction.customId = `setBackgroundCustomization-${choice}`;
 			}
 
 			if (isButton(interaction, 'animalSettingsDropdown')) {
@@ -426,19 +436,26 @@ class Plugin {
 			}
 
 			if (isButton(interaction, 'setBackgroundCustomization')) {
-				let itemId = getButtonParameter(interaction.customId)[1]
+				let itemId = getButtonParameter(interaction.customId)[1];
 
-				if (itemId == "ABBRECHEN") itemId = 0
+				if (itemId == "ABBRECHEN") itemId = 0;
 
-				let discordUserId = interaction.user.id
+				let discordUserId = interaction.user.id;
+				let discordUserDatabase = await getUserCurrencyFromDatabase(discordUserId, db);
+				let backgroundlistdatabase = discordUserDatabase["backgroundlist"] || [];
+
+				// Safety check: is it owned? (DEFAULT and SUMMER are always allowed)
+				if (itemId !== 0 && itemId !== "DEFAULT" && itemId !== "SUMMER" && !backgroundlistdatabase.includes(itemId)) {
+					return await interaction.reply({ content: "Diesen Hintergrund besitzt du noch nicht!", ephemeral: true });
+				}
 
 				await updateUserFromDatabase(db, discordUserId, {
 					$set: {
 						["currency." + "background"]: itemId,
 					}
-				})
+				});
 
-				await waldspiel.showMeinWald(client, plugin, db, interaction.user, interaction, true)
+				await waldspiel.showMeinWald(client, plugin, db, interaction.user, interaction, true);
 			}
 
 			//[1]animalId
@@ -449,49 +466,88 @@ class Plugin {
 			}
 
 			if (isButton(interaction, 'editBackground')) {
-				let offset = parseInt(getButtonParameter(interaction.customId)[1])
+				let page = parseInt(getButtonParameter(interaction.customId)[1]);
 
+				let discordUserId = interaction.user.id;
+				let discordUserDatabase = await getUserCurrencyFromDatabase(discordUserId, db);
 
-				let discordUserId = interaction.user.id
-				let discordUserDatabase = await getUserCurrencyFromDatabase(discordUserId, db)
+				let backgroundlistdatabase = discordUserDatabase["backgroundlist"] || [];
 
-				let backgroundlistdatabase = discordUserDatabase["backgroundlist"]
-				if (!backgroundlistdatabase) backgroundlistdatabase = []
+				// Ensure defaults are present in owned list
+				if (!backgroundlistdatabase.includes("DEFAULT")) backgroundlistdatabase.unshift("DEFAULT");
+				if (!backgroundlistdatabase.includes("SUMMER")) {
+					let idx = backgroundlistdatabase.indexOf("DEFAULT") + 1;
+					backgroundlistdatabase.splice(idx, 0, "SUMMER");
+				}
 
-				//Add Both default values for the Background
-				backgroundlistdatabase.unshift("SUMMER")
-				backgroundlistdatabase.unshift("DEFAULT")
+				// Get ALL available backgrounds
+				let allBgs = new Backgroundlist().getBackgroundListAll();
+				let allTags = Object.keys(allBgs).filter(tag => tag !== "ABBRECHEN");
 
-				let button1offset = offset - 1
-				if (button1offset < 0) button1offset = backgroundlistdatabase.length - 1
+				const perPage = 9;
+				const startIdx = page * perPage;
+				const pageItems = allTags.slice(startIdx, startIdx + perPage);
 
-				let button2offset = offset + 1
-				if (button2offset >= backgroundlistdatabase.length) button2offset = 0
+				const selectOptions = [];
+				for (let i = 0; i < pageItems.length; i++) {
+					const tag = pageItems[i];
+					const wc = new WaldCreator(tag);
+					const bg = wc.background;
+					let isOwned = backgroundlistdatabase.includes(tag);
 
-				const rowItemliste = new ActionRowBuilder()
-					.addComponents(
-						waldspiel.getZuMeinemWaldButton(),
-						new ButtonBuilder()
-							.setCustomId('Button1editBackground-' + button1offset)
-							.setLabel('<-')
-							.setStyle(ButtonStyle.Primary),
-						new ButtonBuilder()
-							.setCustomId('setBackgroundCustomization-' + backgroundlistdatabase[offset]) //hier wieder back zu meinem wald mit dme entsprechenden ausgewälten ding da 
-							.setLabel('Auswählen')
-							.setStyle(ButtonStyle.Primary),
-						new ButtonBuilder()
-							.setCustomId('Button2editBackground-' + button2offset)
-							.setLabel('->')
-							.setStyle(ButtonStyle.Primary),
+					let label = isOwned ? `${startIdx + i + 1}. ${bg.name}` : `🔒 ${startIdx + i + 1}. ${bg.name}`;
+
+					selectOptions.push(
+						new StringSelectMenuOptionBuilder()
+							.setLabel(label)
+							.setValue(tag)
 					);
+				}
 
-				await ImageCreator.createEditBackground(discordUserDatabase, backgroundlistdatabase, offset)
+				const rowDropdown = new ActionRowBuilder().addComponents(
+					new StringSelectMenuBuilder()
+						.setCustomId('selectBackgroundDropdown')
+						.setPlaceholder('Hintergrund auswählen...')
+						.addOptions(selectOptions)
+				);
 
-				return await interaction.update({
-					files: ['temp/finalpicture.png'],
-					components: [rowItemliste],
-					ephemeral: true
-				});
+				const maxPages = Math.ceil(allTags.length / perPage);
+
+				let nextOffset = page + 1;
+				if (nextOffset >= maxPages) nextOffset = 0;
+				let prevOffset = page - 1;
+				if (prevOffset < 0) prevOffset = maxPages - 1;
+
+				const rowPagination = new ActionRowBuilder().addComponents(
+					waldspiel.getZuMeinemWaldButton()
+				);
+
+				if (maxPages > 1) {
+					// Only add previous button if it's different from next button (prevents duplicates on 2 pages)
+					if (maxPages > 2) {
+						rowPagination.addComponents(
+							new ButtonBuilder()
+								.setCustomId(`editBackground-${prevOffset}`)
+								.setLabel('<- Vorherige Seite')
+								.setStyle(ButtonStyle.Primary)
+						);
+					}
+					
+					rowPagination.addComponents(
+						new ButtonBuilder()
+							.setCustomId(`editBackground-${nextOffset}`)
+							.setLabel(maxPages === 2 ? 'Nächste Seite' : 'Nächste Seite ->')
+							.setStyle(ButtonStyle.Primary)
+					);
+				}
+
+				const outPath = await ImageCreator.createSetBackground(pageItems, startIdx, backgroundlistdatabase);
+
+				if (interaction.isStringSelectMenu() || (interaction.message && interaction.message.editable)) {
+					await interaction.update({ files: [outPath], components: [rowDropdown, rowPagination] });
+				} else {
+					await interaction.reply({ files: [outPath], components: [rowDropdown, rowPagination], ephemeral: true });
+				}
 			}
 
 			if (isButton(interaction, 'selectStorageNumber')) {
