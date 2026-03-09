@@ -158,7 +158,7 @@ module.exports = {
 		return outPath;
 	},
 
-	async createMeinStorage(animalStorage, currentPage) {
+	async createMeinStorage(animalStorage, currentPage, searchQuery = "") {
 
 		const sharp = require('sharp');
 
@@ -186,6 +186,13 @@ module.exports = {
 			const offsetY = 35;
 
 			let bgSvg = `<svg width="${width}" height="${height}">`;
+
+			// Anzeige des Suchbegriffs oben links
+			if (searchQuery) {
+				bgSvg += `
+				<rect x="51" y="5" width="200" height="25" rx="5" fill="rgba(0,0,0,0.5)" />
+				<text x="56" y="22" font-family="Arial, Helvetica, sans-serif" font-size="14px" fill="white" font-weight="bold">🔍: ${searchQuery}</text>`;
+			}
 
 			for (let i = 0; i < itemCount; i++) {
 				let animal = animalsForCurrentPage[i];
@@ -403,12 +410,12 @@ module.exports = {
 		return outPath;
 	},
 
-	async createSetCustomization(pageItems, ownedItems, startIdx, animalType) {
+	async createSetCustomization(pageItems, ownedItems, startIdx, animalType, searchQuery = "") {
 		const sharp = require('sharp');
 		let ItemlistObj = require('./obj/ItemList.js');
 		let Itemlist = new ItemlistObj().getListAll();
 
-		if (pageItems.length === 0) {
+		if (pageItems.length === 0 && !searchQuery) {
 			await sharp('plugins/waldspiel/images/backgrounds/select.png').toFile('temp/finalpicture.png');
 			return 'temp/finalpicture.png';
 		}
@@ -430,6 +437,13 @@ module.exports = {
 		const offsetY = 35; // Top offset
 
 		let bgSvg = `<svg width="${width}" height="${height}">`;
+
+		// Anzeige des Suchbegriffs
+		if (searchQuery) {
+			bgSvg += `
+			<rect x="51" y="5" width="200" height="25" rx="5" fill="rgba(0,0,0,0.5)" />
+			<text x="56" y="22" font-family="Arial, Helvetica, sans-serif" font-size="14px" fill="white" font-weight="bold">🔍: ${searchQuery}</text>`;
+		}
 
 		let frameComposites = [];
 
@@ -621,7 +635,7 @@ module.exports = {
 		return outPath;
 	},
 
-	async createSetBackground(pageBackgrounds, startIdx, ownedBackgrounds) {
+	async createSetBackground(pageBackgrounds, startIdx, ownedBackgrounds, searchQuery = "") {
 		const sharp = require('sharp');
 		const width = 550;
 		const height = 300;
@@ -634,6 +648,13 @@ module.exports = {
 
 		let frameComposites = [];
 		let bgSvg = `<svg width="${width}" height="${height}">`;
+
+		// Anzeige des Suchbegriffs
+		if (searchQuery) {
+			bgSvg += `
+			<rect x="45" y="5" width="200" height="25" rx="5" fill="rgba(0,0,0,0.5)" />
+			<text x="50" y="22" font-family="Arial, Helvetica, sans-serif" font-size="14px" fill="white" font-weight="bold">🔍: ${searchQuery}</text>`;
+		}
 
 		for (let i = 0; i < itemCount; i++) {
 			let r = Math.floor(i / columns);

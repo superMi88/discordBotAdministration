@@ -349,6 +349,7 @@ class Plugin {
 				//-1 means no edit
 				let animalPlazierungsId = 'noedit'
 				let currentPage = getButtonParameter(interaction.customId)[2]
+				let searchQuery = getButtonParameter(interaction.customId)[3] || ""
 
 				let discordUserDatabase = await getUserCurrencyFromDatabase(interaction.user.id, db)
 
@@ -363,7 +364,7 @@ class Plugin {
 				);
 
 
-				await waldspiel.showMeinStorage(client, plugin, db, interaction.user, interaction, arrStorageAnimals, animalPlazierungsId, currentPage)
+				await waldspiel.showMeinStorage(client, plugin, db, interaction.user, interaction, arrStorageAnimals, animalPlazierungsId, currentPage, searchQuery)
 			}
 
 			//selectedCustomization-idPlazierung
@@ -373,6 +374,7 @@ class Plugin {
 
 				let animalPlazierungsId = getButtonParameter(interaction.customId)[1]
 				let currentPage = getButtonParameter(interaction.customId)[2]
+				let searchQuery = getButtonParameter(interaction.customId)[3] || ""
 
 				let discordUserDatabase = await getUserCurrencyFromDatabase(interaction.user.id, db)
 
@@ -386,7 +388,7 @@ class Plugin {
 						animal._id.toString() !== (discordUserDatabase.animalId3 ? discordUserDatabase.animalId3.toString() : "")
 				);
 
-				await waldspiel.showMeinStorage(client, plugin, db, interaction.user, interaction, arrStorageAnimals, animalPlazierungsId, currentPage)
+				await waldspiel.showMeinStorage(client, plugin, db, interaction.user, interaction, arrStorageAnimals, animalPlazierungsId, currentPage, searchQuery)
 			}
 
 			//selectedCustomization-idPlazierung
@@ -477,8 +479,38 @@ class Plugin {
 				await waldspiel.showMeinWaldAnimal(client, plugin, db, interaction.user, interaction, true, animalId)
 			}
 
-			if (isButton(interaction, 'editBackground')) {
+			if (isButton(interaction, 'searchBackground')) {
+				const modal = new ModalBuilder()
+					.setCustomId('submitSearchBackground')
+					.setTitle('Hintergründe suchen');
+
+				const searchInput = new TextInputBuilder()
+					.setCustomId('searchquery')
+					.setLabel("Hintergrund suchen")
+					.setPlaceholder("z.B. Sommer, Wald...")
+					.setStyle(TextInputStyle.Short);
+
+				const firstActionRow = new ActionRowBuilder().addComponents(searchInput);
+				modal.addComponents(firstActionRow);
+				await interaction.showModal(modal);
+			}
+
+			if (isButton(interaction, 'submitSearchBackground')) {
+				let searchQuery = interaction.fields.getTextInputValue("searchquery")
+				interaction.customId = `editBackground-0-${searchQuery}`;
+				// Trigger the actual handler
+				return await handleEditBackground(interaction);
+			}
+
+			if (isButton(interaction, 'clearSearchBackground')) {
+				interaction.customId = `editBackground-0`;
+				// Trigger the actual handler
+				return await handleEditBackground(interaction);
+			}
+
+			async function handleEditBackground(interaction) {
 				let page = parseInt(getButtonParameter(interaction.customId)[1]);
+				let searchQuery = getButtonParameter(interaction.customId)[2] || "";
 
 				let discordUserId = interaction.user.id;
 				let discordUserDatabase = await getUserCurrencyFromDatabase(discordUserId, db);
@@ -495,6 +527,11 @@ class Plugin {
 				// Get ALL available backgrounds
 				let allBgs = new Backgroundlist().getBackgroundListAll();
 				let allTags = Object.keys(allBgs).filter(tag => tag !== "ABBRECHEN");
+
+				if (searchQuery) {
+					const query = searchQuery.toLowerCase();
+					allTags = allTags.filter(tag => allBgs[tag].name.toLowerCase().includes(query));
+				}
 
 				const perPage = 9;
 				const startIdx = page * perPage;
@@ -525,37 +562,49 @@ class Plugin {
 
 				const maxPages = Math.ceil(allTags.length / perPage);
 
-				let nextOffset = page + 1;
-				if (nextOffset >= maxPages) nextOffset = 0;
-				let prevOffset = page - 1;
-				if (prevOffset < 0) prevOffset = maxPages - 1;
-
 				const rowPagination = new ActionRowBuilder().addComponents(
-					waldspiel.getZuMeinemWaldButton()
+					waldspiel.getZuMeinemWaldButton(),
+					new ButtonBuilder()
+						.setCustomId('searchBackground')
+						.setLabel('🔍 Suchen')
+						.setStyle(ButtonStyle.Secondary)
 				);
+
+				if (searchQuery) {
+					rowPagination.addComponents(
+						new ButtonBuilder()
+							.setCustomId('clearSearchBackground')
+							.setLabel('❌ Suche löschen')
+							.setStyle(ButtonStyle.Danger)
+					);
+				}
 
 				if (maxPages > 1) {
 					rowPagination.addComponents(
 						new ButtonBuilder()
-							.setCustomId(`editBackground-${page - 1}`)
+							.setCustomId(`editBackground-${page - 1}${searchQuery ? '-' + searchQuery : ''}`)
 							.setLabel('⬅️')
 							.setStyle(ButtonStyle.Primary)
 							.setDisabled(page === 0),
 						new ButtonBuilder()
-							.setCustomId(`editBackground-${page + 1}`)
+							.setCustomId(`editBackground-${page + 1}${searchQuery ? '-' + searchQuery : ''}`)
 							.setLabel('➡️')
 							.setStyle(ButtonStyle.Primary)
 							.setDisabled(page === maxPages - 1)
 					);
 				}
 
-				const outPath = await ImageCreator.createSetBackground(pageItems, startIdx, backgroundlistdatabase);
+				const outPath = await ImageCreator.createSetBackground(pageItems, startIdx, backgroundlistdatabase, searchQuery);
 
-				if (interaction.isStringSelectMenu() || (interaction.message && interaction.message.editable)) {
+				if (interaction.isStringSelectMenu() || interaction.isButton() || interaction.isModalSubmit() || (interaction.message && interaction.message.editable)) {
 					await interaction.update({ files: [outPath], components: [rowDropdown, rowPagination] });
 				} else {
 					await interaction.reply({ files: [outPath], components: [rowDropdown, rowPagination], ephemeral: true });
 				}
+			}
+
+			if (isButton(interaction, 'editBackground')) {
+				await handleEditBackground(interaction);
 			}
 
 			if (isButton(interaction, 'selectStorageDropdown')) {
@@ -599,6 +648,63 @@ class Plugin {
 
 				await waldspiel.showMeinWaldAnimal(client, plugin, db, interaction.user, interaction, true, animalPlazierungsId)
 
+			}
+
+			if (isButton(interaction, 'searchStorage')) {
+				let animalPlazierungsId = getButtonParameter(interaction.customId)[1]
+
+				const modal = new ModalBuilder()
+					.setCustomId('submitSearchStorage-' + animalPlazierungsId)
+					.setTitle('Tiere suchen');
+
+				const searchInput = new TextInputBuilder()
+					.setCustomId('searchquery')
+					.setLabel("Nach was suchst du? (Name oder Sorte)")
+					.setPlaceholder("z.B. Fuchs, Bello...")
+					.setStyle(TextInputStyle.Short);
+
+				const firstActionRow = new ActionRowBuilder().addComponents(searchInput);
+				modal.addComponents(firstActionRow);
+				await interaction.showModal(modal);
+			}
+
+			if (isButton(interaction, 'submitSearchStorage')) {
+				let animalPlazierungsId = getButtonParameter(interaction.customId)[1]
+				let searchQuery = interaction.fields.getTextInputValue("searchquery")
+
+				let discordUserId = interaction.user.id
+				let discordUserDatabase = await getUserCurrencyFromDatabase(discordUserId, db)
+
+				const collectionAnimal = db.collection('animals');
+				const arrAnimal = await collectionAnimal.find({ ownerDiscordId: discordUserId }).sort({ type: 1 }).toArray()
+
+				const arrStorageAnimals = arrAnimal.filter(
+					(animal) =>
+						animal._id.toString() !== (discordUserDatabase.animalId1 ? discordUserDatabase.animalId1.toString() : "") &&
+						animal._id.toString() !== (discordUserDatabase.animalId2 ? discordUserDatabase.animalId2.toString() : "") &&
+						animal._id.toString() !== (discordUserDatabase.animalId3 ? discordUserDatabase.animalId3.toString() : "")
+				);
+
+				await waldspiel.showMeinStorage(client, plugin, db, interaction.user, interaction, arrStorageAnimals, animalPlazierungsId, 0, searchQuery)
+			}
+
+			if (isButton(interaction, 'clearSearchStorage')) {
+				let animalPlazierungsId = getButtonParameter(interaction.customId)[1]
+
+				let discordUserId = interaction.user.id
+				let discordUserDatabase = await getUserCurrencyFromDatabase(discordUserId, db)
+
+				const collectionAnimal = db.collection('animals');
+				const arrAnimal = await collectionAnimal.find({ ownerDiscordId: discordUserId }).sort({ type: 1 }).toArray()
+
+				const arrStorageAnimals = arrAnimal.filter(
+					(animal) =>
+						animal._id.toString() !== (discordUserDatabase.animalId1 ? discordUserDatabase.animalId1.toString() : "") &&
+						animal._id.toString() !== (discordUserDatabase.animalId2 ? discordUserDatabase.animalId2.toString() : "") &&
+						animal._id.toString() !== (discordUserDatabase.animalId3 ? discordUserDatabase.animalId3.toString() : "")
+				);
+
+				await waldspiel.showMeinStorage(client, plugin, db, interaction.user, interaction, arrStorageAnimals, animalPlazierungsId, 0, "")
 			}
 
 			//editAnimalName-animalObjId
@@ -705,11 +811,11 @@ class Plugin {
 			}
 
 
-
-			if (isButton(interaction, 'setCustomization')) {
+			async function handleSetCustomization(interaction) {
 				let animalObjId = getButtonParameter(interaction.customId)[1]
 				let page = parseInt(getButtonParameter(interaction.customId)[2]) || 0;
 				let slot = getButtonParameter(interaction.customId)[3] || "1";
+				let searchQuery = getButtonParameter(interaction.customId)[4] || "";
 
 				let discordUserId = interaction.user.id
 				let discordUserDatabase = await getUserCurrencyFromDatabase(discordUserId, db)
@@ -726,6 +832,12 @@ class Plugin {
 				let allItems = Object.keys(Itemlist);
 
 				allItems = allItems.filter(a => a !== "ABBRECHEN");
+
+				if (searchQuery) {
+					const query = searchQuery.toLowerCase();
+					allItems = allItems.filter(itemKey => Itemlist[itemKey].name.toLowerCase().includes(query));
+				}
+
 				allItems.unshift("ABBRECHEN");
 
 				const itemsPerPage = 15;
@@ -738,7 +850,7 @@ class Plugin {
 				const currentItems = allItems.slice(startIdx, startIdx + itemsPerPage);
 
 				let selectMenu = new StringSelectMenuBuilder()
-					.setCustomId('selectCustomizationDropdown-' + animalObjId + '-' + page + '-' + slot)
+					.setCustomId('selectCustomizationDropdown-' + animalObjId + '-' + page + '-' + slot + (searchQuery ? '-' + searchQuery : ''))
 					.setPlaceholder('Slot ' + slot + ': Wähle eine Dekoration (Seite ' + (page + 1) + '/' + maxPages + ')')
 					.setMinValues(1)
 					.setMaxValues(1);
@@ -758,17 +870,32 @@ class Plugin {
 				}
 
 				const rowDropdown = new ActionRowBuilder().addComponents(selectMenu);
-				let buttons = [waldspiel.getZuMeinemWaldButton()];
+				let buttons = [
+					waldspiel.getZuMeinemWaldButton(),
+					new ButtonBuilder()
+						.setCustomId(`searchCustomization-${animalObjId}-${slot}`)
+						.setLabel('🔍 Suchen')
+						.setStyle(ButtonStyle.Secondary)
+				];
+
+				if (searchQuery) {
+					buttons.push(
+						new ButtonBuilder()
+							.setCustomId(`clearSearchCustomization-${animalObjId}-${slot}`)
+							.setLabel('❌ Suche löschen')
+							.setStyle(ButtonStyle.Danger)
+					);
+				}
 
 				if (maxPages > 1) {
 					buttons.push(
 						new ButtonBuilder()
-							.setCustomId('setCustomization-' + animalObjId + '-' + (page - 1) + '-' + slot)
+							.setCustomId('setCustomization-' + animalObjId + '-' + (page - 1) + '-' + slot + (searchQuery ? '-' + searchQuery : ''))
 							.setLabel('⬅️')
 							.setStyle(ButtonStyle.Primary)
 							.setDisabled(page === 0),
 						new ButtonBuilder()
-							.setCustomId('setCustomization-' + animalObjId + '-' + (page + 1) + '-' + slot)
+							.setCustomId('setCustomization-' + animalObjId + '-' + (page + 1) + '-' + slot + (searchQuery ? '-' + searchQuery : ''))
 							.setLabel('➡️')
 							.setStyle(ButtonStyle.Primary)
 							.setDisabled(page === maxPages - 1)
@@ -776,7 +903,7 @@ class Plugin {
 				}
 				const rowButtons = new ActionRowBuilder().addComponents(...buttons);
 
-				const outPath = await ImageCreator.createSetCustomization(currentItems, ownedItems, startIdx, animalType);
+				const outPath = await ImageCreator.createSetCustomization(currentItems, ownedItems, startIdx, animalType, searchQuery);
 
 				return await interaction.update({
 					files: [outPath],
@@ -785,10 +912,15 @@ class Plugin {
 				});
 			}
 
+			if (isButton(interaction, 'setCustomization')) {
+				await handleSetCustomization(interaction);
+			}
+
 			if (isButton(interaction, 'selectCustomizationDropdown')) {
 				let animalObjId = getButtonParameter(interaction.customId)[1];
 				let page = getButtonParameter(interaction.customId)[2];
 				let slot = getButtonParameter(interaction.customId)[3] || "1";
+				let searchQuery = getButtonParameter(interaction.customId)[4] || "";
 				let itemId = interaction.values[0];
 
 				let discordUserId = interaction.user.id;
@@ -819,6 +951,40 @@ class Plugin {
 				else if (discordUserDatabase.animalId3 && ObjectId(animalObjId).equals(discordUserDatabase.animalId3)) animalId = 3;
 
 				await waldspiel.showMeinWaldAnimal(client, plugin, db, interaction.user, interaction, true, animalId);
+			}
+
+			if (isButton(interaction, 'searchCustomization')) {
+				let animalObjId = getButtonParameter(interaction.customId)[1]
+				let slot = getButtonParameter(interaction.customId)[2]
+
+				const modal = new ModalBuilder()
+					.setCustomId(`submitSearchCustomization-${animalObjId}-${slot}`)
+					.setTitle('Dekoration suchen');
+
+				const searchInput = new TextInputBuilder()
+					.setCustomId('searchquery')
+					.setLabel("Dekoration suchen")
+					.setPlaceholder("z.B. Hut, Brille...")
+					.setStyle(TextInputStyle.Short);
+
+				const firstActionRow = new ActionRowBuilder().addComponents(searchInput);
+				modal.addComponents(firstActionRow);
+				await interaction.showModal(modal);
+			}
+
+			if (isButton(interaction, 'submitSearchCustomization')) {
+				let animalObjId = getButtonParameter(interaction.customId)[1]
+				let slot = getButtonParameter(interaction.customId)[2]
+				let searchQuery = interaction.fields.getTextInputValue("searchquery")
+				interaction.customId = `setCustomization-${animalObjId}-0-${slot}-${searchQuery}`;
+				return await handleSetCustomization(interaction);
+			}
+
+			if (isButton(interaction, 'clearSearchCustomization')) {
+				let animalObjId = getButtonParameter(interaction.customId)[1]
+				let slot = getButtonParameter(interaction.customId)[2]
+				interaction.customId = `setCustomization-${animalObjId}-0-${slot}`;
+				return await handleSetCustomization(interaction);
 			}
 
 

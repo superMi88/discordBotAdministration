@@ -177,10 +177,20 @@ module.exports = {
         console.log("createOsterKorb is deprecated in waldspiel.js, usage moved to EasterEvent extension via ExtensionManager.onCreateWald");
     },
 
-    async showMeinStorage(client, plugin, db, user, interaction, animalStorage, animalPlazierungsId, currentPage) {
+    async showMeinStorage(client, plugin, db, user, interaction, animalStorage, animalPlazierungsId, currentPage, searchQuery = "") {
         let userid = user.id
 
         let discordUserDatabase = await getUserCurrencyFromDatabase(userid, db)
+
+        // Filter by searchQuery if provided
+        if (searchQuery) {
+            const query = searchQuery.toLowerCase();
+            animalStorage = animalStorage.filter(animal => {
+                const animalType = Animallist[animal.type].name.toLowerCase();
+                const animalName = animal.name ? animal.name.toLowerCase() : "";
+                return animalType.includes(query) || animalName.includes(query);
+            });
+        }
 
         // Sicherstellen, dass currentPage ein Integer ist
         currentPage = parseInt(currentPage);
@@ -253,25 +263,38 @@ module.exports = {
             if (prevOffset < 0) prevOffset = totalPages - 1;
 
             const rowButtons = new ActionRowBuilder().addComponents(
-                this.getZuMeinemWaldButton()
+                this.getZuMeinemWaldButton(),
+                new ButtonBuilder()
+                    .setCustomId(`searchStorage-${animalPlazierungsId}`)
+                    .setLabel('🔍 Suchen')
+                    .setStyle(ButtonStyle.Secondary)
             );
+
+            if (searchQuery) {
+                rowButtons.addComponents(
+                    new ButtonBuilder()
+                        .setCustomId(`clearSearchStorage-${animalPlazierungsId}`)
+                        .setLabel('❌ Suche löschen')
+                        .setStyle(ButtonStyle.Danger)
+                );
+            }
 
             if (totalPages > 1) {
                 rowButtons.addComponents(
                     new ButtonBuilder()
-                        .setCustomId(`showStorage-${animalPlazierungsId}-${currentPage - 1}`)
+                        .setCustomId(`showStorage-${animalPlazierungsId}-${currentPage - 1}${searchQuery ? '-' + searchQuery : ''}`)
                         .setLabel('⬅️')
                         .setStyle(ButtonStyle.Primary)
                         .setDisabled(currentPage === 0),
                     new ButtonBuilder()
-                        .setCustomId(`showStorage-${animalPlazierungsId}-${currentPage + 1}`)
+                        .setCustomId(`showStorage-${animalPlazierungsId}-${currentPage + 1}${searchQuery ? '-' + searchQuery : ''}`)
                         .setLabel('➡️')
                         .setStyle(ButtonStyle.Primary)
                         .setDisabled(currentPage === totalPages - 1)
                 );
             }
 
-            await ImageCreator.createMeinStorage(animalStorage, currentPage)
+            await ImageCreator.createMeinStorage(animalStorage, currentPage, searchQuery)
 
             let components = [];
             if (animalPlazierungsId !== 'noedit' && animalsOnCurrentPage.length > 0) {
