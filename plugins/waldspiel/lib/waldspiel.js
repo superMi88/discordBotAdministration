@@ -197,7 +197,7 @@ module.exports = {
             const { ButtonBuilderExtended } = require("../ButtonBuilderExtended.js")
 
             let numberOfAnimals = animalStorage.length;
-            let animalsPerPage = 30;  // Anzahl der Tiere pro Seite
+            let animalsPerPage = 15;  // Anzahl der Tiere pro Seite
             let totalPages = Math.ceil(numberOfAnimals / animalsPerPage);  // Gesamtzahl der Seiten
 
             // Sicherstellen, dass die aktuelle Seite nicht außerhalb des Bereichs liegt
@@ -226,30 +226,62 @@ module.exports = {
                 );
 
 
-            let row2 = new ActionRowBuilder()
-                .addComponents(
-                    this.getZuMeinemWaldButton(),
-                    new ButtonBuilderExtended()
-                        .setCustomId('selectStorageNumber')
-                        .setParameter(animalPlazierungsId)
-                        .setLabel('Wähle Nummer')
-                        .setStyle(ButtonStyle.Primary)
+            const { StringSelectMenuBuilder, StringSelectMenuOptionBuilder } = require('discord.js');
+            const selectOptions = [];
+            for (let i = 0; i < animalsOnCurrentPage.length; i++) {
+                let animal = animalsOnCurrentPage[i];
+                let animalType = Animallist[animal.type].name;
+                let animalLabel = animal.name ? `${animal.name} (${animalType})` : animalType;
+                
+                selectOptions.push(
+                    new StringSelectMenuOptionBuilder()
+                        .setLabel(`${startIndex + i + 1}. ${animalLabel}`)
+                        .setValue(`${startIndex + i}`)
                 );
+            }
 
+            const rowDropdown = new ActionRowBuilder().addComponents(
+                new StringSelectMenuBuilder()
+                    .setCustomId(`selectStorageDropdown-${animalPlazierungsId}-${currentPage}`)
+                    .setPlaceholder('Tier aus der Box wählen...')
+                    .addOptions(selectOptions)
+            );
+
+            let nextOffset = currentPage + 1;
+            if (nextOffset >= totalPages) nextOffset = 0;
+            let prevOffset = currentPage - 1;
+            if (prevOffset < 0) prevOffset = totalPages - 1;
+
+            const rowButtons = new ActionRowBuilder().addComponents(
+                this.getZuMeinemWaldButton()
+            );
+
+            if (totalPages > 1) {
+                rowButtons.addComponents(
+                    new ButtonBuilder()
+                        .setCustomId(`showStorage-${animalPlazierungsId}-${currentPage - 1}`)
+                        .setLabel('⬅️')
+                        .setStyle(ButtonStyle.Primary)
+                        .setDisabled(currentPage === 0),
+                    new ButtonBuilder()
+                        .setCustomId(`showStorage-${animalPlazierungsId}-${currentPage + 1}`)
+                        .setLabel('➡️')
+                        .setStyle(ButtonStyle.Primary)
+                        .setDisabled(currentPage === totalPages - 1)
+                );
+            }
 
             await ImageCreator.createMeinStorage(animalStorage, currentPage)
 
-            //if animalPlazierungsId=noedit means no edit
-            if (animalPlazierungsId === 'noedit') {
-                row2 = new ActionRowBuilder()
-                    .addComponents(
-                        this.getZuMeinemWaldButton()
-                    );
+            let components = [];
+            if (animalPlazierungsId !== 'noedit' && animalsOnCurrentPage.length > 0) {
+                components.push(rowDropdown);
             }
+            components.push(rowButtons);
 
             return await interaction.update({
                 files: ['temp/finalpicture.png'],
-                components: [row1, row2],
+                components: components,
                 ephemeral: true
             });
 

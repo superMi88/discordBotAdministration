@@ -163,70 +163,70 @@ module.exports = {
 		const sharp = require('sharp');
 
 		// Anzahl der Tiere pro Seite
-		const animalsPerPage = 30;
+		const animalsPerPage = 15;
 
 		if (animalStorage) {
 
 			// Berechnung der Start- und End-Index für die aktuelle Seite
 			let startIndex = currentPage * animalsPerPage;
-			let endIndex = Math.min((currentPage + 1) * animalsPerPage, animalStorage.length);  // Um sicherzustellen, dass es nicht über die Länge hinausgeht
+			let endIndex = Math.min((currentPage + 1) * animalsPerPage, animalStorage.length);
 
 			// Extrahiere die Tiere, die auf die aktuelle Seite gehören
 			let animalsForCurrentPage = animalStorage.slice(startIndex, endIndex);
 
-			let mergeArray = [];
+			let frameComposites = [];
 
-			// Gehe durch alle Tiere der aktuellen Seite und erstelle die Bild-Pfade
-			for (let i = 0; i < animalsForCurrentPage.length; i++) {
+			const width = 550;
+			const height = 300;
+			const columns = 5;
+			const itemCount = animalsForCurrentPage.length;
+			const cellW = 100;
+			const cellH = 80;
+			const offsetX = (width - (columns * cellW)) / 2;
+			const offsetY = 35;
+
+			let bgSvg = `<svg width="${width}" height="${height}">`;
+
+			for (let i = 0; i < itemCount; i++) {
 				let animal = animalsForCurrentPage[i];
+				let animalName = animal.name ? animal.name : Animallist[animal.type].name;
 
-				// Berechnung der Position (Reihe und Spalte)
-				let row = i % 10;
-				let column = parseInt(i / 10);
+				let r = Math.floor(i / columns);
+				let c = i % columns;
+				let centerX = offsetX + c * cellW + (cellW / 2);
+				let centerY = offsetY + r * cellH + (cellH / 2) - 10;
+				let yText = offsetY + r * cellH + cellH - 3;
 
-				// Berechnung des globalen Index (absolute Zahl)
 				let globalIndex = startIndex + i;
+				let displayName = `${globalIndex + 1}. ${animalName}`;
+
+				bgSvg += `<text x="${centerX}" y="${yText}" font-family="Arial, Helvetica, sans-serif" font-size="10px" fill="white" text-anchor="middle">${displayName}</text>`;
 
 				// Bild für das Tier
-				let imageToPush = await sharp(getAnimalFilepathStorage(animal.type)).resize(50).toBuffer();
-
-				// Position für das Tierbild
-				let leftPosition = 25 + row * 50;
-				let topPosition = 75 + column * 75;
-
-				// Füge das Tierbild zum Merge-Array hinzu
-				mergeArray.push({ input: imageToPush, left: leftPosition, top: topPosition });
-
-
-				// Text mit der Tiernummer oder ID (kann angepasst werden)
-				let animalText = `${globalIndex + 1}`;  // Anzeige der globalen Nummer (1-basiert)
-
-				// Füge den Text über dem Bild hinzu (Position justieren)
-				mergeArray.push({
-					input: Buffer.from(
-						`<svg width="50" height="40">
-							<text x="50%" y="50%" font-size="22" text-anchor="middle" fill="white" font-family="Arial" dy="5">${animalText}</text>
-						</svg>`
-					),
-					left: leftPosition,
-					top: topPosition - 30
-				});
+				let animalBuf = await sharp(getAnimalFilepathStorage(animal.type)).resize(60).png().toBuffer();
+				frameComposites.push({ input: animalBuf, left: Math.round(centerX - 30), top: Math.round(centerY - 30) });
 
 				// Wenn das Tier eine Personalisierung hat, auch das Bild der Personalisierung hinzufügen
 				if (animal.customization) {
-					let imageToPush2 = await sharp(getItemFilepathStorage(animal.customization)).resize(50).toBuffer();
-					mergeArray.push({ input: imageToPush2, left: 25 + row * 50, top: 75 + column * 75 });
+					let customizationBuf = await sharp(getItemFilepathStorage(animal.customization)).resize(60).png().toBuffer();
+					frameComposites.push({ input: customizationBuf, left: Math.round(centerX - 30), top: Math.round(centerY - 30) });
 				}
 			}
 
+			bgSvg += `</svg>`;
+			let textOverlayBuf = await sharp(Buffer.from(bgSvg)).png().toBuffer();
+
 			// Hintergrundbild und Tiere zusammenfügen
-			await sharp('plugins/waldspiel/images/backgrounds/animalStorage.png')
-				.composite(mergeArray)
+			await sharp('plugins/waldspiel/images/backgrounds/select.png')
+				.composite([
+					{ input: textOverlayBuf, left: 0, top: 0 },
+					...frameComposites
+				])
 				.toFile('temp/finalpicture.png');
 
 		} else {
 			// Falls kein Tier vorhanden ist, nur das Hintergrundbild verwenden
-			await sharp('plugins/waldspiel/images/backgrounds/animalStorage.png')
+			await sharp('plugins/waldspiel/images/backgrounds/select.png')
 				.toFile('temp/finalpicture.png');
 		}
 	},

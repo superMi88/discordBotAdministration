@@ -396,7 +396,7 @@ class Plugin {
 				let animalPlazierungsId = getButtonParameter(interaction.customId)[1]
 
 				await waldspiel.sendToStorage(interaction, db, discordId, animalPlazierungsId);
-				await waldspiel.showMeinWald(client, plugin, db, interaction.user, interaction, true)
+				await waldspiel.showMeinWaldAnimal(client, plugin, db, interaction.user, interaction, true, animalPlazierungsId)
 
 			}
 
@@ -414,7 +414,13 @@ class Plugin {
 					{ $set: { customization: itemId } }
 				);
 
-				await waldspiel.showMeinWald(client, plugin, db, interaction.user, interaction, true)
+				let discordUserDatabase = await getUserCurrencyFromDatabase(interaction.user.id, db);
+				let animalId = 1;
+				if (discordUserDatabase.animalId1 && ObjectId(animalObjId).equals(discordUserDatabase.animalId1)) animalId = 1;
+				else if (discordUserDatabase.animalId2 && ObjectId(animalObjId).equals(discordUserDatabase.animalId2)) animalId = 2;
+				else if (discordUserDatabase.animalId3 && ObjectId(animalObjId).equals(discordUserDatabase.animalId3)) animalId = 3;
+
+				await waldspiel.showMeinWaldAnimal(client, plugin, db, interaction.user, interaction, true, animalId)
 
 			}
 
@@ -431,7 +437,13 @@ class Plugin {
 					{ $set: { animation: animationId } }
 				);
 
-				await waldspiel.showMeinWald(client, plugin, db, interaction.user, interaction, true)
+				let discordUserDatabase = await getUserCurrencyFromDatabase(interaction.user.id, db);
+				let animalId = 1;
+				if (discordUserDatabase.animalId1 && ObjectId(animalObjId).equals(discordUserDatabase.animalId1)) animalId = 1;
+				else if (discordUserDatabase.animalId2 && ObjectId(animalObjId).equals(discordUserDatabase.animalId2)) animalId = 2;
+				else if (discordUserDatabase.animalId3 && ObjectId(animalObjId).equals(discordUserDatabase.animalId3)) animalId = 3;
+
+				await waldspiel.showMeinWaldAnimal(client, plugin, db, interaction.user, interaction, true, animalId)
 
 			}
 
@@ -523,21 +535,17 @@ class Plugin {
 				);
 
 				if (maxPages > 1) {
-					// Only add previous button if it's different from next button (prevents duplicates on 2 pages)
-					if (maxPages > 2) {
-						rowPagination.addComponents(
-							new ButtonBuilder()
-								.setCustomId(`editBackground-${prevOffset}`)
-								.setLabel('<- Vorherige Seite')
-								.setStyle(ButtonStyle.Primary)
-						);
-					}
-					
 					rowPagination.addComponents(
 						new ButtonBuilder()
-							.setCustomId(`editBackground-${nextOffset}`)
-							.setLabel(maxPages === 2 ? 'Nächste Seite' : 'Nächste Seite ->')
+							.setCustomId(`editBackground-${page - 1}`)
+							.setLabel('⬅️')
 							.setStyle(ButtonStyle.Primary)
+							.setDisabled(page === 0),
+						new ButtonBuilder()
+							.setCustomId(`editBackground-${page + 1}`)
+							.setLabel('➡️')
+							.setStyle(ButtonStyle.Primary)
+							.setDisabled(page === maxPages - 1)
 					);
 				}
 
@@ -550,42 +558,9 @@ class Plugin {
 				}
 			}
 
-			if (isButton(interaction, 'selectStorageNumber')) {
+			if (isButton(interaction, 'selectStorageDropdown')) {
 				let animalPlazierungsId = getButtonParameter(interaction.customId)[1]
-
-				// Create the modal
-				const modal = new ModalBuilder()
-					.setCustomId('getFromStorage-' + animalPlazierungsId)
-					.setTitle('Boxnummer');
-
-				// Add components to modal
-
-				// Create the text input components
-				const nameInput = new TextInputBuilder()
-					.setCustomId('storageid')
-					// The label is the prompt the user sees for this input
-					.setLabel("Wie ist die Boxnummer des Tieres?")
-					// Short means only a single line of text
-					.setStyle(TextInputStyle.Short);
-
-				// An action row only holds one text input,
-				// so you need one action row per text input.
-				const firstActionRow = new ActionRowBuilder().addComponents(
-					nameInput
-				);
-
-				// Add inputs to the modal
-				modal.addComponents(firstActionRow);
-
-				// Show the modal to the user
-				await interaction.showModal(modal);
-			}
-
-			if (isButton(interaction, 'getFromStorage')) {
-				let animalPlazierungsId = getButtonParameter(interaction.customId)[1]
-				let storageId = interaction.fields.getTextInputValue("storageid")
-				storageId = parseInt(storageId)
-				storageId--
+				let storageId = parseInt(interaction.values[0])
 
 				let discordUserId = interaction.user.id
 				let discordUserDatabase = await getUserCurrencyFromDatabase(discordUserId, db)
@@ -622,9 +597,7 @@ class Plugin {
 				]);
 
 
-				await waldspiel.showMeinWald(client, plugin, db, interaction.user, interaction, true)
-
-				//return await interaction.deferUpdate()
+				await waldspiel.showMeinWaldAnimal(client, plugin, db, interaction.user, interaction, true, animalPlazierungsId)
 
 			}
 
@@ -702,21 +675,25 @@ class Plugin {
 				let discordUserId = interaction.user.id
 				let discordUserDatabase = await getUserCurrencyFromDatabase(discordUserId, db)
 
+				let animalId = 1;
 				if (ObjectId(animalObjId).equals(discordUserDatabase.animalId1)) {
+					animalId = 1;
 					await updateUserFromDatabase(db, interaction.user.id, {
 						$set: {
 							["currency." + "animalId1"]: ""
 						}
 					})
 				}
-				if (ObjectId(animalObjId).equals(discordUserDatabase.animalId2)) {
+				else if (ObjectId(animalObjId).equals(discordUserDatabase.animalId2)) {
+					animalId = 2;
 					await updateUserFromDatabase(db, interaction.user.id, {
 						$set: {
 							["currency." + "animalId2"]: ""
 						}
 					})
 				}
-				if (ObjectId(animalObjId).equals(discordUserDatabase.animalId3)) {
+				else if (ObjectId(animalObjId).equals(discordUserDatabase.animalId3)) {
+					animalId = 3;
 					await updateUserFromDatabase(db, interaction.user.id, {
 						$set: {
 							["currency." + "animalId3"]: ""
@@ -724,7 +701,7 @@ class Plugin {
 					})
 				}
 
-				await waldspiel.showMeinWald(client, plugin, db, interaction.user, interaction, true)
+				await waldspiel.showMeinWaldAnimal(client, plugin, db, interaction.user, interaction, true, animalId)
 			}
 
 
@@ -754,13 +731,8 @@ class Plugin {
 				const itemsPerPage = 15;
 				const maxPages = Math.ceil(allItems.length / itemsPerPage);
 
-				if (page < 0) page = maxPages - 1;
-				if (page >= maxPages) page = 0;
-
-				let nextOffset = page + 1;
-				if (nextOffset >= maxPages) nextOffset = 0;
-				let prevOffset = page - 1;
-				if (prevOffset < 0) prevOffset = maxPages - 1;
+				if (page < 0) page = 0;
+				if (page >= maxPages) page = maxPages - 1;
 
 				const startIdx = page * itemsPerPage;
 				const currentItems = allItems.slice(startIdx, startIdx + itemsPerPage);
@@ -791,13 +763,15 @@ class Plugin {
 				if (maxPages > 1) {
 					buttons.push(
 						new ButtonBuilder()
-							.setCustomId('setCustomization-' + animalObjId + '-' + prevOffset + '-' + slot)
-							.setLabel('<- Vorherige Seite')
-							.setStyle(ButtonStyle.Primary),
-						new ButtonBuilder()
-							.setCustomId('setCustomization-' + animalObjId + '-' + nextOffset + '-' + slot)
-							.setLabel('Nächste Seite ->')
+							.setCustomId('setCustomization-' + animalObjId + '-' + (page - 1) + '-' + slot)
+							.setLabel('⬅️')
 							.setStyle(ButtonStyle.Primary)
+							.setDisabled(page === 0),
+						new ButtonBuilder()
+							.setCustomId('setCustomization-' + animalObjId + '-' + (page + 1) + '-' + slot)
+							.setLabel('➡️')
+							.setStyle(ButtonStyle.Primary)
+							.setDisabled(page === maxPages - 1)
 					);
 				}
 				const rowButtons = new ActionRowBuilder().addComponents(...buttons);
