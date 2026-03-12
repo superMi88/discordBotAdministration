@@ -10,6 +10,7 @@ import { apiFetcher, getApiFetcher } from '@/lib/apifetcher'
 /*Styles*/
 import utilStyles from '@/styles/utils.module.css'
 import fileUploadStyles from '@/components/inputfields/file.module.css'
+import IconUpload from '@/components/icons/upload.js'
 
 import { useRouter } from 'next/router';
 
@@ -18,8 +19,8 @@ let collection = {}
 export default function component(props) {
 
     const [loading, setLoading] = useState(false)
-
     const [progress, setProgress] = useState(0);
+    const [dragging, setDragging] = useState(false);
 
     let fieldnameToUpdate = props.databasename
 
@@ -33,6 +34,7 @@ export default function component(props) {
     const dropFile = (e) => {
         // Prevent default behavior (Prevent file from being opened)
         e.preventDefault();
+        setDragging(false);
 
         if (e.dataTransfer.items) {
             for (const [key, value] of Object.entries(e.dataTransfer.items)) {
@@ -66,6 +68,13 @@ export default function component(props) {
     const dragOverFile = (e) => {
         e.stopPropagation();
         e.preventDefault();
+        setDragging(true);
+    }
+
+    const dragLeaveFile = (e) => {
+        e.stopPropagation();
+        e.preventDefault();
+        setDragging(false);
     }
 
     const handleClick = async (e, textId, fieldnameToUpdate, name, image) => {
@@ -130,8 +139,14 @@ export default function component(props) {
     if (loading) {
         return (
             <div className={fileUploadStyles.fileList}>
-                <div className={fileUploadStyles.fileDiv}>
-                    <div className={`${utilStyles.loader}`}></div>
+                <div className={fileUploadStyles.progressWrapper}>
+                    <div className={fileUploadStyles.progressBarBackground}>
+                        <div
+                            className={fileUploadStyles.progressBar}
+                            style={{ width: `${progress}%` }}
+                        ></div>
+                    </div>
+                    <span className={fileUploadStyles.progressText}>{progress}%</span>
                 </div>
             </div>
         );
@@ -140,13 +155,19 @@ export default function component(props) {
     if (props.databaseObject[props.databasename] === "" || props.databaseObject[props.databasename] === undefined) {
         return (
             <div
-                className={fileUploadStyles.fileList}
+                className={`${fileUploadStyles.fileList} ${dragging ? fileUploadStyles.dragging : ''}`}
                 onDrop={dropFile}
                 onDragOver={dragOverFile}
+                onDragLeave={dragLeaveFile}
             >
                 <div className={fileUploadStyles.fileDivUploader}>
                     <label className={fileUploadStyles.fileUploadButton} htmlFor="file">
-                        Upload ZIP/JAR Datei
+                        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '5px' }}>
+                            <div style={{ width: '32px', height: '32px' }}>
+                                <IconUpload />
+                            </div>
+                            <span>Upload ZIP/JAR Datei</span>
+                        </div>
                     </label>
                     <input
                         className={utilStyles.hidden}
@@ -157,18 +178,8 @@ export default function component(props) {
                         onChange={handleFileButton}
                     />
                 </div>
-                {progress > 0 && (
-                    <div className={fileUploadStyles.progressWrapper}>
-                        <div
-                            className={fileUploadStyles.progressBar}
-                            style={{ width: `${progress}%` }}
-                        ></div>
-                        <span>{progress}%</span>
-                    </div>
-                )}
             </div>
         );
-
     }
 
     return (

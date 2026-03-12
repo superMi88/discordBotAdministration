@@ -915,25 +915,31 @@ module.exports = {
         let boosterBonus = 0
 
         if (interaction.member.roles.cache.has(plugin['var'].baerRole)) {
-            roleBonus = 3; roleName = "Bär"
-        } else if (interaction.member.roles.cache.has(plugin['var'].wildschweinRole)) {
-            roleBonus = 3; roleName = "Wildschwein"
-        } else if (interaction.member.roles.cache.has(plugin['var'].wolfRole)) {
-            roleBonus = 3; roleName = "Wolf"
-        } else if (interaction.member.roles.cache.has(plugin['var'].hirschRole)) {
-            roleBonus = 3; roleName = "Hirsch"
-        } else if (interaction.member.roles.cache.has(plugin['var'].wildkuhRole)) {
-            roleBonus = 2; roleName = "Wildkuh"
-        } else if (interaction.member.roles.cache.has(plugin['var'].fuchsRole)) {
-            roleBonus = 2; roleName = "Fuchs"
-        } else if (interaction.member.roles.cache.has(plugin['var'].euleRole)) {
-            roleBonus = 2; roleName = "Eule"
-        } else if (interaction.member.roles.cache.has(plugin['var'].waschbaerRole)) {
-            roleBonus = 2; roleName = "Waschbär"
-        } else if (interaction.member.roles.cache.has(plugin['var'].eichhoernchenRole)) {
-            roleBonus = 1; roleName = "Eichhörnchen"
-        } else if (interaction.member.roles.cache.has(plugin['var'].froschRole)) {
-            roleBonus = 1; roleName = "Frosch"
+            roleBonus = Math.max(roleBonus, 3)
+        }
+        if (interaction.member.roles.cache.has(plugin['var'].wildschweinRole)) {
+            roleBonus = Math.max(roleBonus, 3)
+        }
+        if (interaction.member.roles.cache.has(plugin['var'].wolfRole)) {
+            roleBonus = Math.max(roleBonus, 3)
+        }
+        if (interaction.member.roles.cache.has(plugin['var'].hirschRole)) {
+            roleBonus = Math.max(roleBonus, 3)
+        }
+        if (interaction.member.roles.cache.has(plugin['var'].wildkuhRole)) {
+            roleBonus = Math.max(roleBonus, 2)
+        }
+        if (interaction.member.roles.cache.has(plugin['var'].fuchsRole)) {
+            roleBonus = Math.max(roleBonus, 2)
+        }
+        if (interaction.member.roles.cache.has(plugin['var'].euleRole)) {
+            roleBonus = Math.max(roleBonus, 2)
+        }
+        if (interaction.member.roles.cache.has(plugin['var'].waschbaerRole)) {
+            roleBonus = Math.max(roleBonus, 1)
+        }
+        if (interaction.member.roles.cache.has(plugin['var'].eichhoernchenRole)) {
+            roleBonus = Math.max(roleBonus, 1)
         }
 
         if (interaction.member.premiumSinceTimestamp) {

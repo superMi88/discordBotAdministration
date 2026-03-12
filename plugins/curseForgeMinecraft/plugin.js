@@ -140,6 +140,16 @@ class Plugin {
 		}
 	}
 
+	async sendInput(plugin, config, projectAlias, data) {
+		const input = data?.input || "";
+		if (mcProcess && !mcProcess.killed) {
+			sendToServer(mcProcess, input);
+			return { saved: true, infoMessage: "Befehl gesendet", infoStatus: "Info" };
+		} else {
+			return { saved: false, infoMessage: "Server läuft nicht", infoStatus: "Warning" };
+		}
+	}
+
 	async stopServer(plugin, config, projectAlias) {
 		let status = await PluginManager.save(plugin, config);
 		if (!status.saved) {
@@ -190,101 +200,6 @@ class Plugin {
 			return { saved: false, infoMessage: "Kein laufender Server gefunden", infoStatus: "Warning" };
 		}
 	}
-
-	async startServer(plugin, config, projectAlias) {
-		let status = await PluginManager.save(plugin, config);
-		if (!status.saved) {
-			return status;
-		}
-
-
-		const fileName = plugin.var.file;
-
-		const sourcePath = path.join(__dirname, '../../', 'uploads', projectAlias, plugin.botId, plugin.id, fileName);
-		const targetFolderPath = path.join(__dirname, '../../', 'MinecraftCurseForge', projectAlias, plugin.botId, plugin.id);
-		const targetFilePath = path.join(targetFolderPath, fileName);
-
-		// Log-Datei bei jedem Start zurücksetzen
-		fs.writeFileSync(path.join(targetFolderPath, 'console.txt'), '');
-
-		const isWindows = process.platform === 'win32';
-		const scriptName = isWindows ? 'run.ps1' : 'run.sh';
-		const scriptPath = path.join(targetFolderPath, scriptName);
-
-		if (!fs.existsSync(scriptPath)) {
-			console.error(`❌ ${scriptName} fehlt unter: ${scriptPath}`);
-			return { saved: false, error: `${scriptName} fehlt` };
-		}
-
-		console.log("🟢 Starte Minecraft-Server...");
-		console.log(process.env);
-
-		const command = isWindows ? 'powershell.exe' : '/bin/bash';
-		const args = isWindows
-			? ['-ExecutionPolicy', 'Bypass', '-File', scriptPath]
-			: [scriptPath];
-		const options = {
-			cwd: targetFolderPath,
-			env: process.env,
-			shell: true
-		};
-
-
-		// Erstelle einen Write Stream für die Datei 'cmd.txt'
-		const logFile = fs.createWriteStream('cmd.txt', { flags: 'a' }); // 'a' bedeutet anhängen an die Datei
-
-		//createServerProperties(targetFolderPath) //TODO überarbeiten
-		createEula(targetFolderPath)
-
-		mcProcess = spawn(command, args, options);
-
-		console.log(`Minecraft-Server gestartet mit PID ${mcProcess.pid}`);
-
-		// Schreibe die Standardausgabe in die Datei
-		mcProcess.stdout.on('data', (data) => {
-			log(targetFolderPath, `[Minecraft-Server] ${data.toString()}\n`);
-			logFile.write(`[Minecraft-Server] ${data.toString()}\n`);
-			console.log(`[Minecraft-Server] ${data}`);
-
-			const output = data.toString();
-			if (output.includes('Done')) {
-				console.log('✅ Server ist jetzt bereit!');
-				// Hier kannst du weitere Logik starten, z. B. Spieler OP geben
-
-				if (plugin['var'].op) {
-					sendToServer(mcProcess, 'op ' + plugin['var'].op);
-				}
-			}
-		});
-
-		// Schreibe Fehlerausgabe in die Datei
-		mcProcess.stderr.on('data', (data) => {
-			log(targetFolderPath, `[Minecraft-Server ERROR] ${data.toString()}\n`);
-			logFile.write(`[Minecraft-Server ERROR] ${data.toString()}\n`);
-			console.error(`[Minecraft-Server ERROR] ${data}`);
-		});
-
-		// Wenn der Minecraft-Server beendet wird, schreibe das Ende der Datei
-		mcProcess.on('exit', (code) => {
-			log(targetFolderPath, `Minecraft-Server beendet mit Code: ${code}\n`);
-			logFile.write(`Minecraft-Server beendet mit Code: ${code}\n`);
-			console.log(`Minecraft-Server beendet mit Code: ${code}`);
-		});
-
-		// Optional: Bei Exit von Node auch Kindprozess killen
-		process.on('exit', () => {
-			log(targetFolderPath, 'Node-Prozess wird beendet, Minecraft-Server wird gestoppt.');
-			console.log('Node-Prozess wird beendet, Minecraft-Server wird gestoppt.');
-			mcProcess.kill('SIGTERM');
-		});/*
-	process.on('SIGINT', () => process.exit()); // Ctrl+C
-	process.on('SIGUSR1', () => process.exit()); // z.B. Restart durch Nodemon
-	process.on('SIGUSR2', () => process.exit());
-	process.on('uncaughtException', () => process.exit());*/
-
-		return { saved: true, infoMessage: "gestartet", infoStatus: "Info" };
-	}
-
 
 }
 

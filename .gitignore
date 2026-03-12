@@ -42,4 +42,5 @@ yarn-error.log*
 /uploads/
 
 /MinecraftCurseForge/
+/minecraft/
 /logs/
