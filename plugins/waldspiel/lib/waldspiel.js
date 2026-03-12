@@ -24,13 +24,18 @@ const ItemList = require("../obj/ItemList.js");
 module.exports = {
 
     animal: false,
+    busy: false,
     userWhoCollectedBeerys: [],
     userWhoCollectedOsterkorb: [],
     userWhoCollectedSweets: [],
 
 
 
-    async createAnimal(client, plugin, db) {
+    async createAnimal(client, plugin, db, skipLock = false) {
+        if (!skipLock && this.busy) return;
+        if (!skipLock) this.busy = true;
+
+        try {
 
 
         this.userWhoCollectedSweets = []
@@ -103,9 +108,16 @@ module.exports = {
             files: [outPath],
             components: [row]
         })
+        } finally {
+            if (!skipLock) this.busy = false;
+        }
     },
 
-    async createBusch(client, plugin, db) {
+    async createBusch(client, plugin, db, skipLock = false) {
+        if (!skipLock && this.busy) return;
+        if (!skipLock) this.busy = true;
+
+        try {
 
         this.userWhoCollectedBeerys = []
 
@@ -171,6 +183,9 @@ module.exports = {
             files: ['temp/finalpicture.png'],
             components: [rowBusch]
         })
+        } finally {
+            if (!skipLock) this.busy = false;
+        }
     },
 
     async createOsterKorb(client, plugin, db) {
@@ -561,13 +576,18 @@ module.exports = {
 
     async createWald(client, plugin, db, forceRefresh) {
 
+        if (this.busy) return;
+        this.busy = true;
+
+        try {
+
         if (forceRefresh) {
             switch (this.getRandomInt(2)) {
                 case 0:
-                    await this.createBusch(client, plugin, db)
+                    await this.createBusch(client, plugin, db, true)
                     break;
                 case 1:
-                    await this.createAnimal(client, plugin, db)
+                    await this.createAnimal(client, plugin, db, true)
                     break;
                 default:
                     break;
@@ -578,11 +598,11 @@ module.exports = {
             case 0:
             case 1:
             case 2:
-                await this.createBusch(client, plugin, db)
+                await this.createBusch(client, plugin, db, true)
                 break;
             case 3:
             case 4:
-                await this.createAnimal(client, plugin, db)
+                await this.createAnimal(client, plugin, db, true)
                 break;
             /* Cases 5,6,7 moved to EasterEvent extension */
             /*
@@ -600,6 +620,9 @@ module.exports = {
 
         /* Hook for Extensions to spawn their own events */
         await ExtensionManager.onCreateWald(client, plugin, db);
+        } finally {
+            this.busy = false;
+        }
     },
 
     getZuMeinemWaldButton() {
