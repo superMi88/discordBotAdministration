@@ -6,7 +6,7 @@ const { SlashCommandBuilder } = require('@discordjs/builders');
 var CronJob = require('cron').CronJob;
 const { EmbedBuilder } = require('discord.js');
 const helper = require('../../discordBot/lib/helper.js');
-const { ActionRowBuilder, ModalBuilder, TextInputBuilder, TextInputStyle, ButtonBuilder, SelectMenuBuilder, ButtonStyle, Events } = require('discord.js');
+const { ActionRowBuilder, ModalBuilder, TextInputBuilder, TextInputStyle, ButtonBuilder, StringSelectMenuBuilder, StringSelectMenuOptionBuilder, ButtonStyle, Events } = require('discord.js');
 let { getUserCurrencyFromDatabase, updateUserFromDatabase } = require('../../discordBot/lib/helper.js')
 
 const { ObjectId } = require("mongodb");
@@ -22,6 +22,7 @@ const ItemList = require('./obj/ItemList.js');
 const Backgroundlist = require('./obj/BackgroundList.js');
 
 
+const WaldCreator = require("./imageCreator/WaldCreator.js");
 const ImageCreator = require("./imageCreator.js");
 const DatabaseManager = require("../../discordBot/lib/DatabaseManager.js");
 
@@ -228,6 +229,34 @@ class Plugin {
 				await waldspiel.showMeinWald(client, plugin, db, interaction.user, interaction, true)
 			}
 
+			if (isButton(interaction, 'waldSettingsDropdown')) {
+				let choice = interaction.values[0];
+				if (choice === 'editBackground') {
+					interaction.customId = 'editBackground-0'; // Route to page 0
+				} else {
+					interaction.customId = choice; // Route to button logic
+				}
+			}
+
+			if (isButton(interaction, 'selectBackgroundDropdown')) {
+				let choice = interaction.values[0];
+				interaction.customId = `setBackgroundCustomization-${choice}`;
+			}
+
+			if (isButton(interaction, 'animalSettingsDropdown')) {
+				let animalObjId = getButtonParameter(interaction.customId)[1];
+				let choice = interaction.values[0];
+
+				if (choice.startsWith('editCustomization-')) {
+					let slot = choice.split('-')[1];
+					interaction.customId = `setCustomization-${animalObjId}-0-${slot}`;
+				} else if (choice === 'editAnimation') {
+					interaction.customId = `setAnimation-${animalObjId}-0`;
+				} else if (choice === 'editName') {
+					interaction.customId = `editAnimalName-${animalObjId}`;
+				}
+			}
+
 			//Tiere anzeigen
 			if (interaction.commandName == plugin['var'].name2) {
 
@@ -281,13 +310,13 @@ class Plugin {
 				let discordUserDatabase = await getUserCurrencyFromDatabase(user.id, db)
 
 				if (discordUserDatabase) {
-					await ImageCreator.createMeinWald(discordUserDatabase)
+					let filename = await ImageCreator.createMeinWald(discordUserDatabase)
 
 
 					let postChannel = await client.channels.fetch(plugin['var'].postChannel)
 
 					await postChannel.send({
-						files: ['temp/finalpicture.png'],
+						files: [filename],
 						content: "Wald von <@" + user.id + ">"
 					})
 
@@ -320,6 +349,7 @@ class Plugin {
 				//-1 means no edit
 				let animalPlazierungsId = 'noedit'
 				let currentPage = getButtonParameter(interaction.customId)[2]
+				let searchQuery = getButtonParameter(interaction.customId)[3] || ""
 
 				let discordUserDatabase = await getUserCurrencyFromDatabase(interaction.user.id, db)
 
@@ -334,7 +364,7 @@ class Plugin {
 				);
 
 
-				await waldspiel.showMeinStorage(client, plugin, db, interaction.user, interaction, arrStorageAnimals, animalPlazierungsId, currentPage)
+				await waldspiel.showMeinStorage(client, plugin, db, interaction.user, interaction, arrStorageAnimals, animalPlazierungsId, currentPage, searchQuery)
 			}
 
 			//selectedCustomization-idPlazierung
@@ -344,6 +374,7 @@ class Plugin {
 
 				let animalPlazierungsId = getButtonParameter(interaction.customId)[1]
 				let currentPage = getButtonParameter(interaction.customId)[2]
+				let searchQuery = getButtonParameter(interaction.customId)[3] || ""
 
 				let discordUserDatabase = await getUserCurrencyFromDatabase(interaction.user.id, db)
 
@@ -357,7 +388,7 @@ class Plugin {
 						animal._id.toString() !== (discordUserDatabase.animalId3 ? discordUserDatabase.animalId3.toString() : "")
 				);
 
-				await waldspiel.showMeinStorage(client, plugin, db, interaction.user, interaction, arrStorageAnimals, animalPlazierungsId, currentPage)
+				await waldspiel.showMeinStorage(client, plugin, db, interaction.user, interaction, arrStorageAnimals, animalPlazierungsId, currentPage, searchQuery)
 			}
 
 			//selectedCustomization-idPlazierung
@@ -367,7 +398,7 @@ class Plugin {
 				let animalPlazierungsId = getButtonParameter(interaction.customId)[1]
 
 				await waldspiel.sendToStorage(interaction, db, discordId, animalPlazierungsId);
-				await waldspiel.showMeinWald(client, plugin, db, interaction.user, interaction, true)
+				await waldspiel.showMeinWaldAnimal(client, plugin, db, interaction.user, interaction, true, animalPlazierungsId)
 
 			}
 
@@ -385,24 +416,60 @@ class Plugin {
 					{ $set: { customization: itemId } }
 				);
 
-				await waldspiel.showMeinWald(client, plugin, db, interaction.user, interaction, true)
+				let discordUserDatabase = await getUserCurrencyFromDatabase(interaction.user.id, db);
+				let animalId = 1;
+				if (discordUserDatabase.animalId1 && ObjectId(animalObjId).equals(discordUserDatabase.animalId1)) animalId = 1;
+				else if (discordUserDatabase.animalId2 && ObjectId(animalObjId).equals(discordUserDatabase.animalId2)) animalId = 2;
+				else if (discordUserDatabase.animalId3 && ObjectId(animalObjId).equals(discordUserDatabase.animalId3)) animalId = 3;
+
+				await waldspiel.showMeinWaldAnimal(client, plugin, db, interaction.user, interaction, true, animalId)
+
+			}
+
+			if (isButton(interaction, 'selectedAnimation')) {
+				let animalObjId = getButtonParameter(interaction.customId)[1]
+				let animationId = getButtonParameter(interaction.customId)[2]
+
+				if (animationId == "ABBRECHEN") animationId = 0
+
+				const collection = db.collection('animals');
+
+				await collection.updateOne(
+					{ _id: ObjectId(animalObjId) },
+					{ $set: { animation: animationId } }
+				);
+
+				let discordUserDatabase = await getUserCurrencyFromDatabase(interaction.user.id, db);
+				let animalId = 1;
+				if (discordUserDatabase.animalId1 && ObjectId(animalObjId).equals(discordUserDatabase.animalId1)) animalId = 1;
+				else if (discordUserDatabase.animalId2 && ObjectId(animalObjId).equals(discordUserDatabase.animalId2)) animalId = 2;
+				else if (discordUserDatabase.animalId3 && ObjectId(animalObjId).equals(discordUserDatabase.animalId3)) animalId = 3;
+
+				await waldspiel.showMeinWaldAnimal(client, plugin, db, interaction.user, interaction, true, animalId)
 
 			}
 
 			if (isButton(interaction, 'setBackgroundCustomization')) {
-				let itemId = getButtonParameter(interaction.customId)[1]
+				let itemId = getButtonParameter(interaction.customId)[1];
 
-				if (itemId == "ABBRECHEN") itemId = 0
+				if (itemId == "ABBRECHEN") itemId = 0;
 
-				let discordUserId = interaction.user.id
+				let discordUserId = interaction.user.id;
+				let discordUserDatabase = await getUserCurrencyFromDatabase(discordUserId, db);
+				let backgroundlistdatabase = discordUserDatabase["backgroundlist"] || [];
+
+				// Safety check: is it owned? (DEFAULT and SUMMER are always allowed)
+				if (itemId !== 0 && itemId !== "DEFAULT" && itemId !== "SUMMER" && !backgroundlistdatabase.includes(itemId)) {
+					return await interaction.reply({ content: "Diesen Hintergrund besitzt du noch nicht!", ephemeral: true });
+				}
 
 				await updateUserFromDatabase(db, discordUserId, {
 					$set: {
 						["currency." + "background"]: itemId,
 					}
-				})
+				});
 
-				await waldspiel.showMeinWald(client, plugin, db, interaction.user, interaction, true)
+				await waldspiel.showMeinWald(client, plugin, db, interaction.user, interaction, true);
 			}
 
 			//[1]animalId
@@ -412,88 +479,137 @@ class Plugin {
 				await waldspiel.showMeinWaldAnimal(client, plugin, db, interaction.user, interaction, true, animalId)
 			}
 
-			if (isButton(interaction, 'editBackground')) {
-				let offset = parseInt(getButtonParameter(interaction.customId)[1])
-
-
-				let discordUserId = interaction.user.id
-				let discordUserDatabase = await getUserCurrencyFromDatabase(discordUserId, db)
-
-				let backgroundlistdatabase = discordUserDatabase["backgroundlist"]
-				if (!backgroundlistdatabase) backgroundlistdatabase = []
-
-				//Add Both default values for the Background
-				backgroundlistdatabase.unshift("SUMMER")
-				backgroundlistdatabase.unshift("DEFAULT")
-
-				let button1offset = offset - 1
-				if (button1offset < 0) button1offset = backgroundlistdatabase.length - 1
-
-				let button2offset = offset + 1
-				if (button2offset >= backgroundlistdatabase.length) button2offset = 0
-
-				const rowItemliste = new ActionRowBuilder()
-					.addComponents(
-						waldspiel.getZuMeinemWaldButton(),
-						new ButtonBuilder()
-							.setCustomId('Button1editBackground-' + button1offset)
-							.setLabel('<-')
-							.setStyle(ButtonStyle.Primary),
-						new ButtonBuilder()
-							.setCustomId('setBackgroundCustomization-' + backgroundlistdatabase[offset]) //hier wieder back zu meinem wald mit dme entsprechenden ausgewälten ding da 
-							.setLabel('Auswählen')
-							.setStyle(ButtonStyle.Primary),
-						new ButtonBuilder()
-							.setCustomId('Button2editBackground-' + button2offset)
-							.setLabel('->')
-							.setStyle(ButtonStyle.Primary),
-					);
-
-				await ImageCreator.createEditBackground(discordUserDatabase, backgroundlistdatabase, offset)
-
-				return await interaction.update({
-					files: ['temp/finalpicture.png'],
-					components: [rowItemliste],
-					ephemeral: true
-				});
-			}
-
-			if (isButton(interaction, 'selectStorageNumber')) {
-				let animalPlazierungsId = getButtonParameter(interaction.customId)[1]
-
-				// Create the modal
+			if (isButton(interaction, 'searchBackground')) {
 				const modal = new ModalBuilder()
-					.setCustomId('getFromStorage-' + animalPlazierungsId)
-					.setTitle('Boxnummer');
+					.setCustomId('submitSearchBackground')
+					.setTitle('Hintergründe suchen');
 
-				// Add components to modal
-
-				// Create the text input components
-				const nameInput = new TextInputBuilder()
-					.setCustomId('storageid')
-					// The label is the prompt the user sees for this input
-					.setLabel("Wie ist die Boxnummer des Tieres?")
-					// Short means only a single line of text
+				const searchInput = new TextInputBuilder()
+					.setCustomId('searchquery')
+					.setLabel("Hintergrund suchen")
+					.setPlaceholder("z.B. Sommer, Wald...")
 					.setStyle(TextInputStyle.Short);
 
-				// An action row only holds one text input,
-				// so you need one action row per text input.
-				const firstActionRow = new ActionRowBuilder().addComponents(
-					nameInput
-				);
-
-				// Add inputs to the modal
+				const firstActionRow = new ActionRowBuilder().addComponents(searchInput);
 				modal.addComponents(firstActionRow);
-
-				// Show the modal to the user
 				await interaction.showModal(modal);
 			}
 
-			if (isButton(interaction, 'getFromStorage')) {
+			if (isButton(interaction, 'submitSearchBackground')) {
+				let searchQuery = interaction.fields.getTextInputValue("searchquery")
+				interaction.customId = `editBackground-0-${searchQuery}`;
+				// Trigger the actual handler
+				return await handleEditBackground(interaction);
+			}
+
+			if (isButton(interaction, 'clearSearchBackground')) {
+				interaction.customId = `editBackground-0`;
+				// Trigger the actual handler
+				return await handleEditBackground(interaction);
+			}
+
+			async function handleEditBackground(interaction) {
+				let page = parseInt(getButtonParameter(interaction.customId)[1]);
+				let searchQuery = getButtonParameter(interaction.customId)[2] || "";
+
+				let discordUserId = interaction.user.id;
+				let discordUserDatabase = await getUserCurrencyFromDatabase(discordUserId, db);
+
+				let backgroundlistdatabase = discordUserDatabase["backgroundlist"] || [];
+
+				// Ensure defaults are present in owned list
+				if (!backgroundlistdatabase.includes("DEFAULT")) backgroundlistdatabase.unshift("DEFAULT");
+				if (!backgroundlistdatabase.includes("SUMMER")) {
+					let idx = backgroundlistdatabase.indexOf("DEFAULT") + 1;
+					backgroundlistdatabase.splice(idx, 0, "SUMMER");
+				}
+
+				// Get ALL available backgrounds
+				let allBgs = new Backgroundlist().getBackgroundListAll();
+				let allTags = Object.keys(allBgs).filter(tag => tag !== "ABBRECHEN");
+
+				if (searchQuery) {
+					const query = searchQuery.toLowerCase();
+					allTags = allTags.filter(tag => allBgs[tag].name.toLowerCase().includes(query));
+				}
+
+				const perPage = 9;
+				const startIdx = page * perPage;
+				const pageItems = allTags.slice(startIdx, startIdx + perPage);
+
+				const selectOptions = [];
+				for (let i = 0; i < pageItems.length; i++) {
+					const tag = pageItems[i];
+					const wc = new WaldCreator(tag);
+					const bg = wc.background;
+					let isOwned = backgroundlistdatabase.includes(tag);
+
+					let label = isOwned ? `${startIdx + i + 1}. ${bg.name}` : `🔒 ${startIdx + i + 1}. ${bg.name}`;
+
+					selectOptions.push(
+						new StringSelectMenuOptionBuilder()
+							.setLabel(label)
+							.setValue(tag)
+					);
+				}
+
+				const rowDropdown = new ActionRowBuilder().addComponents(
+					new StringSelectMenuBuilder()
+						.setCustomId('selectBackgroundDropdown')
+						.setPlaceholder('Hintergrund auswählen...')
+						.addOptions(selectOptions)
+				);
+
+				const maxPages = Math.ceil(allTags.length / perPage);
+
+				const rowPagination = new ActionRowBuilder().addComponents(
+					waldspiel.getZuMeinemWaldButton(),
+					new ButtonBuilder()
+						.setCustomId('searchBackground')
+						.setLabel('🔍 Suchen')
+						.setStyle(ButtonStyle.Secondary)
+				);
+
+				if (searchQuery) {
+					rowPagination.addComponents(
+						new ButtonBuilder()
+							.setCustomId('clearSearchBackground')
+							.setLabel('❌ Suche löschen')
+							.setStyle(ButtonStyle.Danger)
+					);
+				}
+
+				if (maxPages > 1) {
+					rowPagination.addComponents(
+						new ButtonBuilder()
+							.setCustomId(`editBackground-${page - 1}${searchQuery ? '-' + searchQuery : ''}`)
+							.setLabel('⬅️')
+							.setStyle(ButtonStyle.Primary)
+							.setDisabled(page === 0),
+						new ButtonBuilder()
+							.setCustomId(`editBackground-${page + 1}${searchQuery ? '-' + searchQuery : ''}`)
+							.setLabel('➡️')
+							.setStyle(ButtonStyle.Primary)
+							.setDisabled(page === maxPages - 1)
+					);
+				}
+
+				const outPath = await ImageCreator.createSetBackground(pageItems, startIdx, backgroundlistdatabase, searchQuery);
+
+				if (interaction.isStringSelectMenu() || interaction.isButton() || interaction.isModalSubmit() || (interaction.message && interaction.message.editable)) {
+					await interaction.update({ files: [outPath], components: [rowDropdown, rowPagination] });
+				} else {
+					await interaction.reply({ files: [outPath], components: [rowDropdown, rowPagination], ephemeral: true });
+				}
+			}
+
+			if (isButton(interaction, 'editBackground')) {
+				await handleEditBackground(interaction);
+			}
+
+			if (isButton(interaction, 'selectStorageDropdown')) {
 				let animalPlazierungsId = getButtonParameter(interaction.customId)[1]
-				let storageId = interaction.fields.getTextInputValue("storageid")
-				storageId = parseInt(storageId)
-				storageId--
+				let storageId = parseInt(interaction.values[0])
 
 				let discordUserId = interaction.user.id
 				let discordUserDatabase = await getUserCurrencyFromDatabase(discordUserId, db)
@@ -530,10 +646,65 @@ class Plugin {
 				]);
 
 
-				await waldspiel.showMeinWald(client, plugin, db, interaction.user, interaction, true)
+				await waldspiel.showMeinWaldAnimal(client, plugin, db, interaction.user, interaction, true, animalPlazierungsId)
 
-				//return await interaction.deferUpdate()
+			}
 
+			if (isButton(interaction, 'searchStorage')) {
+				let animalPlazierungsId = getButtonParameter(interaction.customId)[1]
+
+				const modal = new ModalBuilder()
+					.setCustomId('submitSearchStorage-' + animalPlazierungsId)
+					.setTitle('Tiere suchen');
+
+				const searchInput = new TextInputBuilder()
+					.setCustomId('searchquery')
+					.setLabel("Nach was suchst du? (Name oder Sorte)")
+					.setPlaceholder("z.B. Fuchs, Bello...")
+					.setStyle(TextInputStyle.Short);
+
+				const firstActionRow = new ActionRowBuilder().addComponents(searchInput);
+				modal.addComponents(firstActionRow);
+				await interaction.showModal(modal);
+			}
+
+			if (isButton(interaction, 'submitSearchStorage')) {
+				let animalPlazierungsId = getButtonParameter(interaction.customId)[1]
+				let searchQuery = interaction.fields.getTextInputValue("searchquery")
+
+				let discordUserId = interaction.user.id
+				let discordUserDatabase = await getUserCurrencyFromDatabase(discordUserId, db)
+
+				const collectionAnimal = db.collection('animals');
+				const arrAnimal = await collectionAnimal.find({ ownerDiscordId: discordUserId }).sort({ type: 1 }).toArray()
+
+				const arrStorageAnimals = arrAnimal.filter(
+					(animal) =>
+						animal._id.toString() !== (discordUserDatabase.animalId1 ? discordUserDatabase.animalId1.toString() : "") &&
+						animal._id.toString() !== (discordUserDatabase.animalId2 ? discordUserDatabase.animalId2.toString() : "") &&
+						animal._id.toString() !== (discordUserDatabase.animalId3 ? discordUserDatabase.animalId3.toString() : "")
+				);
+
+				await waldspiel.showMeinStorage(client, plugin, db, interaction.user, interaction, arrStorageAnimals, animalPlazierungsId, 0, searchQuery)
+			}
+
+			if (isButton(interaction, 'clearSearchStorage')) {
+				let animalPlazierungsId = getButtonParameter(interaction.customId)[1]
+
+				let discordUserId = interaction.user.id
+				let discordUserDatabase = await getUserCurrencyFromDatabase(discordUserId, db)
+
+				const collectionAnimal = db.collection('animals');
+				const arrAnimal = await collectionAnimal.find({ ownerDiscordId: discordUserId }).sort({ type: 1 }).toArray()
+
+				const arrStorageAnimals = arrAnimal.filter(
+					(animal) =>
+						animal._id.toString() !== (discordUserDatabase.animalId1 ? discordUserDatabase.animalId1.toString() : "") &&
+						animal._id.toString() !== (discordUserDatabase.animalId2 ? discordUserDatabase.animalId2.toString() : "") &&
+						animal._id.toString() !== (discordUserDatabase.animalId3 ? discordUserDatabase.animalId3.toString() : "")
+				);
+
+				await waldspiel.showMeinStorage(client, plugin, db, interaction.user, interaction, arrStorageAnimals, animalPlazierungsId, 0, "")
 			}
 
 			//editAnimalName-animalObjId
@@ -584,7 +755,13 @@ class Plugin {
 					{ $set: { name: newName } }
 				);
 
-				await waldspiel.showMeinWald(client, plugin, db, interaction.user, interaction, true)
+				let discordUserDatabase = await getUserCurrencyFromDatabase(interaction.user.id, db);
+				let animalId = 1;
+				if (discordUserDatabase.animalId1 && ObjectId(animalObjId).equals(discordUserDatabase.animalId1.toString())) animalId = 1;
+				else if (discordUserDatabase.animalId2 && ObjectId(animalObjId).equals(discordUserDatabase.animalId2.toString())) animalId = 2;
+				else if (discordUserDatabase.animalId3 && ObjectId(animalObjId).equals(discordUserDatabase.animalId3.toString())) animalId = 3;
+
+				await waldspiel.showMeinWaldAnimal(client, plugin, db, interaction.user, interaction, true, animalId)
 			}
 
 			if (isButton(interaction, 'removeAnimal')) {
@@ -604,21 +781,25 @@ class Plugin {
 				let discordUserId = interaction.user.id
 				let discordUserDatabase = await getUserCurrencyFromDatabase(discordUserId, db)
 
+				let animalId = 1;
 				if (ObjectId(animalObjId).equals(discordUserDatabase.animalId1)) {
+					animalId = 1;
 					await updateUserFromDatabase(db, interaction.user.id, {
 						$set: {
 							["currency." + "animalId1"]: ""
 						}
 					})
 				}
-				if (ObjectId(animalObjId).equals(discordUserDatabase.animalId2)) {
+				else if (ObjectId(animalObjId).equals(discordUserDatabase.animalId2)) {
+					animalId = 2;
 					await updateUserFromDatabase(db, interaction.user.id, {
 						$set: {
 							["currency." + "animalId2"]: ""
 						}
 					})
 				}
-				if (ObjectId(animalObjId).equals(discordUserDatabase.animalId3)) {
+				else if (ObjectId(animalObjId).equals(discordUserDatabase.animalId3)) {
+					animalId = 3;
 					await updateUserFromDatabase(db, interaction.user.id, {
 						$set: {
 							["currency." + "animalId3"]: ""
@@ -626,61 +807,275 @@ class Plugin {
 					})
 				}
 
-				await waldspiel.showMeinWald(client, plugin, db, interaction.user, interaction, true)
+				await waldspiel.showMeinWaldAnimal(client, plugin, db, interaction.user, interaction, true, animalId)
 			}
 
-			//setCustomization-idPlazierung-offsetItemliste
-			if (isButton(interaction, 'setCustomization')) {
-				let animalObjId = getButtonParameter(interaction.customId)[1]
-				let offset = parseInt(getButtonParameter(interaction.customId)[2])
 
+			async function handleSetCustomization(interaction) {
+				let animalObjId = getButtonParameter(interaction.customId)[1]
+				let page = parseInt(getButtonParameter(interaction.customId)[2]) || 0;
+				let slot = getButtonParameter(interaction.customId)[3] || "1";
+				let searchQuery = getButtonParameter(interaction.customId)[4] || "";
 
 				let discordUserId = interaction.user.id
 				let discordUserDatabase = await getUserCurrencyFromDatabase(discordUserId, db)
 
-				let itemliste = discordUserDatabase["itemlist"]
-				if (!itemliste) itemliste = []
+				const collectionAnimal = db.collection('animals');
+				const animal = await collectionAnimal.findOne({ _id: ObjectId(animalObjId) });
+				const animalType = animal ? animal.type : null;
 
-				itemliste.unshift("ABBRECHEN")//add item ABBRECHEN first of the array, item 0 means no item
+				let ownedItems = discordUserDatabase["itemlist"] || []
 
+				const { StringSelectMenuBuilder, StringSelectMenuOptionBuilder } = require('discord.js');
+				let ItemlistObj = require('./obj/ItemList.js');
+				let Itemlist = new ItemlistObj().getListAll();
+				let allItems = Object.keys(Itemlist);
 
-				const sharp = require('sharp')
+				allItems = allItems.filter(a => a !== "ABBRECHEN");
 
+				if (searchQuery) {
+					const query = searchQuery.toLowerCase();
+					allItems = allItems.filter(itemKey => Itemlist[itemKey].name.toLowerCase().includes(query));
+				}
 
-				let button1offset = offset - 1
-				if (button1offset < 0) button1offset = itemliste.length - 1
+				allItems.unshift("ABBRECHEN");
 
-				let button2offset = offset + 1
-				if (button2offset >= itemliste.length) button2offset = 0
+				const itemsPerPage = 15;
+				const maxPages = Math.ceil(allItems.length / itemsPerPage);
 
-				const rowItemliste = new ActionRowBuilder()
-					.addComponents(
-						waldspiel.getZuMeinemWaldButton(),
-						new ButtonBuilder()
-							.setCustomId('Button1setCustomization-' + animalObjId + '-' + button1offset)
-							.setLabel('<-')
-							.setStyle(ButtonStyle.Primary),
-						new ButtonBuilder()
-							.setCustomId('selectedCustomization-' + animalObjId + '-' + itemliste[offset]) //hier wieder back zu meinem wald mit dme entsprechenden ausgewälten ding da 
-							.setLabel('Auswählen')
-							.setStyle(ButtonStyle.Primary),
-						new ButtonBuilder()
-							.setCustomId('Button2setCustomization-' + animalObjId + '-' + button2offset)
-							.setLabel('->')
-							.setStyle(ButtonStyle.Primary),
+				if (page < 0) page = 0;
+				if (page >= maxPages) page = maxPages - 1;
+
+				const startIdx = page * itemsPerPage;
+				const currentItems = allItems.slice(startIdx, startIdx + itemsPerPage);
+
+				let selectMenu = new StringSelectMenuBuilder()
+					.setCustomId('selectCustomizationDropdown-' + animalObjId + '-' + page + '-' + slot + (searchQuery ? '-' + searchQuery : ''))
+					.setPlaceholder('Slot ' + slot + ': Wähle eine Dekoration (Seite ' + (page + 1) + '/' + maxPages + ')')
+					.setMinValues(1)
+					.setMaxValues(1);
+
+				for (let i = 0; i < currentItems.length; i++) {
+					let itemKey = currentItems[i];
+					let itemName = Itemlist[itemKey] ? Itemlist[itemKey].name : "Unknown";
+
+					let isOwned = itemKey === "ABBRECHEN" || ownedItems.includes(itemKey);
+					let label = isOwned ? `${startIdx + i + 1}. ${itemName}` : `🔒 ${startIdx + i + 1}. ${itemName}`;
+
+					selectMenu.addOptions(
+						new StringSelectMenuOptionBuilder()
+							.setLabel(label)
+							.setValue(itemKey)
 					);
+				}
 
-				//.resize(80)
+				const rowDropdown = new ActionRowBuilder().addComponents(selectMenu);
+				let buttons = [
+					waldspiel.getZuMeinemWaldButton(),
+					new ButtonBuilder()
+						.setCustomId(`searchCustomization-${animalObjId}-${slot}`)
+						.setLabel('🔍 Suchen')
+						.setStyle(ButtonStyle.Secondary)
+				];
 
-				await ImageCreator.createSetCustomization(itemliste, offset)
+				if (searchQuery) {
+					buttons.push(
+						new ButtonBuilder()
+							.setCustomId(`clearSearchCustomization-${animalObjId}-${slot}`)
+							.setLabel('❌ Suche löschen')
+							.setStyle(ButtonStyle.Danger)
+					);
+				}
+
+				if (maxPages > 1) {
+					buttons.push(
+						new ButtonBuilder()
+							.setCustomId('setCustomization-' + animalObjId + '-' + (page - 1) + '-' + slot + (searchQuery ? '-' + searchQuery : ''))
+							.setLabel('⬅️')
+							.setStyle(ButtonStyle.Primary)
+							.setDisabled(page === 0),
+						new ButtonBuilder()
+							.setCustomId('setCustomization-' + animalObjId + '-' + (page + 1) + '-' + slot + (searchQuery ? '-' + searchQuery : ''))
+							.setLabel('➡️')
+							.setStyle(ButtonStyle.Primary)
+							.setDisabled(page === maxPages - 1)
+					);
+				}
+				const rowButtons = new ActionRowBuilder().addComponents(...buttons);
+
+				const outPath = await ImageCreator.createSetCustomization(currentItems, ownedItems, startIdx, animalType, searchQuery);
 
 				return await interaction.update({
-					files: ['temp/finalpicture.png'],
-					components: [rowItemliste],
+					files: [outPath],
+					components: [rowDropdown, rowButtons],
 					ephemeral: true
 				});
+			}
+
+			if (isButton(interaction, 'setCustomization')) {
+				await handleSetCustomization(interaction);
+			}
+
+			if (isButton(interaction, 'selectCustomizationDropdown')) {
+				let animalObjId = getButtonParameter(interaction.customId)[1];
+				let page = getButtonParameter(interaction.customId)[2];
+				let slot = getButtonParameter(interaction.customId)[3] || "1";
+				let searchQuery = getButtonParameter(interaction.customId)[4] || "";
+				let itemId = interaction.values[0];
+
+				let discordUserId = interaction.user.id;
+				let discordUserDatabase = await getUserCurrencyFromDatabase(discordUserId, db);
+				let ownedItems = discordUserDatabase["itemlist"] || [];
+
+				if (itemId !== "ABBRECHEN" && !ownedItems.includes(itemId)) {
+					return await interaction.reply({ content: "Du hast diese Dekoration noch nicht freigeschaltet!", ephemeral: true });
+				}
+
+				if (itemId == "ABBRECHEN") itemId = 0;
+
+				const collection = db.collection('animals');
+				let fieldToUpdate = slot === "1" ? "customization1" : (slot === "2" ? "customization2" : "customization3");
+
+				let updateObj = { [fieldToUpdate]: itemId };
+				// Also update legacy field if it's slot 1
+				if (slot === "1") updateObj.customization = itemId;
+
+				await collection.updateOne(
+					{ _id: ObjectId(animalObjId) },
+					{ $set: updateObj }
+				);
+
+				let animalId = 1;
+				if (discordUserDatabase.animalId1 && ObjectId(animalObjId).equals(discordUserDatabase.animalId1)) animalId = 1;
+				else if (discordUserDatabase.animalId2 && ObjectId(animalObjId).equals(discordUserDatabase.animalId2)) animalId = 2;
+				else if (discordUserDatabase.animalId3 && ObjectId(animalObjId).equals(discordUserDatabase.animalId3)) animalId = 3;
+
+				await waldspiel.showMeinWaldAnimal(client, plugin, db, interaction.user, interaction, true, animalId);
+			}
+
+			if (isButton(interaction, 'searchCustomization')) {
+				let animalObjId = getButtonParameter(interaction.customId)[1]
+				let slot = getButtonParameter(interaction.customId)[2]
+
+				const modal = new ModalBuilder()
+					.setCustomId(`submitSearchCustomization-${animalObjId}-${slot}`)
+					.setTitle('Dekoration suchen');
+
+				const searchInput = new TextInputBuilder()
+					.setCustomId('searchquery')
+					.setLabel("Dekoration suchen")
+					.setPlaceholder("z.B. Hut, Brille...")
+					.setStyle(TextInputStyle.Short);
+
+				const firstActionRow = new ActionRowBuilder().addComponents(searchInput);
+				modal.addComponents(firstActionRow);
+				await interaction.showModal(modal);
+			}
+
+			if (isButton(interaction, 'submitSearchCustomization')) {
+				let animalObjId = getButtonParameter(interaction.customId)[1]
+				let slot = getButtonParameter(interaction.customId)[2]
+				let searchQuery = interaction.fields.getTextInputValue("searchquery")
+				interaction.customId = `setCustomization-${animalObjId}-0-${slot}-${searchQuery}`;
+				return await handleSetCustomization(interaction);
+			}
+
+			if (isButton(interaction, 'clearSearchCustomization')) {
+				let animalObjId = getButtonParameter(interaction.customId)[1]
+				let slot = getButtonParameter(interaction.customId)[2]
+				interaction.customId = `setCustomization-${animalObjId}-0-${slot}`;
+				return await handleSetCustomization(interaction);
+			}
 
 
+			if (isButton(interaction, 'setAnimation')) {
+				let animalObjId = getButtonParameter(interaction.customId)[1]
+
+				let discordUserId = interaction.user.id
+				let discordUserDatabase = await getUserCurrencyFromDatabase(discordUserId, db)
+
+				const collectionAnimal = db.collection('animals');
+				const animal = await collectionAnimal.findOne({ _id: ObjectId(animalObjId) });
+				const animalType = animal ? animal.type : null;
+
+				let ownedAnimations = discordUserDatabase["animationlist"] || ["WACKELN"]
+
+				const { StringSelectMenuBuilder, StringSelectMenuOptionBuilder } = require('discord.js');
+				let AnimationListObj = require('./obj/AnimationList.js');
+				let AnimationList = new AnimationListObj().getListAll();
+				let allAnimations = Object.keys(AnimationList);
+
+				// Ensure ABBRECHEN is at the start and not duplicated
+				allAnimations = allAnimations.filter(a => a !== "ABBRECHEN");
+				allAnimations.unshift("ABBRECHEN");
+
+				let selectMenu = new StringSelectMenuBuilder()
+					.setCustomId('selectAnimationDropdown-' + animalObjId)
+					.setPlaceholder('Wähle eine Animation')
+					.setMinValues(1)
+					.setMaxValues(1);
+
+				// Show up to 15 animations
+				let count = 0;
+				for (let i = 0; i < allAnimations.length; i++) {
+					if (count >= 15) break;
+
+					let animKey = allAnimations[i];
+					let animName = "Aus / Keine";
+					if (animKey !== "ABBRECHEN" && AnimationList[animKey]) {
+						animName = AnimationList[animKey].name;
+					}
+
+					let isOwned = animKey === "ABBRECHEN" || ownedAnimations.includes(animKey);
+					let label = isOwned ? `${i + 1}. ${animName}` : `🔒 ${i + 1}. ${animName}`;
+
+					selectMenu.addOptions(
+						new StringSelectMenuOptionBuilder()
+							.setLabel(label)
+							.setValue(animKey)
+					);
+					count++;
+				}
+
+				const rowAnimationlist = new ActionRowBuilder().addComponents(selectMenu);
+				const rowBack = new ActionRowBuilder().addComponents(waldspiel.getZuMeinemWaldButton());
+
+				const outPath = await ImageCreator.createSetAnimation(allAnimations, ownedAnimations, animalType);
+
+				return await interaction.update({
+					files: [outPath],
+					components: [rowAnimationlist, rowBack],
+					ephemeral: true
+				});
+			}
+
+			if (isButton(interaction, 'selectAnimationDropdown')) {
+				let animalObjId = getButtonParameter(interaction.customId)[1]
+				let animationId = interaction.values[0]
+
+				let discordUserId = interaction.user.id;
+				let discordUserDatabase = await getUserCurrencyFromDatabase(discordUserId, db);
+				let ownedAnimations = discordUserDatabase["animationlist"] || ["WACKELN"];
+
+				if (animationId !== "ABBRECHEN" && !ownedAnimations.includes(animationId)) {
+					return await interaction.reply({ content: "Du hast diese Animation noch nicht freigeschaltet!", ephemeral: true });
+				}
+
+				if (animationId == "ABBRECHEN") animationId = 0
+
+				const collection = db.collection('animals');
+
+				await collection.updateOne(
+					{ _id: ObjectId(animalObjId) },
+					{ $set: { animation: animationId } }
+				);
+
+				let animalId = 1;
+				if (discordUserDatabase.animalId1 && ObjectId(animalObjId).equals(discordUserDatabase.animalId1)) animalId = 1;
+				else if (discordUserDatabase.animalId2 && ObjectId(animalObjId).equals(discordUserDatabase.animalId2)) animalId = 2;
+				else if (discordUserDatabase.animalId3 && ObjectId(animalObjId).equals(discordUserDatabase.animalId3)) animalId = 3;
+
+				await waldspiel.showMeinWaldAnimal(client, plugin, db, interaction.user, interaction, true, animalId)
 			}
 
 			if (isButton(interaction, 'buyItem')) {

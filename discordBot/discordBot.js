@@ -1,3 +1,6 @@
+// Force canvas to load before sharp to prevent DLL conflicts on Windows (ERR_DLOPEN_FAILED)
+try { require('canvas'); } catch (ignore) { }
+
 const { REST } = require("@discordjs/rest");
 const { Routes } = require("discord-api-types/v9");
 const { Message, User, Partials } = require('discord.js');

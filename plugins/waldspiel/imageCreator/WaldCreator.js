@@ -1,4 +1,3 @@
-const imageCreator = require('../imageCreator.js');
 const { date } = require("../lib/date.js");
 const Backgroundlist = require('../obj/BackgroundList.js');
 
@@ -79,7 +78,7 @@ function getBackgroundByTag(tag) {
 	if(dateInfo.isDay){
 		retunObj["filename"] = currentBackground.filename.day;
 		if(currentBackground.filename.dayoverlay){
-			retunObj["overlay"] = currentBackground.filename.nightoverlay;
+			retunObj["overlay"] = currentBackground.filename.dayoverlay;
 		}
 	}
 
