@@ -418,74 +418,129 @@ module.exports = new Plugin();
 //logFixed -> nachkommastellen in der log ausgabe
 
 async function messageCounterAdd(plugin, client, discordUserId, currencyId, oldActivityValue, newActivityValue, db) {
-	if (isNaN(oldActivityValue) || isNaN(newActivityValue)) return;
 
-	const discordUserDatabase = await getUserCurrencyFromDatabase(discordUserId, db);
-	if (!discordUserDatabase) return;
+	try {
+		if (isNaN(newActivityValue)) return;
 
-	const guild = await client.guilds.fetch(plugin['var'].server);
-	const member = await guild.members.fetch(discordUserId).catch(() => null);
-	if (!member) return;
+		const discordUserDatabase = await getUserCurrencyFromDatabase(discordUserId, db);
+		if (!discordUserDatabase) return;
 
-	// XP aus Sprach- und Chataktivität berechnen
-	let voiceActivity = parseInt(discordUserDatabase[plugin['var'].voiceActivity] || 0);
-	let chatActivity = parseInt(discordUserDatabase[plugin['var'].chatActivity] || 0);
-	let xp = voiceActivity + chatActivity;
+		const guild = await client.guilds.fetch(plugin['var'].server).catch(err => {
+			console.error(`[Rolesystem] Fehler beim Abrufen des Servers ${plugin['var'].server}:`, err);
+			return null;
+		});
+		if (!guild) return;
 
-	// RELATIVE XP-Grenzen (werden gleich summiert)
-	const relativeRanks = getRanksWithPluginVar(plugin['var']);
+		const member = await guild.members.fetch(discordUserId).catch(err => {
+			console.error(`[Rolesystem] Fehler beim Abrufen des Nutzers ${discordUserId}:`, err);
+			return null;
+		});
+		if (!member) return;
 
-	// Relative XP in kumulative XP umwandeln
-	const rankLevels = [];
-	let total = 0;
-	for (const r of relativeRanks) {
-		total += r.xp;
-		rankLevels.push({ ...r, cumulativeXp: total });
-	}
+		// XP aus Sprach- und Chataktivität berechnen
+		let voiceActivity = parseInt(discordUserDatabase[plugin['var'].voiceActivity] || 0);
+		let chatActivity = parseInt(discordUserDatabase[plugin['var'].chatActivity] || 0);
 
-	// Aktuellen Rang finden
-	let currentRankIndex = -1;
-	for (let i = rankLevels.length - 1; i >= 0; i--) {
-		if (member.roles.cache.has(rankLevels[i].roleId)) {
-			currentRankIndex = i;
-			break;
+		// Sicherstellen, dass wir den aktuellsten Wert aus dem Trigger nehmen (== für String/Number Vergleich)
+		if (currencyId == plugin['var'].chatActivity) {
+			chatActivity = parseInt(newActivityValue);
+			// console.log(`[Rolesystem] Chat-Trigger verarbeitet: ${chatActivity} XP`);
 		}
-	}
-
-	const nextRankIndex = currentRankIndex + 1;
-	if (nextRankIndex >= rankLevels.length) return;
-
-	const nextRank = rankLevels[nextRankIndex];
-
-	// Reicht die XP für den nächsten Rang?
-	if (xp >= nextRank.cumulativeXp) {
-		// Alte Rolle entfernen
-		if (currentRankIndex >= 0) {
-			await member.roles.remove(rankLevels[currentRankIndex].roleId).catch(console.error);
+		if (currencyId == plugin['var'].voiceActivity) {
+			voiceActivity = parseInt(newActivityValue);
+			// console.log(`[Rolesystem] Voice-Trigger verarbeitet: ${voiceActivity} XP`);
 		}
 
-		// Neue Rolle geben
-		await member.roles.add(nextRank.roleId).catch(console.error);
+		let xp = voiceActivity + chatActivity;
 
-		//Get Discorduser and send him his rankup message
-		let discordUser = await guild.members.resolve(discordUserId);
-		const exampleEmbed = new EmbedBuilder()
-			.setColor('#12ba69')
-			.setTitle(`${capitalize(nextRank.label)} [Rolesystem]`)
-			.setDescription(nextRank.description)
-		discordUser.send({ embeds: [exampleEmbed] })
+		// RELATIVE XP-Grenzen (werden gleich summiert)
+		const relativeRanks = getRanksWithPluginVar(plugin['var']);
 
-		// Log senden
-		const embed = new EmbedBuilder()
-			.setColor('#12ba69')
-			.setTitle("🐾 Neues Tier-Rang erreicht!")
-			.setDescription(`<@${discordUserId}> hat genug Aktivität für den Rang **${capitalize(nextRank.label)}** gesammelt! 🎉`)
-			.setTimestamp();
-
-		const logChannel = client.channels.cache.get(plugin['var'].logChannel);
-		if (logChannel) {
-			await logChannel.send({ embeds: [embed] });
+		// Relative XP in kumulative XP umwandeln
+		const rankLevels = [];
+		let total = 0;
+		for (const r of relativeRanks) {
+			total += r.xp;
+			rankLevels.push({ ...r, cumulativeXp: total });
 		}
+
+		// Den höchsten Rang finden, den der User laut Discord-Rollen aktuell hat
+		let currentRankIndex = -1;
+		let rolesOnUser = [];
+		for (let i = 0; i < rankLevels.length; i++) {
+			if (rankLevels[i].roleId && member.roles.cache.has(rankLevels[i].roleId)) {
+				currentRankIndex = i;
+				rolesOnUser.push(rankLevels[i].label);
+			}
+		}
+
+		console.log(`[Rolesystem Debug] User: ${member.user.tag} | XP: ${xp} | Rollen im Cache: [${rolesOnUser.join(', ')}] | Höchster erkannter Rang: ${currentRankIndex >= 0 ? rankLevels[currentRankIndex].label : 'Keiner'}`);
+
+		// Den bestmöglichen Rang basierend auf XP finden
+		let targetRankIndex = -1;
+		for (let i = rankLevels.length - 1; i >= 0; i--) {
+			if (xp >= rankLevels[i].cumulativeXp) {
+				targetRankIndex = i;
+				break;
+			}
+		}
+
+		// Wenn kein Rang erreicht wurde, abbrechen
+		if (targetRankIndex === -1) return;
+
+		const targetRank = rankLevels[targetRankIndex];
+		if (!targetRank.roleId) return;
+
+		// Check: Hat der User genau die richtige Rolle?
+		const hasCorrectRole = member.roles.cache.has(targetRank.roleId);
+
+		// Check: Hat der User noch andere (falsche) Rang-Rollen?
+		const allRankRoleIds = rankLevels.filter(r => r.roleId).map(r => r.roleId);
+		const hasOtherRankRoles = member.roles.cache.some(role => allRankRoleIds.includes(role.id) && role.id !== targetRank.roleId);
+
+		// Wenn die Rolle fehlt ODER falsche Rollen da sind -> Aufräumen und Setzen
+		if (!hasCorrectRole || hasOtherRankRoles) {
+
+			// Alle alten/falschen Rang-Rollen entfernen
+			const rolesToRemove = member.roles.cache.filter(role => allRankRoleIds.includes(role.id));
+			if (rolesToRemove.size > 0) {
+				await member.roles.remove(rolesToRemove).catch(err => {
+					console.error(`[Rolesystem] Fehler beim Entfernen alter Rollen für ${member.user.tag}:`, err);
+				});
+			}
+
+			// Neue Rolle geben
+			await member.roles.add(targetRank.roleId).then(async () => {
+				console.log(`[Rolesystem] Rolle für ${member.user.tag} auf ${targetRank.label} korrigiert/gesetzt.`);
+
+				// NUR wenn es eine echte Beförderung war (Index ist gestiegen), senden wir die Nachricht
+				if (targetRankIndex > currentRankIndex) {
+					// DM senden
+					if (targetRank.description) {
+						const exampleEmbed = new EmbedBuilder()
+							.setColor('#12ba69')
+							.setTitle(`${capitalize(targetRank.label)} [Rolesystem]`)
+							.setDescription(targetRank.description);
+						await member.send({ embeds: [exampleEmbed] }).catch(() => { });
+					}
+
+					// Log in Channel senden
+					const logChannel = client.channels.cache.get(plugin['var'].logChannel);
+					if (logChannel) {
+						const embed = new EmbedBuilder()
+							.setColor('#12ba69')
+							.setTitle("🐾 Neues Tier-Rang erreicht!")
+							.setDescription(`<@${discordUserId}> hat genug Aktivität für den Rang **${capitalize(targetRank.label)}** gesammelt! 🎉`)
+							.setTimestamp();
+						await logChannel.send({ embeds: [embed] }).catch(() => { });
+					}
+				}
+			}).catch(err => {
+				console.error(`[Rolesystem] Fehler beim Hinzufügen der Rolle ${targetRank.roleId} für ${member.user.tag}:`, err);
+			});
+		}
+	} catch (globalErr) {
+		console.error("[Rolesystem] Globaler Fehler in messageCounterAdd:", globalErr);
 	}
 }
 

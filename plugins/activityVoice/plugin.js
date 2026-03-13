@@ -22,37 +22,46 @@ class Plugin {
 		plugin.cronJob.push(
 			//einmal die minute
 			new CronJob('0 * * * * *', async function () {
+				try {
+					const serverId = plugin['var'].server;
+					if (!serverId) return;
 
-				const guild = await client.guilds.fetch(plugin['var'].server)
-				let mapMember = guild.members.cache.filter(member => member.voice.channel)
+					const guild = await client.guilds.fetch(serverId).catch(() => null);
+					if (!guild) return;
 
-				for (var [key, member] of mapMember.entries()) {
+					// VoiceStates sind zuverlässiger als der Member-Cache
+					const voiceStates = guild.voiceStates.cache;
+					if (voiceStates.size === 0) return;
 
-					let valid = false
+					// Alle Channel mit mehr als einer Person finden
+					const channelCounts = {};
+					voiceStates.forEach(vs => {
+						if (vs.channelId) {
+							channelCounts[vs.channelId] = (channelCounts[vs.channelId] || 0) + 1;
+						}
+					});
 
-					for (var [key2, member2] of mapMember.entries()) {
+					for (const [memberId, vs] of voiceStates.entries()) {
+						if (!vs.channelId || channelCounts[vs.channelId] < 2) continue;
 
-						//check if 2 different user are in the same voice channel AND are not the same user
-						if(member.voice.channel.id == member2.voice.channel.id && member.id != member2.id){
-							valid = true
+						const member = vs.member || await guild.members.fetch(memberId).catch(() => null);
+						if (!member || member.user.bot) continue;
+
+						// nur zählen, wenn:
+						// - nicht servergemuted oder selbst gemutet
+						// - nicht deaf ist
+						if (
+							!vs.mute &&
+							!vs.selfMute &&
+							!vs.deaf &&
+							!vs.selfDeaf
+						) {
+							await VariableManager.counterAdd(memberId, 1, plugin['var'].voiceActivity, db, plugin);
 						}
 					}
-
-					// nur zählen, wenn:
-					// - mindestens 2 Leute im Channel
-					// - der User nicht servergemutet oder selbst gemutet ist
-					// - der User nicht deaf ist
-					if (
-						valid &&
-						!member.voice.mute &&
-						!member.voice.selfMute &&
-						!member.voice.deaf &&
-						!member.voice.selfDeaf
-					) {
-						await VariableManager.counterAdd(member.id, 1, plugin['var'].voiceActivity, db, plugin)
-					}
+				} catch (err) {
+					console.error("[ActivityVoice] Fehler im CronJob:", err);
 				}
-				
 			}, null, true)
 		)
 		
