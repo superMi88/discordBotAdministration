@@ -1,6 +1,6 @@
 const { ActionRowBuilder, ModalBuilder, TextInputBuilder, TextInputStyle, ButtonBuilder, SelectMenuBuilder, ButtonStyle, Events } = require('discord.js');
 const CustomId = require("../../../../discordBot/lib/CustomId.js");
-let { getUserCurrencyFromDatabase, updateUserFromDatabase } = require("../../../../discordBot/lib/helper.js")
+const UserData = require("../../../../discordBot/lib/UserData.js");
 
 const {
     EmbedBuilder,
@@ -26,18 +26,16 @@ class ChristmasExtension {
             if (!interaction.isButton()) return;
             if (interaction.customId !== "weihnachten") return;
 
+            // User laden
             const discordUserId = interaction.user.id;
-            const db = DatabaseManager.get();
-            const userCollection = db.collection("userCollection");
-
             const now = new Date();
             const tag = now.getDate();
-
-            // User laden
-            const userData = await getUserCurrencyFromDatabase(discordUserId, db);
+            const db = DatabaseManager.get();
+            
+            const userData = await UserData.get(discordUserId);
 
             // Prüfen: hat er heute schon geöffnet?
-            const lastOpened = userData.lastChristmasDoorOpenDate;
+            const lastOpened = userData.getCurrency("lastChristmasDoorOpenDate");
             const todayString = now.toISOString().split("T")[0];
 
             if (lastOpened === todayString) {
@@ -48,11 +46,8 @@ class ChristmasExtension {
             }
 
             // Speichern unter: currency.lastChristmasDoorOpenDate
-            const result = await userCollection.updateOne(
-                { discordId: discordUserId },
-                { $set: { "currency.lastChristmasDoorOpenDate": todayString } },
-                { upsert: true }
-            );
+            userData.setCurrency("lastChristmasDoorOpenDate", todayString);
+            await userData.save();
 
             // Berrys erhöhen
             await VariableManager.counterAdd(discordUserId, 5, plugin['var'].berry, db, plugin);

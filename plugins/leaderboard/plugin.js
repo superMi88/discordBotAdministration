@@ -12,6 +12,7 @@ const { interactionSlashCommand } = require('../../discordBot/lib/helper.js');
 
 const PluginManager = require("../../discordBot/lib/PluginManager.js");
 const helper = require("../../discordBot/lib/helper.js");
+const UserData = require("../../discordBot/lib/UserData.js");
 const VariableManager = require("../../discordBot/lib/VariableManager.js");
 const DatabaseManager = require("../../discordBot/lib/DatabaseManager.js");
 
@@ -231,78 +232,66 @@ function getUsername(user) {
 }
 
 function getValue(user, currencyId) {
-	let value = 0
-
-	if (user.currency && user.currency[currencyId]) {
-		value = user.currency[currencyId]
-	}
-
-
-
-	return value
+	let value = user.getCurrency(currencyId);
+	return value || 0;
 }
 
 function getIndex(gleichUserArray, discordId) {
 	for (let i = 0; i < gleichUserArray.length; i++) {
 		const element = gleichUserArray[i];
 		if (discordId == element.discordId) {
-			return i
+			return i;
 		}
 	}
+	return -1;
 }
 
 
 
 async function showLeaderboard(db, interaction, currencyId, discordUserId, title) {
-	let discordUserDatabase = await getUserFromDatabase(discordUserId, db)
+	let discordUserDatabase = await UserData.get(discordUserId);
 
 	//wurde kein user gefunden nicht ausführen
 	if (discordUserDatabase) {
 
-		var chatActivity = discordUserDatabase['currency'][currencyId]
-		if (!chatActivity) chatActivity = 0
-		chatActivity = parseInt(chatActivity)
+		var chatActivity = discordUserDatabase.getCurrency(currencyId);
+		if (!chatActivity) chatActivity = 0;
+		chatActivity = parseInt(chatActivity);
 
 		/**/
 
-		let DatabaseManager = require("../../discordBot/lib/DatabaseManager.js");
-		let db = DatabaseManager.get()
-
-		var ObjectId = require('mongodb').ObjectId;
-		const collection = db.collection('userCollection');
-
-		let top10 = await collection.find().sort({ ["currency." + currencyId]: -1, discordId: 1 }).limit(10).toArray();
+		let top10 = await UserData.find({}, { ["currency." + currencyId]: -1, discordId: 1 }, 10);
 
 		//get user eins ueber wert
-		let ueberUserArray = await collection.find({ ["currency." + currencyId]: { $gt: chatActivity } }).sort({ ["currency." + currencyId]: 1, discordId: 1 }).limit(1).toArray();
-		let ueberUser = ueberUserArray[0]
+		let ueberUserArray = await UserData.find({ ["currency." + currencyId]: { $gt: chatActivity } }, { ["currency." + currencyId]: 1, discordId: 1 }, 1);
+		let ueberUser = ueberUserArray[0];
 
-		$searchObj = {["currency." + currencyId]: chatActivity}
+		let $searchObj = {["currency." + currencyId]: chatActivity};
 		
 		if(chatActivity == 0){
 			$searchObj = {$or: [
 				{["currency." + currencyId]: {$exists: false}},
 				{["currency." + currencyId]: chatActivity}]
-			}
+			};
 		}
 
 		//get all user gleich dem wert da ist natührlich auch der user dabei um den es geht
-		let gleichUserArray = await collection.find($searchObj).sort({ ["currency." + currencyId]: 1, discordId: 1 }).toArray();
+		let gleichUserArray = await UserData.find($searchObj, { ["currency." + currencyId]: 1, discordId: 1 });
 
 
 		//get user eins ueber wert
 
-		let searchObj = {["currency." + currencyId]: { $lt: chatActivity }}
+		let searchObj = {["currency." + currencyId]: { $lt: chatActivity }};
 
 		if(chatActivity == 0){
 			searchObj = {$or: [
 				{["currency." + currencyId]: {$exists: false}},
 				{["currency." + currencyId]: { $lt: chatActivity }}]
-			}
+			};
 		}
 
-		let kleinerUserArray = await collection.find(searchObj).sort({ ["currency." + currencyId]: -1, discordId: 1 }).limit(1).toArray();
-		let kleinerUser = kleinerUserArray[0]
+		let kleinerUserArray = await UserData.find(searchObj, { ["currency." + currencyId]: -1, discordId: 1 }, 1);
+		let kleinerUser = kleinerUserArray[0];
 
 		let index = getIndex(gleichUserArray, discordUserDatabase.discordId)
 
@@ -320,7 +309,7 @@ async function showLeaderboard(db, interaction, currencyId, discordUserId, title
 
 
 
-		let count = await collection.countDocuments({ ["currency." + currencyId]: { $gt: chatActivity } });
+		let count = await UserData.count({ ["currency." + currencyId]: { $gt: chatActivity } });
 
 		//rechne wie viele mit dem glechen wert drüber sind abhand des indexes
 		count = count + index

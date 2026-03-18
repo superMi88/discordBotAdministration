@@ -3,7 +3,7 @@ const dataManager = require("../../discordBot/lib/dataManager.js")
 const PluginManager = require("../../discordBot/lib/PluginManager.js");
 
 
-let { getUserCurrencyFromDatabase, updateUserFromDatabase } = require('../../discordBot/lib/helper.js')
+const UserData = require("../../discordBot/lib/UserData.js");
 
 const { EmbedBuilder } = require('discord.js');
 const { ActionRowBuilder, ChannelType, TextInputBuilder, TextInputStyle, ButtonBuilder, SelectMenuBuilder, ButtonStyle, ModalBuilder } = require('discord.js');
@@ -30,9 +30,7 @@ class Plugin {
 			new CronJob('0 * * * * *', async function () {
 				
 				
-				const collection = db.collection('userCollection');
-
-				let arrUserWithRole = await collection.find({ ["currency.boosterRole_" + plugin.id]: { $exists: true } }).toArray();
+				let arrUserWithRole = await UserData.find({ ["currency.boosterRole_" + plugin.id]: { $exists: true } });
 
 				console.log(arrUserWithRole)
 
@@ -48,9 +46,7 @@ class Plugin {
 
 						console.log(user)
 
-						console.log(user.currency["boosterRole_" + plugin.id].roleId)
-
-						const roleId = user.currency["boosterRole_" + plugin.id].roleId
+						const roleId = user.getCurrency("boosterRole_" + plugin.id).roleId;
 
 						
 						//db.collection.update({ _id: yourDocumentId }, { $unset: { fieldName: 1 } })
@@ -61,15 +57,9 @@ class Plugin {
 							try {
 								await role.delete();
 
-								//save createdRole to user
-								const filteredDocs = await collection.updateOne(
-									{ discordId: user.discordId},
-									{
-										$unset: {
-											["currency." + "boosterRole_" + plugin.id]: 1,
-										}
-									}
-								);
+								//save createdRole to user (set to null instead of unset)
+								user.setCurrency("boosterRole_" + plugin.id, null);
+								await user.save();
 
 								console.log(`Role with ID ${roleId} deleted successfully.`);
 							} catch (error) {
@@ -150,15 +140,12 @@ class Plugin {
 				console.log("color: "+color)
 
 
-				let discordUserDatabase = await getUserCurrencyFromDatabase(interaction.user.id, db)
+				let discordUserData = await UserData.get(interaction.user.id);
+				let roleObj = discordUserData.getCurrency("boosterRole_" + plugin.id);
 
-				let roleObj = discordUserDatabase["boosterRole_" + plugin.id]
-
-
-				console.log(interaction)
-
-				console.log(discordUserDatabase)
-				console.log(roleObj)
+				console.log(interaction);
+				console.log(discordUserData);
+				console.log(roleObj);
 
 				//es exestiert schon eine rolle für diesen user
 				if(roleObj){
@@ -209,20 +196,9 @@ class Plugin {
 					interaction.member.roles.add(createdRole)
 
 
-					const collection = db.collection('userCollection');
-
 					//save createdRole to user
-					const filteredDocs = await collection.updateOne(
-						{ discordId: interaction.user.id},
-						{
-							$set: {
-								["currency." + "boosterRole_" + plugin.id]: 
-								{
-									roleId: createdRole.id,
-								},
-							}
-						}
-					);
+					discordUserData.setCurrency("boosterRole_" + plugin.id, { roleId: createdRole.id });
+					await discordUserData.save();
 
 
 				}

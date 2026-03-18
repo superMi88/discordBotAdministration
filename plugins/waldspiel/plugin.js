@@ -12,7 +12,7 @@ let { getUserCurrencyFromDatabase, updateUserFromDatabase } = require('../../dis
 const { ObjectId } = require("mongodb");
 
 const PluginManager = require("../../discordBot/lib/PluginManager.js");
-
+const UserData = require("../../discordBot/lib/UserData.js");
 const System = require("../../discordBot/lib/system.js");
 
 
@@ -163,20 +163,20 @@ class Plugin {
 					});
 				}
 
-				let discordUserDatabase = await getUserCurrencyFromDatabase(user.id, db)
+				let discordUserData = await UserData.get(user.id);
 
 				//wurde kein user gefunden nicht ausführen
-				if (discordUserDatabase) {
+				if (discordUserData) {
 
-					var berryCount = discordUserDatabase[plugin['var'].berry]
+					var berryCount = discordUserData.getCurrency(plugin['var'].berry);
 					if (!berryCount) berryCount = 0
 					berryCount = parseInt(berryCount)
 
-					var eggCount = discordUserDatabase[plugin['var'].eggs]
+					var eggCount = discordUserData.getCurrency(plugin['var'].eggs);
 					if (!eggCount) eggCount = 0
 					eggCount = parseInt(eggCount)
 
-					var sweetsCount = discordUserDatabase[plugin['var'].sweets]
+					var sweetsCount = discordUserData.getCurrency(plugin['var'].sweets);
 					if (!sweetsCount) sweetsCount = 0
 					sweetsCount = parseInt(sweetsCount)
 
@@ -307,10 +307,10 @@ class Plugin {
 
 				let user = interaction.user
 
-				let discordUserDatabase = await getUserCurrencyFromDatabase(user.id, db)
+				let discordUserData = await UserData.get(user.id);
 
-				if (discordUserDatabase) {
-					let filename = await ImageCreator.createMeinWald(discordUserDatabase)
+				if (discordUserData) {
+					let filename = await ImageCreator.createMeinWald(discordUserData.currencyData)
 
 
 					let postChannel = await client.channels.fetch(plugin['var'].postChannel)
@@ -351,16 +351,17 @@ class Plugin {
 				let currentPage = getButtonParameter(interaction.customId)[2]
 				let searchQuery = getButtonParameter(interaction.customId)[3] || ""
 
-				let discordUserDatabase = await getUserCurrencyFromDatabase(interaction.user.id, db)
+				let discordUserData = await UserData.get(interaction.user.id);
+				let cData = discordUserData.currencyData;
 
 				const collectionAnimal = db.collection('animals');
 				const arrAnimal = await collectionAnimal.find({ ownerDiscordId: discordUserId }).sort({ type: 1 }).toArray()
 
 				const arrStorageAnimals = arrAnimal.filter(
 					(animal) =>
-						animal._id.toString() !== (discordUserDatabase.animalId1 ? discordUserDatabase.animalId1.toString() : "") &&
-						animal._id.toString() !== (discordUserDatabase.animalId2 ? discordUserDatabase.animalId2.toString() : "") &&
-						animal._id.toString() !== (discordUserDatabase.animalId3 ? discordUserDatabase.animalId3.toString() : "")
+						animal._id.toString() !== ((discordUserData.getPluginData(plugin, 'animalId1') ?? cData.animalId1) ? (discordUserData.getPluginData(plugin, 'animalId1') ?? cData.animalId1).toString() : "") &&
+						animal._id.toString() !== ((discordUserData.getPluginData(plugin, 'animalId2') ?? cData.animalId2) ? (discordUserData.getPluginData(plugin, 'animalId2') ?? cData.animalId2).toString() : "") &&
+						animal._id.toString() !== ((discordUserData.getPluginData(plugin, 'animalId3') ?? cData.animalId3) ? (discordUserData.getPluginData(plugin, 'animalId3') ?? cData.animalId3).toString() : "")
 				);
 
 
@@ -376,16 +377,17 @@ class Plugin {
 				let currentPage = getButtonParameter(interaction.customId)[2]
 				let searchQuery = getButtonParameter(interaction.customId)[3] || ""
 
-				let discordUserDatabase = await getUserCurrencyFromDatabase(interaction.user.id, db)
+				let discordUserData = await UserData.get(interaction.user.id);
+				let cData = discordUserData.currencyData;
 
 				const collectionAnimal = db.collection('animals');
 				const arrAnimal = await collectionAnimal.find({ ownerDiscordId: discordUserId }).sort({ type: 1 }).toArray()
 
 				const arrStorageAnimals = arrAnimal.filter(
 					(animal) =>
-						animal._id.toString() !== (discordUserDatabase.animalId1 ? discordUserDatabase.animalId1.toString() : "") &&
-						animal._id.toString() !== (discordUserDatabase.animalId2 ? discordUserDatabase.animalId2.toString() : "") &&
-						animal._id.toString() !== (discordUserDatabase.animalId3 ? discordUserDatabase.animalId3.toString() : "")
+						animal._id.toString() !== ((discordUserData.getPluginData(plugin, 'animalId1') ?? cData.animalId1) ? (discordUserData.getPluginData(plugin, 'animalId1') ?? cData.animalId1).toString() : "") &&
+						animal._id.toString() !== ((discordUserData.getPluginData(plugin, 'animalId2') ?? cData.animalId2) ? (discordUserData.getPluginData(plugin, 'animalId2') ?? cData.animalId2).toString() : "") &&
+						animal._id.toString() !== ((discordUserData.getPluginData(plugin, 'animalId3') ?? cData.animalId3) ? (discordUserData.getPluginData(plugin, 'animalId3') ?? cData.animalId3).toString() : "")
 				);
 
 				await waldspiel.showMeinStorage(client, plugin, db, interaction.user, interaction, arrStorageAnimals, animalPlazierungsId, currentPage, searchQuery)
@@ -397,7 +399,7 @@ class Plugin {
 				let discordId = interaction.user.id
 				let animalPlazierungsId = getButtonParameter(interaction.customId)[1]
 
-				await waldspiel.sendToStorage(interaction, db, discordId, animalPlazierungsId);
+				await waldspiel.sendToStorage(interaction, plugin, db, discordId, animalPlazierungsId);
 				await waldspiel.showMeinWaldAnimal(client, plugin, db, interaction.user, interaction, true, animalPlazierungsId)
 
 			}
@@ -416,11 +418,12 @@ class Plugin {
 					{ $set: { customization: itemId } }
 				);
 
-				let discordUserDatabase = await getUserCurrencyFromDatabase(interaction.user.id, db);
+				let discordUserData = await UserData.get(interaction.user.id);
+				let cData = discordUserData.currencyData;
 				let animalId = 1;
-				if (discordUserDatabase.animalId1 && ObjectId(animalObjId).equals(discordUserDatabase.animalId1)) animalId = 1;
-				else if (discordUserDatabase.animalId2 && ObjectId(animalObjId).equals(discordUserDatabase.animalId2)) animalId = 2;
-				else if (discordUserDatabase.animalId3 && ObjectId(animalObjId).equals(discordUserDatabase.animalId3)) animalId = 3;
+				if ((discordUserData.getPluginData(plugin, 'animalId1') ?? cData.animalId1) && ObjectId(animalObjId).equals((discordUserData.getPluginData(plugin, 'animalId1') ?? cData.animalId1))) animalId = 1;
+				else if ((discordUserData.getPluginData(plugin, 'animalId2') ?? cData.animalId2) && ObjectId(animalObjId).equals((discordUserData.getPluginData(plugin, 'animalId2') ?? cData.animalId2))) animalId = 2;
+				else if ((discordUserData.getPluginData(plugin, 'animalId3') ?? cData.animalId3) && ObjectId(animalObjId).equals((discordUserData.getPluginData(plugin, 'animalId3') ?? cData.animalId3))) animalId = 3;
 
 				await waldspiel.showMeinWaldAnimal(client, plugin, db, interaction.user, interaction, true, animalId)
 
@@ -455,19 +458,16 @@ class Plugin {
 				if (itemId == "ABBRECHEN") itemId = 0;
 
 				let discordUserId = interaction.user.id;
-				let discordUserDatabase = await getUserCurrencyFromDatabase(discordUserId, db);
-				let backgroundlistdatabase = discordUserDatabase["backgroundlist"] || [];
+				let discordUserData = await UserData.get(discordUserId);
+				let backgroundlistdatabase = discordUserData.getCurrency("backgroundlist") || [];
 
 				// Safety check: is it owned? (DEFAULT and SUMMER are always allowed)
 				if (itemId !== 0 && itemId !== "DEFAULT" && itemId !== "SUMMER" && !backgroundlistdatabase.includes(itemId)) {
 					return await interaction.reply({ content: "Diesen Hintergrund besitzt du noch nicht!", ephemeral: true });
 				}
 
-				await updateUserFromDatabase(db, discordUserId, {
-					$set: {
-						["currency." + "background"]: itemId,
-					}
-				});
+				discordUserData.setPluginData(plugin, 'background', itemId);
+				await discordUserData.save();
 
 				await waldspiel.showMeinWald(client, plugin, db, interaction.user, interaction, true);
 			}
@@ -513,9 +513,10 @@ class Plugin {
 				let searchQuery = getButtonParameter(interaction.customId)[2] || "";
 
 				let discordUserId = interaction.user.id;
-				let discordUserDatabase = await getUserCurrencyFromDatabase(discordUserId, db);
+				let discordUserData = await UserData.get(discordUserId);
+				let cData = discordUserData.currencyData;
 
-				let backgroundlistdatabase = discordUserDatabase["backgroundlist"] || [];
+				let backgroundlistdatabase = (discordUserData.getPluginData(plugin, 'backgroundlist') ?? cData.backgroundlist) || [];
 
 				// Ensure defaults are present in owned list
 				if (!backgroundlistdatabase.includes("DEFAULT")) backgroundlistdatabase.unshift("DEFAULT");
@@ -612,16 +613,17 @@ class Plugin {
 				let storageId = parseInt(interaction.values[0])
 
 				let discordUserId = interaction.user.id
-				let discordUserDatabase = await getUserCurrencyFromDatabase(discordUserId, db)
+				let discordUserData = await UserData.get(discordUserId);
+				let cData = discordUserData.currencyData;
 
 				const collectionAnimal = db.collection('animals');
 				const arrAnimal = await collectionAnimal.find({ ownerDiscordId: discordUserId }).sort({ type: 1 }).toArray()
 
 				const arrStorageAnimals = arrAnimal.filter(
 					(animal) =>
-						animal._id.toString() !== (discordUserDatabase.animalId1 ? discordUserDatabase.animalId1.toString() : "") &&
-						animal._id.toString() !== (discordUserDatabase.animalId2 ? discordUserDatabase.animalId2.toString() : "") &&
-						animal._id.toString() !== (discordUserDatabase.animalId3 ? discordUserDatabase.animalId3.toString() : "")
+						animal._id.toString() !== ((discordUserData.getPluginData(plugin, 'animalId1') ?? cData.animalId1) ? (discordUserData.getPluginData(plugin, 'animalId1') ?? cData.animalId1).toString() : "") &&
+						animal._id.toString() !== ((discordUserData.getPluginData(plugin, 'animalId2') ?? cData.animalId2) ? (discordUserData.getPluginData(plugin, 'animalId2') ?? cData.animalId2).toString() : "") &&
+						animal._id.toString() !== ((discordUserData.getPluginData(plugin, 'animalId3') ?? cData.animalId3) ? (discordUserData.getPluginData(plugin, 'animalId3') ?? cData.animalId3).toString() : "")
 				);
 
 				if (isNaN(storageId) || storageId >= arrStorageAnimals.length || storageId < 0) {
@@ -636,15 +638,8 @@ class Plugin {
 				const collection = db.collection('userCollection');
 				System.log(db, System.status.INFO, "[waldspiel]", interaction.user.username + "[" + interaction.user.id + "] holt Tier von storageId id:" + storageId)
 
-
-				await collection.update({ discordId: interaction.user.id }, [
-					{
-						$set: {
-							["currency." + "animalId" + animalPlazierungsId]: animal._id
-						}
-					}
-				]);
-
+				discordUserData.setPluginData(plugin, 'animalId' + animalPlazierungsId, animal._id);
+				await discordUserData.save();
 
 				await waldspiel.showMeinWaldAnimal(client, plugin, db, interaction.user, interaction, true, animalPlazierungsId)
 
@@ -673,16 +668,17 @@ class Plugin {
 				let searchQuery = interaction.fields.getTextInputValue("searchquery")
 
 				let discordUserId = interaction.user.id
-				let discordUserDatabase = await getUserCurrencyFromDatabase(discordUserId, db)
+				let discordUserData = await UserData.get(discordUserId);
+				let cData = discordUserData.currencyData;
 
 				const collectionAnimal = db.collection('animals');
 				const arrAnimal = await collectionAnimal.find({ ownerDiscordId: discordUserId }).sort({ type: 1 }).toArray()
 
 				const arrStorageAnimals = arrAnimal.filter(
 					(animal) =>
-						animal._id.toString() !== (discordUserDatabase.animalId1 ? discordUserDatabase.animalId1.toString() : "") &&
-						animal._id.toString() !== (discordUserDatabase.animalId2 ? discordUserDatabase.animalId2.toString() : "") &&
-						animal._id.toString() !== (discordUserDatabase.animalId3 ? discordUserDatabase.animalId3.toString() : "")
+						animal._id.toString() !== ((discordUserData.getPluginData(plugin, 'animalId1') ?? cData.animalId1) ? (discordUserData.getPluginData(plugin, 'animalId1') ?? cData.animalId1).toString() : "") &&
+						animal._id.toString() !== ((discordUserData.getPluginData(plugin, 'animalId2') ?? cData.animalId2) ? (discordUserData.getPluginData(plugin, 'animalId2') ?? cData.animalId2).toString() : "") &&
+						animal._id.toString() !== ((discordUserData.getPluginData(plugin, 'animalId3') ?? cData.animalId3) ? (discordUserData.getPluginData(plugin, 'animalId3') ?? cData.animalId3).toString() : "")
 				);
 
 				await waldspiel.showMeinStorage(client, plugin, db, interaction.user, interaction, arrStorageAnimals, animalPlazierungsId, 0, searchQuery)
@@ -692,16 +688,17 @@ class Plugin {
 				let animalPlazierungsId = getButtonParameter(interaction.customId)[1]
 
 				let discordUserId = interaction.user.id
-				let discordUserDatabase = await getUserCurrencyFromDatabase(discordUserId, db)
+				let discordUserData = await UserData.get(discordUserId);
+				let cData = discordUserData.currencyData;
 
 				const collectionAnimal = db.collection('animals');
 				const arrAnimal = await collectionAnimal.find({ ownerDiscordId: discordUserId }).sort({ type: 1 }).toArray()
 
 				const arrStorageAnimals = arrAnimal.filter(
 					(animal) =>
-						animal._id.toString() !== (discordUserDatabase.animalId1 ? discordUserDatabase.animalId1.toString() : "") &&
-						animal._id.toString() !== (discordUserDatabase.animalId2 ? discordUserDatabase.animalId2.toString() : "") &&
-						animal._id.toString() !== (discordUserDatabase.animalId3 ? discordUserDatabase.animalId3.toString() : "")
+						animal._id.toString() !== ((discordUserData.getPluginData(plugin, 'animalId1') ?? cData.animalId1) ? (discordUserData.getPluginData(plugin, 'animalId1') ?? cData.animalId1).toString() : "") &&
+						animal._id.toString() !== ((discordUserData.getPluginData(plugin, 'animalId2') ?? cData.animalId2) ? (discordUserData.getPluginData(plugin, 'animalId2') ?? cData.animalId2).toString() : "") &&
+						animal._id.toString() !== ((discordUserData.getPluginData(plugin, 'animalId3') ?? cData.animalId3) ? (discordUserData.getPluginData(plugin, 'animalId3') ?? cData.animalId3).toString() : "")
 				);
 
 				await waldspiel.showMeinStorage(client, plugin, db, interaction.user, interaction, arrStorageAnimals, animalPlazierungsId, 0, "")
@@ -755,11 +752,12 @@ class Plugin {
 					{ $set: { name: newName } }
 				);
 
-				let discordUserDatabase = await getUserCurrencyFromDatabase(interaction.user.id, db);
+				let discordUserData = await UserData.get(interaction.user.id);
+				let cData = discordUserData.currencyData;
 				let animalId = 1;
-				if (discordUserDatabase.animalId1 && ObjectId(animalObjId).equals(discordUserDatabase.animalId1.toString())) animalId = 1;
-				else if (discordUserDatabase.animalId2 && ObjectId(animalObjId).equals(discordUserDatabase.animalId2.toString())) animalId = 2;
-				else if (discordUserDatabase.animalId3 && ObjectId(animalObjId).equals(discordUserDatabase.animalId3.toString())) animalId = 3;
+				if ((discordUserData.getPluginData(plugin, 'animalId1') ?? cData.animalId1) && ObjectId(animalObjId).equals((discordUserData.getPluginData(plugin, 'animalId1') ?? cData.animalId1).toString())) animalId = 1;
+				else if ((discordUserData.getPluginData(plugin, 'animalId2') ?? cData.animalId2) && ObjectId(animalObjId).equals((discordUserData.getPluginData(plugin, 'animalId2') ?? cData.animalId2).toString())) animalId = 2;
+				else if ((discordUserData.getPluginData(plugin, 'animalId3') ?? cData.animalId3) && ObjectId(animalObjId).equals((discordUserData.getPluginData(plugin, 'animalId3') ?? cData.animalId3).toString())) animalId = 3;
 
 				await waldspiel.showMeinWaldAnimal(client, plugin, db, interaction.user, interaction, true, animalId)
 			}
@@ -779,32 +777,23 @@ class Plugin {
 				);
 
 				let discordUserId = interaction.user.id
-				let discordUserDatabase = await getUserCurrencyFromDatabase(discordUserId, db)
+				let discordUserData = await UserData.get(discordUserId)
 
 				let animalId = 1;
-				if (ObjectId(animalObjId).equals(discordUserDatabase.animalId1)) {
+				if (ObjectId(animalObjId).equals(discordUserData.getCurrency("animalId1"))) {
 					animalId = 1;
-					await updateUserFromDatabase(db, interaction.user.id, {
-						$set: {
-							["currency." + "animalId1"]: ""
-						}
-					})
+					discordUserData.setPluginData(plugin, 'animalId1', "");
+					await discordUserData.save();
 				}
-				else if (ObjectId(animalObjId).equals(discordUserDatabase.animalId2)) {
+				else if (ObjectId(animalObjId).equals(discordUserData.getCurrency("animalId2"))) {
 					animalId = 2;
-					await updateUserFromDatabase(db, interaction.user.id, {
-						$set: {
-							["currency." + "animalId2"]: ""
-						}
-					})
+					discordUserData.setPluginData(plugin, 'animalId2', "");
+					await discordUserData.save();
 				}
-				else if (ObjectId(animalObjId).equals(discordUserDatabase.animalId3)) {
+				else if (ObjectId(animalObjId).equals(discordUserData.getCurrency("animalId3"))) {
 					animalId = 3;
-					await updateUserFromDatabase(db, interaction.user.id, {
-						$set: {
-							["currency." + "animalId3"]: ""
-						}
-					})
+					discordUserData.setPluginData(plugin, 'animalId3', "");
+					await discordUserData.save();
 				}
 
 				await waldspiel.showMeinWaldAnimal(client, plugin, db, interaction.user, interaction, true, animalId)
@@ -818,13 +807,14 @@ class Plugin {
 				let searchQuery = getButtonParameter(interaction.customId)[4] || "";
 
 				let discordUserId = interaction.user.id
-				let discordUserDatabase = await getUserCurrencyFromDatabase(discordUserId, db)
+				let discordUserData = await UserData.get(discordUserId);
+				let cData = discordUserData.currencyData;
 
 				const collectionAnimal = db.collection('animals');
 				const animal = await collectionAnimal.findOne({ _id: ObjectId(animalObjId) });
 				const animalType = animal ? animal.type : null;
 
-				let ownedItems = discordUserDatabase["itemlist"] || []
+				let ownedItems = (discordUserData.getPluginData(plugin, 'itemlist') ?? cData.itemlist) || []
 
 				const { StringSelectMenuBuilder, StringSelectMenuOptionBuilder } = require('discord.js');
 				let ItemlistObj = require('./obj/ItemList.js');
@@ -924,8 +914,9 @@ class Plugin {
 				let itemId = interaction.values[0];
 
 				let discordUserId = interaction.user.id;
-				let discordUserDatabase = await getUserCurrencyFromDatabase(discordUserId, db);
-				let ownedItems = discordUserDatabase["itemlist"] || [];
+				let discordUserData = await UserData.get(discordUserId);
+				let cData = discordUserData.currencyData;
+				let ownedItems = (discordUserData.getPluginData(plugin, 'itemlist') ?? cData.itemlist) || [];
 
 				if (itemId !== "ABBRECHEN" && !ownedItems.includes(itemId)) {
 					return await interaction.reply({ content: "Du hast diese Dekoration noch nicht freigeschaltet!", ephemeral: true });
@@ -946,9 +937,9 @@ class Plugin {
 				);
 
 				let animalId = 1;
-				if (discordUserDatabase.animalId1 && ObjectId(animalObjId).equals(discordUserDatabase.animalId1)) animalId = 1;
-				else if (discordUserDatabase.animalId2 && ObjectId(animalObjId).equals(discordUserDatabase.animalId2)) animalId = 2;
-				else if (discordUserDatabase.animalId3 && ObjectId(animalObjId).equals(discordUserDatabase.animalId3)) animalId = 3;
+				if ((discordUserData.getPluginData(plugin, 'animalId1') ?? cData.animalId1) && ObjectId(animalObjId).equals((discordUserData.getPluginData(plugin, 'animalId1') ?? cData.animalId1))) animalId = 1;
+				else if ((discordUserData.getPluginData(plugin, 'animalId2') ?? cData.animalId2) && ObjectId(animalObjId).equals((discordUserData.getPluginData(plugin, 'animalId2') ?? cData.animalId2))) animalId = 2;
+				else if ((discordUserData.getPluginData(plugin, 'animalId3') ?? cData.animalId3) && ObjectId(animalObjId).equals((discordUserData.getPluginData(plugin, 'animalId3') ?? cData.animalId3))) animalId = 3;
 
 				await waldspiel.showMeinWaldAnimal(client, plugin, db, interaction.user, interaction, true, animalId);
 			}
@@ -992,13 +983,14 @@ class Plugin {
 				let animalObjId = getButtonParameter(interaction.customId)[1]
 
 				let discordUserId = interaction.user.id
-				let discordUserDatabase = await getUserCurrencyFromDatabase(discordUserId, db)
+				let discordUserData = await UserData.get(discordUserId);
+				let cData = discordUserData.currencyData;
 
 				const collectionAnimal = db.collection('animals');
 				const animal = await collectionAnimal.findOne({ _id: ObjectId(animalObjId) });
 				const animalType = animal ? animal.type : null;
 
-				let ownedAnimations = discordUserDatabase["animationlist"] || ["WACKELN"]
+				let ownedAnimations = (discordUserData.getPluginData(plugin, 'animationlist') ?? cData.animationlist) || ["WACKELN"]
 
 				const { StringSelectMenuBuilder, StringSelectMenuOptionBuilder } = require('discord.js');
 				let AnimationListObj = require('./obj/AnimationList.js');
@@ -1054,8 +1046,9 @@ class Plugin {
 				let animationId = interaction.values[0]
 
 				let discordUserId = interaction.user.id;
-				let discordUserDatabase = await getUserCurrencyFromDatabase(discordUserId, db);
-				let ownedAnimations = discordUserDatabase["animationlist"] || ["WACKELN"];
+				let discordUserData = await UserData.get(discordUserId);
+				let cData = discordUserData.currencyData;
+				let ownedAnimations = (discordUserData.getPluginData(plugin, 'animationlist') ?? cData.animationlist) || ["WACKELN"];
 
 				if (animationId !== "ABBRECHEN" && !ownedAnimations.includes(animationId)) {
 					return await interaction.reply({ content: "Du hast diese Animation noch nicht freigeschaltet!", ephemeral: true });
@@ -1071,9 +1064,9 @@ class Plugin {
 				);
 
 				let animalId = 1;
-				if (discordUserDatabase.animalId1 && ObjectId(animalObjId).equals(discordUserDatabase.animalId1)) animalId = 1;
-				else if (discordUserDatabase.animalId2 && ObjectId(animalObjId).equals(discordUserDatabase.animalId2)) animalId = 2;
-				else if (discordUserDatabase.animalId3 && ObjectId(animalObjId).equals(discordUserDatabase.animalId3)) animalId = 3;
+				if ((discordUserData.getPluginData(plugin, 'animalId1') ?? cData.animalId1) && ObjectId(animalObjId).equals((discordUserData.getPluginData(plugin, 'animalId1') ?? cData.animalId1))) animalId = 1;
+				else if ((discordUserData.getPluginData(plugin, 'animalId2') ?? cData.animalId2) && ObjectId(animalObjId).equals((discordUserData.getPluginData(plugin, 'animalId2') ?? cData.animalId2))) animalId = 2;
+				else if ((discordUserData.getPluginData(plugin, 'animalId3') ?? cData.animalId3) && ObjectId(animalObjId).equals((discordUserData.getPluginData(plugin, 'animalId3') ?? cData.animalId3))) animalId = 3;
 
 				await waldspiel.showMeinWaldAnimal(client, plugin, db, interaction.user, interaction, true, animalId)
 			}
@@ -1172,6 +1165,7 @@ class Plugin {
 
 	async addEvents(plugin, eventsArray) {
 
+
 		eventsArray.push(
 			{
 				pluginId: plugin.id,
@@ -1181,6 +1175,7 @@ class Plugin {
 				message: "löst den trigger aus berry"
 			},
 		)
+
 	}
 
 	async addCommands(plugin, commandMap) {

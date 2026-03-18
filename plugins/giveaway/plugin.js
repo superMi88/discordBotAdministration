@@ -3,9 +3,9 @@ const dataManager = require("../../discordBot/lib/dataManager.js")
 const { EmbedBuilder } = require('discord.js');
 var ObjectId = require('mongodb').ObjectId;
 const { ActionRowBuilder, ButtonBuilder, ButtonStyle, Events } = require('discord.js');
-let { getUserCurrencyFromDatabase, updateUserFromDatabase } = require('../../discordBot/lib/helper.js');
 const DatabaseManager = require("../../discordBot/lib/DatabaseManager.js");
 const PluginManager = require("../../discordBot/lib/PluginManager.js");
+const UserData = require("../../discordBot/lib/UserData.js");
 
 class Plugin {
 	async execute(client, plugin) {
@@ -18,18 +18,15 @@ class Plugin {
 
 
 				let discordUserId = interaction.user.id
-				let discordUserDatabase = await getUserCurrencyFromDatabase(discordUserId, db)
+				let discordUserData = await UserData.get(discordUserId)
 
-				let giveawayBool = discordUserDatabase["giveaway_" + plugin.id]
+				let giveawayBool = discordUserData.getCurrency("giveaway_" + plugin.id)
 				if (giveawayBool) {
 					await interaction.reply({ content: 'Du bist dem Giveaway schon beigetreten', ephemeral: true });
 
 				} else {
-					await updateUserFromDatabase(db, discordUserId, {
-						$set: {
-							["currency." + "giveaway_" + plugin.id]: true,
-						}
-					})
+					discordUserData.setCurrency("giveaway_" + plugin.id, true);
+					await discordUserData.save();
 					await interaction.reply({ content: 'Giveway beigetreten', ephemeral: true });
 				}
 
@@ -204,9 +201,7 @@ async function endGiveaway(client, plugin, db) {
 	const pluginCollection = db.collection('pluginCollection');
 	//const selectedPlugin = await pluginCollection.findOne({ _id: ObjectId(plugin.selectedPluginId) })
 
-	const collection = db.collection('userCollection');
-
-	const allUsersEntered = await collection.find({ ["currency." + "giveaway_" + plugin.id]: true }).toArray()
+	const allUsersEntered = await UserData.find({ ["currency." + "giveaway_" + plugin.id]: true })
 
 	let channel = await client.channels.fetch(plugin['var'].giveawayChannel)
 	let guild = await client.guilds.fetch(channel.guild.id);

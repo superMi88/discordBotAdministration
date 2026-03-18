@@ -1,5 +1,5 @@
 const { ActionRowBuilder, ButtonBuilder, ButtonStyle, Events } = require('discord.js');
-let { getUserCurrencyFromDatabase, updateUserFromDatabase } = require("../../../../discordBot/lib/helper.js");
+const UserData = require("../../../../discordBot/lib/UserData.js");
 
 class EasterEvent {
     constructor() {
@@ -125,12 +125,11 @@ class EasterEvent {
 
 
         let discordUserId = interaction.user.id
+        let discordUserData = await UserData.get(discordUserId)
 
-        await updateUserFromDatabase(db, discordUserId, {
-            $inc: {
-                ["currency." + plugin['var'].eggs]: 1,
-            }
-        })
+        let eggs = discordUserData.getCurrency(plugin['var'].eggs) || 0;
+        discordUserData.setCurrency(plugin['var'].eggs, eggs + 1);
+        await discordUserData.save();
 
         await interaction.reply({ content: '<@' + interaction.user.id + '> hat ein Osterei erhalten' })
     }

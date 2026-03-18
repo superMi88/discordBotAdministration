@@ -1,6 +1,6 @@
 const { ActionRowBuilder, ModalBuilder, TextInputBuilder, TextInputStyle, ButtonBuilder, SelectMenuBuilder, UserSelectMenuBuilder, ButtonStyle, Events, ChannelType } = require('discord.js');
 const CustomId = require("../../../../discordBot/lib/CustomId.js");
-let { getUserCurrencyFromDatabase, updateUserFromDatabase } = require("../../../../discordBot/lib/helper.js");
+const UserData = require("../../../../discordBot/lib/UserData.js");
 const sharp = require('sharp');
 const axios = require('axios');
 
@@ -163,16 +163,16 @@ class FriendshipEvent {
         }
 
         if (interaction.customId === 'freundschaftsevent-open') {
-            let discordUserDatabase = await getUserCurrencyFromDatabase(interaction.user.id, db);
-            if (!discordUserDatabase) {
+            let discordUserData = await UserData.get(interaction.user.id);
+            if (!discordUserData) {
                 await interaction.reply({ content: 'Fehler: User nicht in Datenbank', ephemeral: true });
                 return;
             }
 
-            let friendId = discordUserDatabase["friendshipSelectedFriend"];
+            let friendId = discordUserData.getCurrency("friendshipSelectedFriend");
             if (friendId) {
                 // Zeige Progress Bar in ephemeral picture using sharp
-                let currentPoints = discordUserDatabase["friendshipEventPoints"] || 0;
+                let currentPoints = discordUserData.getCurrency("friendshipEventPoints") || 0;
                 let maxPoints = 200;
                 let percent = Math.min(100, (currentPoints / maxPoints) * 100);
 
@@ -254,11 +254,9 @@ class FriendshipEvent {
                 return;
             }
 
-            await updateUserFromDatabase(db, interaction.user.id, {
-                $set: {
-                    ["currency.friendshipSelectedFriend"]: friendId
-                }
-            });
+            let discordUserData = await UserData.get(interaction.user.id);
+            discordUserData.setCurrency("friendshipSelectedFriend", friendId);
+            await discordUserData.save();
 
             await interaction.reply({ content: `Du hast <@${friendId}> erfolgreich als Freund für das Event ausgewählt! Sammle Beeren im Wald, um Ressourcen zu teilen.`, ephemeral: true });
         }
@@ -267,34 +265,32 @@ class FriendshipEvent {
     async onBerryCollected(client, plugin, interaction, db, discordUserId, amount) {
         if (!this.isExtensionActive(plugin)) return;
 
-        let discordUserDatabase = await getUserCurrencyFromDatabase(discordUserId, db);
-        if (!discordUserDatabase) return;
+        let discordUserData = await UserData.get(discordUserId);
+        if (!discordUserData) return;
 
-        let friendId = discordUserDatabase["friendshipSelectedFriend"];
+        let friendId = discordUserData.getCurrency("friendshipSelectedFriend");
         if (friendId) {
             // Give berries to friend
-            let friendDb = await getUserCurrencyFromDatabase(friendId, db);
-            if (friendDb) {
-                let friendBerry = friendDb[plugin['var'].berry];
+            let friendData = await UserData.get(friendId);
+            if (friendData) {
+                let friendBerry = friendData.getCurrency(plugin['var'].berry);
                 if (!friendBerry) friendBerry = 0;
 
-                await updateUserFromDatabase(db, friendId, {
-                    $set: { ["currency." + plugin['var'].berry]: friendBerry + amount }
-                });
+                friendData.setCurrency(plugin['var'].berry, friendBerry + amount);
+                await friendData.save();
             }
 
-            let currentEventPoints = discordUserDatabase["friendshipEventPoints"];
+            let currentEventPoints = discordUserData.getCurrency("friendshipEventPoints");
             if (!currentEventPoints) currentEventPoints = 0;
 
             let newPoints = currentEventPoints + amount;
 
-            await updateUserFromDatabase(db, discordUserId, {
-                $set: { ["currency.friendshipEventPoints"]: newPoints }
-            });
+            discordUserData.setCurrency("friendshipEventPoints", newPoints);
+            await discordUserData.save();
 
             // Grant items if reaching 200
             if (currentEventPoints < 200 && newPoints >= 200) {
-                let itemlist = discordUserDatabase.itemlist;
+                let itemlist = discordUserData.getCurrency("itemlist");
                 if (!itemlist) itemlist = [];
 
                 let itemIdYin = 'FRIENDSHIP_YIN';
@@ -311,9 +307,8 @@ class FriendshipEvent {
                 }
 
                 if (updated) {
-                    await updateUserFromDatabase(db, discordUserId, {
-                        $set: { ["currency.itemlist"]: itemlist }
-                    });
+                    discordUserData.setCurrency("itemlist", itemlist);
+                    await discordUserData.save();
 
                     try {
                         let userOption = await client.users.fetch(discordUserId);

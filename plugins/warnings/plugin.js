@@ -9,6 +9,7 @@ const helper = require("../../discordBot/lib/helper.js");
 let { getUserCurrencyFromDatabase, updateUserFromDatabase } = require('../../discordBot/lib/helper.js');
 const DatabaseManager = require("../../discordBot/lib/DatabaseManager.js");
 const PluginManager = require("../../discordBot/lib/PluginManager.js");
+const UserData = require("../../discordBot/lib/UserData.js");
 
 class Plugin {
 	async execute(client, plugin) {
@@ -21,17 +22,11 @@ class Plugin {
 			if (interaction.commandName == plugin['var'].warnCommand) {
 
 				let user = interaction.options.getUser('user')
-				let discordUserDatabase = await getUserCurrencyFromDatabase(user.id, db)
+				let userData = await UserData.get(user.id);
 
-				if(!discordUserDatabase.warnings){
-					warnings = 0
-				}
-
-				let returnValue = await updateUserFromDatabase(db, user.id, {
-					$inc: {
-						["currency." + "warnings"]: 1,
-					}
-				})
+				let warnings = userData.getCurrency("warnings");
+				userData.setCurrency("warnings", warnings + 1);
+				await userData.save();
 
 				const guild = await client.guilds.fetch(plugin['var'].server)
 				let discordUser = await guild.members.resolve(user.id);
@@ -43,7 +38,7 @@ class Plugin {
 					discordUser.send({embeds:[exampleEmbed]})
 
 				return await interaction.reply({
-					content: 'User wurde verwarnt, Verwarnungen des Users: '+(returnValue.value.currency.warnings+1),
+					content: 'User wurde verwarnt, Verwarnungen des Users: '+(warnings+1),
 					ephemeral: true
 				});
 				
@@ -51,17 +46,9 @@ class Plugin {
 			if (interaction.commandName == plugin['var'].warnRemoveCommand) {
 
 				let user = interaction.options.getUser('user')
-				let discordUserDatabase = await getUserCurrencyFromDatabase(user.id, db)
-
-				if(!discordUserDatabase.warnings){
-					warnings = 0
-				}
-
-				await updateUserFromDatabase(db, user.id, {
-					$set: {
-						["currency." + "warnings"]: 0,
-					}
-				})
+				let userData = await UserData.get(user.id);
+				userData.setCurrency("warnings", 0);
+				await userData.save();
 
 				return await interaction.reply({
 					content: 'Alle verwarnungen des Users entfernt',
@@ -71,12 +58,7 @@ class Plugin {
 			}
 			if (interaction.commandName == plugin['var'].warnlistCommand) {
 
-			
-				const collection = db.collection('userCollection');
-
-				let userlist = await collection.find({ "currency.warnings": { $gt: 0 } }).toArray();
-
-				console.log(userlist)
+				let userlist = await UserData.find({ "currency.warnings": { $gt: 0 } });
 
 				let warnlistText = ""
 				for (let i = 0; i < userlist.length; i++) {

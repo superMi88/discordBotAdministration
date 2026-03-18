@@ -12,7 +12,7 @@ class Plugin {
 		let db = DatabaseManager.get()
 		
 
-		addStandartRolesToAllMember(plugin, db, client)
+		await addStandartRolesToAllMember(plugin, db, client)
 
 		plugin.on(client, 'guildMemberUpdate', async (oldMember, newMember) => {
 			addStandartRolesToMemberIfNeeded(newMember, plugin)
@@ -29,7 +29,7 @@ class Plugin {
 			return status
 		}
 
-		addStandartRolesToAllMember(plugin, db, client)
+		await addStandartRolesToAllMember(plugin, db, client)
 
 		return ({ saved: true, infoMessage: "Standart Rollen geupdatet", infoStatus: "Info" })
 	}
@@ -37,10 +37,10 @@ class Plugin {
 module.exports = new Plugin();
 
 
-function addStandartRolesToAllMember(plugin, db, client){
-	const collection = db.collection('userCollection');
+const UserData = require("../../discordBot/lib/UserData.js");
 
-	const allUser = collection.find({})
+async function addStandartRolesToAllMember(plugin, db, client){
+	const allUser = await UserData.find({});
 	let guild = client.guilds.cache.get(plugin['var'].server); //TODO change this 
 
 	allUser.forEach(async user => {

@@ -1,5 +1,5 @@
 const { ActionRowBuilder, ModalBuilder, TextInputBuilder, TextInputStyle, ButtonBuilder, SelectMenuBuilder, ButtonStyle, Events } = require('discord.js');
-let { getUserCurrencyFromDatabase, updateUserFromDatabase } = require("../../../../discordBot/lib/helper.js")
+const UserData = require("../../../../discordBot/lib/UserData.js");
 
 class HalloweenEvent {
     constructor() {
@@ -52,12 +52,11 @@ class HalloweenEvent {
 
         this.userWhoCollectedSweets.push(interaction.user.id)
         let discordUserId = interaction.user.id
+        let discordUserData = await UserData.get(discordUserId)
 
-        await updateUserFromDatabase(db, discordUserId, {
-            $inc: {
-                ["currency." + plugin['var'].sweets]: 1,
-            }
-        })
+        let sweets = discordUserData.getCurrency(plugin['var'].sweets) || 0;
+        discordUserData.setCurrency(plugin['var'].sweets, sweets + 1);
+        await discordUserData.save();
 
         await interaction.reply({ content: '<@' + interaction.user.id + '> hat Süßigkeiten erhalten' })
     }

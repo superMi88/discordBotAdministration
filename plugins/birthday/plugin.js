@@ -1,11 +1,12 @@
 const DatabaseManager = require("../../discordBot/lib/DatabaseManager.js");
 const dataManager = require("../../discordBot/lib/dataManager.js")
 const PluginManager = require("../../discordBot/lib/PluginManager.js");
+const UserData = require("../../discordBot/lib/UserData.js");
 
 const { EmbedBuilder } = require('discord.js');
 const { ActionRowBuilder, ModalBuilder, TextInputBuilder, TextInputStyle, ButtonBuilder, SelectMenuBuilder, ButtonStyle, Events } = require('discord.js');
 
-const { PermissionsBitField  } = require('discord.js');
+const { PermissionsBitField } = require('discord.js');
 
 var CronJob = require('cron').CronJob;
 
@@ -24,7 +25,7 @@ class Plugin {
 
 		//shop reset um 0 Uhr
 		if (!plugin.cronJob) plugin.cronJob = []
-		
+
 		plugin.cronJob.push(
 			//0 0 0 * * *
 			new CronJob('0 0 0 * * *', async function () {
@@ -49,65 +50,57 @@ class Plugin {
 				let error = false
 
 				//wenn Jahr angegeben ist prüfe es grob und füge es hinzu
-				if(arr.length == 2 || arr.length == 3){
+				if (arr.length == 2 || arr.length == 3) {
 
 					let day = parseInt(arr[0])
 					let month = parseInt(arr[1])
 					let year = false
-					
+
 					console.log("abfrage")
 					console.log(!isNaN(day) && day > 0 && day < 31 && !isNaN(month) && month > 0 && month < 12)
 
-					if(
+					if (
 						!isNaN(day) && day > 0 && day <= 31 &&
 						!isNaN(month) && month > 0 && month <= 12
-					)
-					{
+					) {
 						birthdayObj = {
 							day: day,
 							month: month
 						}
-						
-					}else{
+
+					} else {
 						error = true
 					}
 
 					//wenn Jahr angegeben ist prüfe es grob und füge es hinzu
-					if(arr.length == 3){
+					if (arr.length == 3) {
 
 						let year = parseInt(arr[2])
 
-						if(!isNaN(year) && year > 1900 && year < (new Date().getFullYear())){
-							
+						if (!isNaN(year) && year > 1900 && year < (new Date().getFullYear())) {
+
 							birthdayObj = {
 								day: day,
 								month: month,
 								year: year
 							}
-						}else{
+						} else {
 							error = true
 						}
 					}
 
-				}else{
+				} else {
 					error = true
 				}
-			
-				if(error){
+
+				if (error) {
 					await interaction.reply({ content: 'Ungültiges Format, das Format muss TT-MM-JJJJ oder TT-MM entsprechen um gültig zu sein zB. 30-07-1997, 14-03', ephemeral: true });
 					return
 				}
 
-				const collection = db.collection('userCollection');
-
-				const returnvalue = await collection.updateOne(
-					{ discordId: interaction.user.id },
-					{
-						$set: {
-							["birthday"]: birthdayObj
-						}
-					}
-				);
+				let userData = await UserData.get(interaction.user.id);
+				userData.setPluginData("birthday", plugin.id, birthdayObj);
+				await userData.save();
 
 				//update birthday role for everyone, this should normaly only update this player who sets his birthday today
 				await setBirthdayRole(client, plugin)
@@ -146,17 +139,19 @@ class Plugin {
 			}
 
 		})
-		
 
-		
+
+
 	}
 	async create(plugin, config) {
-		
+
+		console.log(plugin)
+
 		let client = dataManager.client
 		let db = DatabaseManager.get()
 
 		let status = await PluginManager.save(plugin, config)
-		if(!status.saved){
+		if (!status.saved) {
 			return status
 		}
 
@@ -167,7 +162,7 @@ class Plugin {
 
 		let description = "Setze dein Geburtstag"
 
-		if(plugin['var'].description && plugin['var'].description.length > 1){
+		if (plugin['var'].description && plugin['var'].description.length > 1) {
 			description = plugin['var'].description
 		}
 
@@ -184,14 +179,14 @@ class Plugin {
 					.setStyle(ButtonStyle.Primary)
 			);
 
-		let message = await channel.send({ 
+		let message = await channel.send({
 			embeds: [exampleEmbed],
 			components: [actionRow]
 		})
 
 
 		await saveMessage(db, plugin.id, message.channelId, message.id)
-		
+
 		return ({ saved: true, infoMessage: "Embed wurde erstellt", infoStatus: "Info" })
 	}
 	async delete(plugin, config) {
@@ -211,12 +206,12 @@ async function deleteMessage(client, plugin, db) {
 
 	if (channelId && messageId) {
 
-		try{
+		try {
 			let channel = await client.channels.fetch(channelId)
 			let message = await channel.messages.fetch(messageId)
 			message.delete()
 
-		}catch(e){
+		} catch (e) {
 			//mach nichts, die message wurde wahrscheinlich schon gelöscht
 		}
 
@@ -269,44 +264,36 @@ function isButton(interaction, buttonId) {
 async function setBirthdayRole(client, plugin) {
 
 	//set birthday role and unset birthday role
-	let db = DatabaseManager.get()
-
-	const collection = db.collection('userCollection');
-
 	var currentdate = new Date()
 
-	function isLeapYear() { 
-		return ((currentdate.getFullYear() % 4 == 0 && 
-		currentdate.getFullYear() % 100 != 0)) || 
-		(currentdate.getFullYear() % 400 == 0)
+	function isLeapYear() {
+		return ((currentdate.getFullYear() % 4 == 0 &&
+			currentdate.getFullYear() % 100 != 0)) ||
+			(currentdate.getFullYear() % 400 == 0)
 	}
 
 
-	let allUserInDatabase = await collection.find(
-		{ $and: [
-			{"birthday.day": currentdate.getDate()}, 
-			{"birthday.month": currentdate.getMonth()+1} 
-		]}
-	).toArray()
+	let allUserInDatabase = await UserData.findByPluginData("birthday", plugin.id, {
+		day: currentdate.getDate(),
+		month: currentdate.getMonth() + 1
+	});
 
 	//wenn erster Mai im SchaltJahr dann haben die am 29.Februar auch hier Geburtstag
-	if(isLeapYear() && currentdate.getMonth()+1 == 3 && currentdate.getDate() == 1){
-		let allUserInDatabaseLeapYear = await collection.find(
-			{ $and: [
-				{"birthday.day": 29}, 
-				{"birthday.month": 2} 
-			]}
-		).toArray()
+	if (isLeapYear() && currentdate.getMonth() + 1 == 3 && currentdate.getDate() == 1) {
+		let allUserInDatabaseLeapYear = await UserData.findByPluginData("birthday", plugin.id, {
+			day: 29,
+			month: 2
+		});
 		allUserInDatabase = allUserInDatabase.concat(allUserInDatabaseLeapYear)
 	}
 
 	const guild = await client.guilds.fetch(plugin['var'].server)
-	
+
 	//remove birthday role on everyone 
-	let usersIdsWithBirthdayRole = guild.roles.cache.get(plugin['var'].birthdayRole).members.map(m=>m.user.id);
+	let usersIdsWithBirthdayRole = guild.roles.cache.get(plugin['var'].birthdayRole).members.map(m => m.user.id);
 	for (let i = 0; i < usersIdsWithBirthdayRole.length; i++) {
 		const discordUserId = usersIdsWithBirthdayRole[i];
-	
+
 		let discordMember = await guild.members.resolve(discordUserId);
 
 		//warte bis es gelöscht wird da es später unter umständen wieder hinzugefügt wird
@@ -316,17 +303,20 @@ async function setBirthdayRole(client, plugin) {
 	//add birthday role on birthday user
 	for (let i = 0; i < allUserInDatabase.length; i++) {
 		const user = allUserInDatabase[i];
-		
+		const userBirthdayObj = user.pluginData && user.pluginData[`birthday-${plugin.id}`];
+
+		if (!userBirthdayObj) continue;
+
 		let discordMember = await guild.members.resolve(user.discordId);
 
 		discordMember.roles.add(plugin['var'].birthdayRole)
 
 		//wenn ein Jahr exestiert gebe die entsprechende Altersrolle
-		if(plugin['var'].ageRoleArray && user.birthday.year){
+		if (plugin['var'].ageRoleArray && userBirthdayObj.year) {
 
 			plugin['var'].ageRoleArray.sort(function (a, b) {
 				var valueA, valueB;
-	
+
 				valueA = a["numberString"]; // Where 1 is your index, from your example
 				valueB = b["numberString"];
 				if (valueA < valueB) {
@@ -338,27 +328,27 @@ async function setBirthdayRole(client, plugin) {
 				return 0;
 			});
 
-			let alter = currentdate.getFullYear() - user.birthday.year
-			
+			let alter = currentdate.getFullYear() - userBirthdayObj.year
+
 			let i = 0;
 			let ageRoleToGive = false
 
-			while(plugin['var'].ageRoleArray[i].numberString <= alter && i < plugin['var'].ageRoleArray[i].length){
+			while (plugin['var'].ageRoleArray[i].numberString <= alter && i < plugin['var'].ageRoleArray[i].length) {
 
 				//lösche vorherige Age Role wenn es nicht die erste/jüngste ist
-				if(i > 0 && discordMember.roles.cache.has(plugin['var'].ageRoleArray[i-1].ageRole)){
-					discordMember.roles.remove(plugin['var'].ageRoleArray[i-1].ageRole)
+				if (i > 0 && discordMember.roles.cache.has(plugin['var'].ageRoleArray[i - 1].ageRole)) {
+					discordMember.roles.remove(plugin['var'].ageRoleArray[i - 1].ageRole)
 				}
 
 				ageRoleToGive = plugin['var'].ageRoleArray[i].ageRole
 				i++
 			}
-			if(ageRoleToGive){
+			if (ageRoleToGive) {
 				discordMember.roles.add(ageRoleToGive)
 			}
-			
-		
-			
+
+
+
 		}
 
 	}

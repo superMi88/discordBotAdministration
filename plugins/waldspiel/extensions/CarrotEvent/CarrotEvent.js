@@ -1,5 +1,5 @@
 const { ActionRowBuilder, ModalBuilder, TextInputBuilder, TextInputStyle, ButtonBuilder, SelectMenuBuilder, ButtonStyle, Events } = require('discord.js');
-let { getUserCurrencyFromDatabase, updateUserFromDatabase } = require("../../../../discordBot/lib/helper.js")
+const UserData = require("../../../../discordBot/lib/UserData.js");
 
 class CarrotEvent {
     // Aktiv vom 27. bis 29. Juni
@@ -26,105 +26,77 @@ class CarrotEvent {
         if (isButton(interaction.customId, 'carrotEvent')) {
             let action = getParams(interaction.customId)[1]
 
+            let discordUserId = interaction.user.id;
+            let discordUserData = await UserData.get(discordUserId);
+
             if (action == "aussaht") {
-
-                let discordUserId = interaction.user.id
-                let discordUserDatabase = await getUserCurrencyFromDatabase(discordUserId, db)
-
-                let schonGemacht = discordUserDatabase["carrotEventAussaht"]
+                let schonGemacht = discordUserData.getCurrency("carrotEventAussaht");
 
                 if (schonGemacht) {
                     await interaction.reply({ content: 'Du hast bereits ausgesäht', ephemeral: true })
                     return
                 }
-                await updateUserFromDatabase(db, discordUserId, {
-                    $set: {
-                        ["currency.carrotEventAussaht"]: true,
-                    }
-                })
-
+                
+                discordUserData.setCurrency("carrotEventAussaht", true);
+                await discordUserData.save();
             }
 
             if (action == "gießen") {
-                let discordUserId = interaction.user.id
-                let discordUserDatabase = await getUserCurrencyFromDatabase(discordUserId, db)
-
-                let schonGemacht = discordUserDatabase["carrotEventGegossen"]
+                let schonGemacht = discordUserData.getCurrency("carrotEventGegossen");
 
                 if (schonGemacht) {
                     await interaction.reply({ content: 'Du hast bereits gegossen', ephemeral: true })
                     return
                 }
-                await updateUserFromDatabase(db, discordUserId, {
-                    $set: {
-                        ["currency.carrotEventGegossen"]: true,
-                    }
-                })
-
+                discordUserData.setCurrency("carrotEventGegossen", true);
+                await discordUserData.save();
             }
 
             if (action == "ernten") {
-                let discordUserId = interaction.user.id
-                let discordUserDatabase = await getUserCurrencyFromDatabase(discordUserId, db)
-
-                let schonGemacht = discordUserDatabase["carrotEventGeerntet"]
+                let schonGemacht = discordUserData.getCurrency("carrotEventGeerntet");
 
                 if (schonGemacht) {
                     await interaction.reply({ content: 'Du hast die Karotte bereits geerntet', ephemeral: true })
                     return
                 }
-                await updateUserFromDatabase(db, discordUserId, {
-                    $set: {
-                        ["currency.carrotEventGeerntet"]: true,
-                    }
-                })
-
+                discordUserData.setCurrency("carrotEventGeerntet", true);
+                await discordUserData.save();
             }
 
-            let discordUserId = interaction.user.id
-            let discordUserDatabase = await getUserCurrencyFromDatabase(discordUserId, db)
-            let berryUser = discordUserDatabase[plugin['var'].berry]
-            if (!berryUser) berryUser = 0
+            let berryUser = discordUserData.getCurrency(plugin['var'].berry);
+            if (!berryUser) berryUser = 0;
 
-            let anzahlGeholfen = 0
-            if (discordUserDatabase["carrotEventAussaht"]) anzahlGeholfen++
-            if (discordUserDatabase["carrotEventGegossen"]) anzahlGeholfen++
-            if (discordUserDatabase["carrotEventGeerntet"]) anzahlGeholfen++
+            let anzahlGeholfen = 0;
+            if (discordUserData.getCurrency("carrotEventAussaht")) anzahlGeholfen++;
+            if (discordUserData.getCurrency("carrotEventGegossen")) anzahlGeholfen++;
+            if (discordUserData.getCurrency("carrotEventGeerntet")) anzahlGeholfen++;
 
             if (anzahlGeholfen == 1) {
-                await updateUserFromDatabase(db, discordUserId, {
-                    $set: {
-                        ["currency." + plugin['var'].berry]: berryUser + 20,
-                    }
-                })
+                discordUserData.setCurrency(plugin['var'].berry, berryUser + 20);
+                await discordUserData.save();
 
                 await interaction.reply({ content: '<@' + interaction.user.id + '> hat beim Karottenanbau 1 mal geholfen und 20 Beeren erhalten' })
             }
             if (anzahlGeholfen == 2) {
-                await updateUserFromDatabase(db, discordUserId, {
-                    $set: {
-                        ["currency." + plugin['var'].berry]: berryUser + 50,
-                    }
-                })
+                discordUserData.setCurrency(plugin['var'].berry, berryUser + 50);
+                await discordUserData.save();
 
                 await interaction.reply({ content: '<@' + interaction.user.id + '> hat beim Karottenanbau 2 mal geholfen und 50 Beeren erhalten' })
             }
             if (anzahlGeholfen == 3) {
 
-                let itemlist = discordUserDatabase.itemlist
-                if (!itemlist) itemlist = []
+                let itemlist = discordUserData.getCurrency("itemlist");
+                if (!itemlist) itemlist = [];
 
-                let itemId = 'CARROT_HUT'
+                let itemId = 'CARROT_HUT';
 
                 if (itemlist.includes(itemId)) {
                     await interaction.reply({ content: 'Du hast dieses Item bereits', ephemeral: true });
                 } else {
-                    itemlist.push(itemId)
-                    await updateUserFromDatabase(db, discordUserId, {
-                        $set: {
-                            ["currency." + "itemlist"]: itemlist,
-                        }
-                    })
+                    itemlist.push(itemId);
+                    discordUserData.setCurrency("itemlist", itemlist);
+                    await discordUserData.save();
+                    
                     await interaction.reply({ content: '<@' + interaction.user.id + '> hat beim Karottenanbau 3 mal geholfen und den legendären Karottenhut erhalten!!' })
                 }
 

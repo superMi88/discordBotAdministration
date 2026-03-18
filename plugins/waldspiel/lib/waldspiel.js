@@ -1,7 +1,7 @@
 const { ActionRowBuilder, ModalBuilder, TextInputBuilder, TextInputStyle, ButtonBuilder, SelectMenuBuilder, ButtonStyle, Events } = require('discord.js');
 let { getUserCurrencyFromDatabase, updateUserFromDatabase } = require("../../../discordBot/lib/helper.js")
 
-
+const UserData = require("../../../discordBot/lib/UserData.js");
 const System = require("../../../discordBot/lib/system.js");
 const { ObjectId } = require("mongodb");
 
@@ -843,13 +843,14 @@ module.exports = {
 
     async catchAnimal(interaction, plugin, animalType, discordUserId, db) {
 
-        let discordUserDatabase = await getUserCurrencyFromDatabase(discordUserId, db)
+        let discordUserData = await UserData.get(discordUserId)
+        let cData = discordUserData.currencyData;
 
         if (this.animal == false) {
             return await interaction.reply({ content: 'Tier wurde bereits eingesammelt', ephemeral: true })
         }
 
-        let berryUser = discordUserDatabase[plugin['var'].berry]
+        let berryUser = cData[plugin['var'].berry]
         if (!berryUser) berryUser = 0
 
         if (berryUser < BERRY_COST) {
@@ -860,32 +861,23 @@ module.exports = {
         let arrAnimal = await collection.find({ ownerDiscordId: discordUserId }).toArray()
         let aninmalCountInStorage = arrAnimal.length
 
-        if (!discordUserDatabase.animalId1 || discordUserDatabase.animalId1 == 0) {
+        if (!(discordUserData.getPluginData(plugin, 'animalId1') ?? cData.animalId1) || (discordUserData.getPluginData(plugin, 'animalId1') ?? cData.animalId1) == 0) {
             this.animal = false
-            await updateUserFromDatabase(db, discordUserId, {
-                $set: {
-                    ["currency." + "animalId1"]: await this.insertAnimalInDB(db, discordUserId, animalType),
-                    ["currency." + plugin['var'].berry]: berryUser - BERRY_COST
-                }
-            })
+            discordUserData.setPluginData(plugin, 'animalId1', await this.insertAnimalInDB(db, discordUserId, animalType));
+            discordUserData.removeCurrency(plugin['var'].berry, BERRY_COST);
+            await discordUserData.save(plugin);
         }
-        else if (!discordUserDatabase.animalId2 || discordUserDatabase.animalId2 == 0) {
+        else if (!(discordUserData.getPluginData(plugin, 'animalId2') ?? cData.animalId2) || (discordUserData.getPluginData(plugin, 'animalId2') ?? cData.animalId2) == 0) {
             this.animal = false
-            await updateUserFromDatabase(db, discordUserId, {
-                $set: {
-                    ["currency." + "animalId2"]: await this.insertAnimalInDB(db, discordUserId, animalType),
-                    ["currency." + plugin['var'].berry]: berryUser - BERRY_COST
-                }
-            })
+            discordUserData.setPluginData(plugin, 'animalId2', await this.insertAnimalInDB(db, discordUserId, animalType));
+            discordUserData.removeCurrency(plugin['var'].berry, BERRY_COST);
+            await discordUserData.save(plugin);
         }
-        else if (!discordUserDatabase.animalId3 || discordUserDatabase.animalId3 == 0) {
+        else if (!(discordUserData.getPluginData(plugin, 'animalId3') ?? cData.animalId3) || (discordUserData.getPluginData(plugin, 'animalId3') ?? cData.animalId3) == 0) {
             this.animal = false
-            await updateUserFromDatabase(db, discordUserId, {
-                $set: {
-                    ["currency." + "animalId3"]: await this.insertAnimalInDB(db, discordUserId, animalType),
-                    ["currency." + plugin['var'].berry]: berryUser - BERRY_COST
-                }
-            })
+            discordUserData.setPluginData(plugin, 'animalId3', await this.insertAnimalInDB(db, discordUserId, animalType));
+            discordUserData.removeCurrency(plugin['var'].berry, BERRY_COST);
+            await discordUserData.save(plugin);
         } else {
             //alle Waldplätze sind voll, teste nun ob es in die Box passt
 
@@ -894,11 +886,8 @@ module.exports = {
 
             await this.insertAnimalInDB(db, discordUserId, animalType)
 
-            await updateUserFromDatabase(db, interaction.user.id, {
-                $set: {
-                    ["currency." + plugin['var'].berry]: berryUser - BERRY_COST
-                }
-            })
+            discordUserData.removeCurrency(plugin['var'].berry, BERRY_COST);
+            await discordUserData.save(plugin);
 
         }
 
@@ -972,16 +961,10 @@ module.exports = {
         let collectedBerrysWithBonus = collectedBerrys + roleBonus + boosterBonus
 
         let discordUserId = interaction.user.id
-        let discordUserDatabase = await getUserCurrencyFromDatabase(discordUserId, db)
+        let discordUserData = await UserData.get(discordUserId)
 
-        let berryUser = discordUserDatabase[plugin['var'].berry]
-        if (!berryUser) berryUser = 0
-
-        await updateUserFromDatabase(db, discordUserId, {
-            $set: {
-                ["currency." + plugin['var'].berry]: berryUser + collectedBerrysWithBonus,
-            }
-        })
+        discordUserData.addCurrency(plugin['var'].berry, collectedBerrysWithBonus);
+        await discordUserData.save(plugin);
 
         await ExtensionManager.onBerryCollected(interaction.client, plugin, interaction, db, discordUserId, collectedBerrysWithBonus);
 
@@ -1007,34 +990,31 @@ module.exports = {
 
 
         let discordUserId = interaction.user.id
+        let discordUserData = await UserData.get(discordUserId)
 
-        await updateUserFromDatabase(db, discordUserId, {
-            $inc: {
-                ["currency." + plugin['var'].sweets]: 1,	//add timestamp on last karma add
-            }
-        })
+        discordUserData.addCurrency(plugin['var'].sweets, 1);
+        await discordUserData.save(plugin);
 
         await interaction.deferUpdate();
         await interaction.channel.send({ content: '<@' + interaction.user.id + '> hat Süßigkeiten erhalten' })
     },
 
-    async sendToStorage(interaction, db, discordId, animalPlazierungsId) {
-        let discordUserDatabase = await getUserCurrencyFromDatabase(discordId, db)
+    async sendToStorage(interaction, plugin, db, discordId, animalPlazierungsId) {
+        let discordUserData = await UserData.get(discordId)
+        let cData = discordUserData.currencyData;
 
         let animalCountInForest = 0
-        if (discordUserDatabase.animalId1 || !discordUserDatabase.animalId1 == 0) animalCountInForest++
-        if (discordUserDatabase.animalId2 || !discordUserDatabase.animalId2 == 0) animalCountInForest++
-        if (discordUserDatabase.animalId3 || !discordUserDatabase.animalId3 == 0) animalCountInForest++
+        if ((discordUserData.getPluginData(plugin, 'animalId1') ?? cData.animalId1) || !(discordUserData.getPluginData(plugin, 'animalId1') ?? cData.animalId1) == 0) animalCountInForest++
+        if ((discordUserData.getPluginData(plugin, 'animalId2') ?? cData.animalId2) || !(discordUserData.getPluginData(plugin, 'animalId2') ?? cData.animalId2) == 0) animalCountInForest++
+        if ((discordUserData.getPluginData(plugin, 'animalId3') ?? cData.animalId3) || !(discordUserData.getPluginData(plugin, 'animalId3') ?? cData.animalId3) == 0) animalCountInForest++
 
         const collection = db.collection('animals');
         const arrAnimal = await collection.find({ ownerDiscordId: discordId }).toArray()
         const aninmalCountInStorage = arrAnimal.length - animalCountInForest
 
-        await updateUserFromDatabase(db, interaction.user.id, {
-            $set: {
-                ["currency." + 'animalId' + animalPlazierungsId]: ''
-            }
-        })
+        discordUserData.setPluginData(plugin, 'animalId' + animalPlazierungsId, '');
+        // We aren't passing `plugin` here because sendToStorage currently isn't wired up to plugin
+        await discordUserData.save(plugin);
     },
 
     getRandomInt(max) {
