@@ -1,4 +1,4 @@
-const DatabaseManager = require("../../discordBot/lib/DatabaseManager.js");
+const DatabaseManager = require("../../lib/DatabaseManager.js");
 const dataManager = require("../../discordBot/lib/dataManager.js")
 const PluginManager = require("../../discordBot/lib/PluginManager.js");
 
@@ -37,7 +37,7 @@ class Plugin {
 module.exports = new Plugin();
 
 
-const UserData = require("../../discordBot/lib/UserData.js");
+const UserData = require("../../lib/UserData.js");
 
 async function addStandartRolesToAllMember(plugin, db, client){
 	const allUser = await UserData.find({});

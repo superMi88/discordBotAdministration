@@ -17,7 +17,7 @@ module.exports = {
         if (!pluginId) { throw new Error("plugin Id is undefined") }
 
 
-        let DatabaseManager = require("../lib/DatabaseManager.js");
+        let DatabaseManager = require("../../lib/DatabaseManager.js");
         let db = DatabaseManager.get()
 
         var ObjectId = require('mongodb').ObjectId;
@@ -44,7 +44,7 @@ module.exports = {
 
         let obj = false
 
-        let DatabaseManager = require("../lib/DatabaseManager.js");
+        let DatabaseManager = require("../../lib/DatabaseManager.js");
         let db = DatabaseManager.get()
 
 

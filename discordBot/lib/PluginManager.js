@@ -4,7 +4,7 @@ const { REST } = require("@discordjs/rest");
 const { Routes } = require("discord-api-types/v9");
 const log = require("./log.js");
 const dataManager = require("./dataManager.js");
-const DatabaseManager = require("./DatabaseManager.js");
+const DatabaseManager = require("../../lib/DatabaseManager.js");
 
 //Jeder Bot hat einen eigenen PluginManager
 class PluginManager {

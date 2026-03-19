@@ -8,7 +8,7 @@ var ObjectId = require('mongodb').ObjectId;
 const { ActionRowBuilder, ButtonBuilder, ButtonStyle, Events, ModalBuilder, TextInputBuilder, TextInputStyle} = require('discord.js');
 
 let { getPluginFromDatabase } = require('../../discordBot/lib/helper.js');
-const DatabaseManager = require("../../discordBot/lib/DatabaseManager.js");
+const DatabaseManager = require("../../lib/DatabaseManager.js");
 
 class Plugin {
 	

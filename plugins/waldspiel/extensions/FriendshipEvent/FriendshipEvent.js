@@ -1,6 +1,6 @@
 const { ActionRowBuilder, ModalBuilder, TextInputBuilder, TextInputStyle, ButtonBuilder, SelectMenuBuilder, UserSelectMenuBuilder, ButtonStyle, Events, ChannelType } = require('discord.js');
 const CustomId = require("../../../../discordBot/lib/CustomId.js");
-const UserData = require("../../../../discordBot/lib/UserData.js");
+const UserData = require("../../../../lib/UserData.js");
 const sharp = require('sharp');
 const axios = require('axios');
 

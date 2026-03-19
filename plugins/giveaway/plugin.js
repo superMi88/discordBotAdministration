@@ -3,9 +3,9 @@ const dataManager = require("../../discordBot/lib/dataManager.js")
 const { EmbedBuilder } = require('discord.js');
 var ObjectId = require('mongodb').ObjectId;
 const { ActionRowBuilder, ButtonBuilder, ButtonStyle, Events } = require('discord.js');
-const DatabaseManager = require("../../discordBot/lib/DatabaseManager.js");
+const DatabaseManager = require("../../lib/DatabaseManager.js");
 const PluginManager = require("../../discordBot/lib/PluginManager.js");
-const UserData = require("../../discordBot/lib/UserData.js");
+const UserData = require("../../lib/UserData.js");
 
 class Plugin {
 	async execute(client, plugin) {

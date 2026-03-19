@@ -1,4 +1,4 @@
-const DatabaseManager = require("./DatabaseManager");
+const DatabaseManager = require("../../lib/DatabaseManager.js");
 
 
 

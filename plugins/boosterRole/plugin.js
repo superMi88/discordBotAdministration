@@ -1,9 +1,9 @@
-const DatabaseManager = require("../../discordBot/lib/DatabaseManager.js");
+const DatabaseManager = require("../../lib/DatabaseManager.js");
 const dataManager = require("../../discordBot/lib/dataManager.js")
 const PluginManager = require("../../discordBot/lib/PluginManager.js");
 
 
-const UserData = require("../../discordBot/lib/UserData.js");
+const UserData = require("../../lib/UserData.js");
 
 const { EmbedBuilder } = require('discord.js');
 const { ActionRowBuilder, ChannelType, TextInputBuilder, TextInputStyle, ButtonBuilder, SelectMenuBuilder, ButtonStyle, ModalBuilder } = require('discord.js');

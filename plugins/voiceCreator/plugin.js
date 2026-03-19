@@ -7,10 +7,10 @@ const { PermissionFlagsBits } = require('discord.js');
 const PluginManager = require("../../discordBot/lib/PluginManager.js");
 const { ObjectId } = require("mongodb");
 
-const DatabaseManager = require("../../discordBot/lib/DatabaseManager.js");
+const DatabaseManager = require("../../lib/DatabaseManager.js");
 
 const { ModalBuilder, TextInputBuilder, TextInputStyle, StringSelectMenuBuilder, StringSelectMenuOptionBuilder, ButtonBuilder, ButtonStyle, RoleSelectMenuBuilder, UserSelectMenuBuilder, EmbedBuilder, ActionRowBuilder } = require('discord.js');
-const UserData = require("../../discordBot/lib/UserData.js");
+const UserData = require("../../lib/UserData.js");
 
 
 

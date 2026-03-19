@@ -1,5 +1,5 @@
 const { ActionRowBuilder, ModalBuilder, TextInputBuilder, TextInputStyle, ButtonBuilder, SelectMenuBuilder, ButtonStyle, Events } = require('discord.js');
-const UserData = require("../../../../discordBot/lib/UserData.js");
+const UserData = require("../../../../lib/UserData.js");
 
 class HalloweenEvent {
     constructor() {

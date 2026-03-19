@@ -1,4 +1,4 @@
-const DatabaseManager = require("../../discordBot/lib/DatabaseManager.js");
+const DatabaseManager = require("../../lib/DatabaseManager.js");
 const dataManager = require("../../discordBot/lib/dataManager.js")
 const PluginManager = require("../../discordBot/lib/PluginManager.js");
 

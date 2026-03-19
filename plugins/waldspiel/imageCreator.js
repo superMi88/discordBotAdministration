@@ -1,7 +1,7 @@
 //const Itemlist = require("./items.js")
 //const Backgroundlist = require("./backgrounds.js")
 const Animallist = require("./animals.js")
-const DatabaseManager = require("../../discordBot/lib/DatabaseManager.js");
+const DatabaseManager = require("../../lib/DatabaseManager.js");
 const TextToSVG = require('text-to-svg');
 const textToSVG = TextToSVG.loadSync('discordBot/fonts/Quicksand-Bold.ttf');
 

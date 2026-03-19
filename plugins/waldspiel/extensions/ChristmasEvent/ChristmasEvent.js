@@ -1,13 +1,13 @@
 const { ActionRowBuilder, ModalBuilder, TextInputBuilder, TextInputStyle, ButtonBuilder, SelectMenuBuilder, ButtonStyle, Events } = require('discord.js');
 const CustomId = require("../../../../discordBot/lib/CustomId.js");
-const UserData = require("../../../../discordBot/lib/UserData.js");
+const UserData = require("../../../../lib/UserData.js");
 
 const {
     EmbedBuilder,
     AttachmentBuilder
 } = require('discord.js');
 
-const DatabaseManager = require("../../../../discordBot/lib/DatabaseManager.js");
+const DatabaseManager = require("../../../../lib/DatabaseManager.js");
 const VariableManager = require("../../../../discordBot/lib/VariableManager.js");
 
 

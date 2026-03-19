@@ -66,7 +66,7 @@ class VariableManager {
 
         if (isNaN(activityCounter)) return
 
-        const UserData = require('./UserData.js');
+        const UserData = require('../../lib/UserData.js');
         let discordUserData = await UserData.get(discordUserId);
 
         let oldValue = discordUserData.getCurrency(counterId);

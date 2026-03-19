@@ -14,7 +14,7 @@ const helper = require("../../discordBot/lib/helper.js");
 const VariableManager = require("../../discordBot/lib/VariableManager.js");
 
 const { EmbedBuilder, ActionRowBuilder, ModalBuilder, TextInputBuilder, TextInputStyle, ButtonBuilder, SelectMenuBuilder, ButtonStyle, Events } = require('discord.js');
-const DatabaseManager = require("../../discordBot/lib/DatabaseManager.js");
+const DatabaseManager = require("../../lib/DatabaseManager.js");
 
 // Ganz oben, z.B. direkt nach den Imports oder als konstante Variable in der Plugin-Klasse:
 const RANKS = [
@@ -65,7 +65,7 @@ class Plugin {
 				}
 
 
-				let discordUserDatabase = (await require('../../discordBot/lib/UserData.js').get(discordId)).currencyData
+				let discordUserDatabase = (await require('../../lib/UserData.js').get(discordId)).currencyData
 
 				//wurde kein user gefunden nicht ausführen
 				if (discordUserDatabase) {
@@ -334,7 +334,7 @@ class Plugin {
 		members.forEach(async member => {
 			if (member.user.bot) return; // Optional: Bots überspringen
 
-			const discordUserDatabase = (await require('../../discordBot/lib/UserData.js').get(member.id)).currencyData;
+			const discordUserDatabase = (await require('../../lib/UserData.js').get(member.id)).currencyData;
 			if (!discordUserDatabase) return;
 
 			// XP aus Sprach- und Chataktivität berechnen
@@ -421,7 +421,7 @@ async function messageCounterAdd(plugin, client, discordUserId, currencyId, oldA
 	try {
 		if (isNaN(newActivityValue)) return;
 
-		const discordUserDatabase = (await require('../../discordBot/lib/UserData.js').get(discordUserId)).currencyData;
+		const discordUserDatabase = (await require('../../lib/UserData.js').get(discordUserId)).currencyData;
 		if (!discordUserDatabase) return;
 
 		const guild = await client.guilds.fetch(plugin['var'].server).catch(err => {

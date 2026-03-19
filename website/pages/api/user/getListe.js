@@ -35,17 +35,54 @@ export default async function handler(req, res) {
 
     if (req.method === 'POST') {
 
-        const { getAllUser, } = require('../../../lib/app');
-        const data = await getAllUser(req.body.projectAlias, req.body);
+        const UserData = require('../../../../lib/UserData.js');
+        const DatabaseManager = require('../../../../lib/DatabaseManager.js');
 
-        let response = [];
-
-        for (let i = 0; i < data.length; i++) {
-            const discordUserDatabbaseData = data[i];
-            delete discordUserDatabbaseData['_id'];
-            response.push(discordUserDatabbaseData)
+        await DatabaseManager.create(req.body.projectAlias);
+        
+        // Use UserData.find to get populated UserData objects
+        // We need to build the search query manually as before
+        const searchName = req.body.searchName;
+        const selectedServer = req.body.selectedServer;
+        let searchObj = {};
+        if (searchName || selectedServer) {
+            searchObj = { $and: [] };
         }
 
+        if (searchName) {
+            searchObj.$and.push({
+                $or: [
+                    { "username": new RegExp(searchName, 'i') },
+                    { "discriminator": new RegExp(searchName, 'i') },
+                    { "discordId": new RegExp(searchName, 'i') }
+                ]
+            });
+        }
+
+        if (selectedServer) {
+            searchObj.$and.push({
+                guilds: { $elemMatch: { guildId: selectedServer, onServer: true } }
+            });
+        }
+
+        const users = await UserData.find(searchObj);
+        const db = DatabaseManager.get();
+        const collection = db.collection('userCollection');
+        const rawDocs = await collection.find(searchObj).toArray();
+
+        // Create a lookup map for raw docs to get username/avatar etc.
+        const docMap = new Map();
+        rawDocs.forEach(d => docMap.set(d.discordId, d));
+
+        const response = users.map(user => {
+            const rawDoc = docMap.get(user.discordId) || {};
+            return {
+                ...rawDoc,
+                pluginData: user.pluginData,
+                currency: user.currency,
+                _id: undefined
+            };
+        });
 
         res.status(200).json(response)
 

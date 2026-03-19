@@ -10,7 +10,7 @@ const { ActionRowBuilder, ModalBuilder, TextInputBuilder, TextInputStyle, Button
 const { ObjectId } = require("mongodb");
 
 const PluginManager = require("../../discordBot/lib/PluginManager.js");
-const UserData = require("../../discordBot/lib/UserData.js");
+const UserData = require("../../lib/UserData.js");
 const System = require("../../discordBot/lib/system.js");
 
 
@@ -22,7 +22,7 @@ const Backgroundlist = require('./obj/BackgroundList.js');
 
 const WaldCreator = require("./imageCreator/WaldCreator.js");
 const ImageCreator = require("./imageCreator.js");
-const DatabaseManager = require("../../discordBot/lib/DatabaseManager.js");
+const DatabaseManager = require("../../lib/DatabaseManager.js");
 
 const waldspiel = require("./lib/waldspiel.js");
 
@@ -440,7 +440,7 @@ class Plugin {
 					{ $set: { animation: animationId } }
 				);
 
-				let discordUserDatabase = (await require('../../discordBot/lib/UserData.js').get(interaction.user.id)).currencyData;
+				let discordUserDatabase = (await require('../../lib/UserData.js').get(interaction.user.id)).currencyData;
 				let animalId = 1;
 				if (discordUserDatabase.animalId1 && ObjectId(animalObjId).equals(discordUserDatabase.animalId1)) animalId = 1;
 				else if (discordUserDatabase.animalId2 && ObjectId(animalObjId).equals(discordUserDatabase.animalId2)) animalId = 2;

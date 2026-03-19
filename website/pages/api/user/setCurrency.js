@@ -14,20 +14,18 @@ export default async function handler(req, res) {
         let result = null;
         let status = undefined;
 
-        await database(body.projectAlias, async function(db){
+        const UserData = require('../../../../lib/UserData.js');
+        const DatabaseManager = require('../../../../lib/DatabaseManager.js');
 
-            const collection = db.collection('userCollection');
-
-            const updatedDocs = await collection.updateOne(
-                {discordId: discordId}, 
-                {$set: {["currency."+currencyId] : parseInt(value)} }
-            );
-
-            if(updatedDocs.matchedCount == 1){
-                message = "value was set to "+parseInt(value)
-                status = "ok"
-            }
-        })
+        await DatabaseManager.create(body.projectAlias);
+        let userData = await UserData.get(discordId);
+        
+        userData.setCurrency(currencyId, parseInt(value));
+        // We pass null as plugin because we are in website context and don't care about bot triggers here
+        await userData.save(null);
+        
+        status = "ok";
+        let message = "value was set to "+parseInt(value);
         
         //TODO richtigen status zurück geben der prüft ob der update geklappt hat
         res.status(200).json({

@@ -1,5 +1,5 @@
 const { ActionRowBuilder, ModalBuilder, TextInputBuilder, TextInputStyle, ButtonBuilder, SelectMenuBuilder, ButtonStyle, Events } = require('discord.js');
-const UserData = require("../../../../discordBot/lib/UserData.js");
+const UserData = require("../../../../lib/UserData.js");
 
 class CarrotEvent {
     // Aktiv vom 27. bis 29. Juni

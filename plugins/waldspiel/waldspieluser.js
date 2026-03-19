@@ -16,7 +16,7 @@ const System = require("../../discordBot/lib/system.js");
 //custom Id handling
 const CustomId = require('../../discordBot/lib/CustomId.js');
 const ImageCreator = require("./imageCreator.js");
-const DatabaseManager = require("../../discordBot/lib/DatabaseManager.js");
+const DatabaseManager = require("../../lib/DatabaseManager.js");
 
 const waldspiel = require("./lib/waldspiel.js");
 
@@ -48,7 +48,7 @@ class WaldspielUser {
 	}
 
 	async getDiscordUserDatabase(){
-        const UserData = require("../../discordBot/lib/UserData.js");
+        const UserData = require("../../lib/UserData.js");
 		if(!this.discordUserDatabase){
 			this.discordUserDatabase = await UserData.get(this.discordUserId);
 		}
