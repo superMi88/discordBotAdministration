@@ -7,7 +7,6 @@ const { v4: uuidv4 } = require('uuid');
 
 var CronJob = require('cron').CronJob;
 
-let { getUserCurrencyFromDatabase, updateUserFromDatabase } = require('../../discordBot/lib/helper.js')
 const { interactionSlashCommand } = require('../../discordBot/lib/helper.js');
 
 const PluginManager = require("../../discordBot/lib/PluginManager.js");
@@ -38,7 +37,7 @@ class Plugin {
 				}
 
 
-				let discordUserDatabase = await getUserCurrencyFromDatabase(discordId, db)
+				let discordUserDatabase = (await require('../../discordBot/lib/UserData.js').get(discordId)).currencyData
 
 				//wurde kein user gefunden nicht ausführen
 				if (discordUserDatabase) {
@@ -354,7 +353,7 @@ async function messageCounterAdd(plugin, client, discordUserId, currencyId, oldA
 
 	if (isNaN(oldActivityValue) || isNaN(newActivityValue) ) return
 
-	let discordUserDatabase = await getUserCurrencyFromDatabase(discordUserId, db)
+	let discordUserDatabase = (await require('../../discordBot/lib/UserData.js').get(discordUserId)).currencyData
 
 	if (discordUserDatabase) {
 

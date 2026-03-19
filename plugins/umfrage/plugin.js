@@ -6,7 +6,6 @@ const { EmbedBuilder, Events, Message, parseEmoji } = require('discord.js');
 const { interactionSlashCommand } = require('../../discordBot/lib/helper.js');
 const VariableManager = require("../../discordBot/lib/VariableManager.js");
 const helper = require("../../discordBot/lib/helper.js");
-let { getUserCurrencyFromDatabase, updateUserFromDatabase } = require('../../discordBot/lib/helper.js')
 const PluginManager = require("../../discordBot/lib/PluginManager.js");
 
 class Plugin {

@@ -7,7 +7,6 @@ const { v4: uuidv4 } = require('uuid');
 
 var CronJob = require('cron').CronJob;
 
-let { getUserCurrencyFromDatabase, updateUserFromDatabase } = require('../../discordBot/lib/helper.js')
 const { interactionSlashCommand } = require('../../discordBot/lib/helper.js');
 
 const PluginManager = require("../../discordBot/lib/PluginManager.js");
@@ -66,7 +65,7 @@ class Plugin {
 				}
 
 
-				let discordUserDatabase = await getUserCurrencyFromDatabase(discordId, db)
+				let discordUserDatabase = (await require('../../discordBot/lib/UserData.js').get(discordId)).currencyData
 
 				//wurde kein user gefunden nicht ausführen
 				if (discordUserDatabase) {
@@ -335,7 +334,7 @@ class Plugin {
 		members.forEach(async member => {
 			if (member.user.bot) return; // Optional: Bots überspringen
 
-			const discordUserDatabase = await getUserCurrencyFromDatabase(member.id, db);
+			const discordUserDatabase = (await require('../../discordBot/lib/UserData.js').get(member.id)).currencyData;
 			if (!discordUserDatabase) return;
 
 			// XP aus Sprach- und Chataktivität berechnen
@@ -422,7 +421,7 @@ async function messageCounterAdd(plugin, client, discordUserId, currencyId, oldA
 	try {
 		if (isNaN(newActivityValue)) return;
 
-		const discordUserDatabase = await getUserCurrencyFromDatabase(discordUserId, db);
+		const discordUserDatabase = (await require('../../discordBot/lib/UserData.js').get(discordUserId)).currencyData;
 		if (!discordUserDatabase) return;
 
 		const guild = await client.guilds.fetch(plugin['var'].server).catch(err => {

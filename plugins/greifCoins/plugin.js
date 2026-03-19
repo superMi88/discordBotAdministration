@@ -6,7 +6,6 @@ const { SlashCommandBuilder } = require('@discordjs/builders');
 
 var CronJob = require('cron').CronJob;
 
-let { getUserCurrencyFromDatabase, updateUserFromDatabase } = require('../../discordBot/lib/helper.js')
 const { interactionSlashCommand } = require('../../discordBot/lib/helper.js');
 
 const PluginManager = require("../../discordBot/lib/PluginManager.js");
@@ -36,7 +35,7 @@ class Plugin {
 					discordId = interaction.user.id
 				}
 
-				let discordUserDatabase = await getUserCurrencyFromDatabase(discordId, db)
+				let discordUserDatabase = (await require('../../discordBot/lib/UserData.js').get(discordId)).currencyData
 
 				//wurde kein user gefunden nicht ausführen
 				if (discordUserDatabase) {

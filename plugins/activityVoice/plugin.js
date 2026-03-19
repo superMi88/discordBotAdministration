@@ -6,7 +6,6 @@ const { SlashCommandBuilder } = require('@discordjs/builders');
 var CronJob = require('cron').CronJob;
 const { EmbedBuilder, Events } = require('discord.js');
 
-let { getUserCurrencyFromDatabase, updateUserFromDatabase } = require('../../discordBot/lib/helper.js')
 const { interactionSlashCommand } = require('../../discordBot/lib/helper.js');
 
 const VariableManager = require("../../discordBot/lib/VariableManager.js");

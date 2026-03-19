@@ -6,8 +6,6 @@ const { SlashCommandBuilder } = require('@discordjs/builders');
 var CronJob = require('cron').CronJob;
 const { ActionRowBuilder, ModalBuilder, TextInputBuilder, TextInputStyle, ButtonBuilder, SelectMenuBuilder, ButtonStyle, Events } = require('discord.js');
 
-
-let { getUserFromDatabase, getPluginFromDatabase } = require('../../discordBot/lib/helper.js')
 const { interactionSlashCommand } = require('../../discordBot/lib/helper.js');
 
 const PluginManager = require("../../discordBot/lib/PluginManager.js");
@@ -38,25 +36,25 @@ class Plugin {
 
 					for (let i = 0; i < plugin['var'].iconAndText1.length; i++) {
 						const obj = plugin['var'].iconAndText1[i];
-	
-						console.log(obj.currency1+" == "+currencyId)
+
+						console.log(obj.currency1 + " == " + currencyId)
 
 						if (obj.currency1 == currencyId) {
 							currencyId = obj.currency1
-	
+
 							if (obj.title) title = obj.title
 						}
-	
+
 					}
 
 					let erfolgreich = await showLeaderboard(db, interaction, currencyId, userId, title)
-					if(erfolgreich){
+					if (erfolgreich) {
 						return await interaction.update({
 							content: "",
 							files: ['temp/finalpicture.png'],
 							ephemeral: true
 						})
-					}else{
+					} else {
 						return await interaction.update({
 							content: 'Ein Fehler ist aufgetreten',
 							ephemeral: true
@@ -102,16 +100,16 @@ class Plugin {
 
 				const row = new ActionRowBuilder()
 
-					for (let i = 0; i < plugin['var'].iconAndText1.length; i++) {
-						const obj = plugin['var'].iconAndText1[i];
+				for (let i = 0; i < plugin['var'].iconAndText1.length; i++) {
+					const obj = plugin['var'].iconAndText1[i];
 
-						row.addComponents(
-							new ButtonBuilder()
-								.setCustomId(plugin.id + "-" + obj.currency1 + "-" + discordUserId)
-								.setLabel(obj.name1)
-								.setStyle(ButtonStyle.Secondary),
-						);
-					}
+					row.addComponents(
+						new ButtonBuilder()
+							.setCustomId(plugin.id + "-" + obj.currency1 + "-" + discordUserId)
+							.setLabel(obj.name1)
+							.setStyle(ButtonStyle.Secondary),
+					);
+				}
 
 				//konnte keine currencyId gefunden werden war die eingabe Falsch
 				if (!currencyId) {
@@ -124,19 +122,19 @@ class Plugin {
 
 
 				let erfolgreich = await showLeaderboard(db, interaction, currencyId, discordUserId, title)
-				if(erfolgreich){
+				if (erfolgreich) {
 					return await interaction.reply({
 						files: ['temp/finalpicture.png'],
 						components: [row],
 						ephemeral: true
 					})
-				}else{
+				} else {
 					return await interaction.reply({
 						content: 'Ein Fehler ist aufgetreten',
 						ephemeral: true
 					});
 				}
-				
+
 
 			}
 
@@ -147,7 +145,7 @@ class Plugin {
 	async save(plugin, config) {
 
 		let status = await PluginManager.save(plugin, config)
-		if(!status.saved){
+		if (!status.saved) {
 			return status
 		}
 
@@ -220,7 +218,7 @@ function getUsername(user) {
 
 
 
-	
+
 	//let str = user.username
 	let str = user.globalName
 
@@ -266,12 +264,13 @@ async function showLeaderboard(db, interaction, currencyId, discordUserId, title
 		let ueberUserArray = await UserData.find({ ["currency." + currencyId]: { $gt: chatActivity } }, { ["currency." + currencyId]: 1, discordId: 1 }, 1);
 		let ueberUser = ueberUserArray[0];
 
-		let $searchObj = {["currency." + currencyId]: chatActivity};
-		
-		if(chatActivity == 0){
-			$searchObj = {$or: [
-				{["currency." + currencyId]: {$exists: false}},
-				{["currency." + currencyId]: chatActivity}]
+		let $searchObj = { ["currency." + currencyId]: chatActivity };
+
+		if (chatActivity == 0) {
+			$searchObj = {
+				$or: [
+					{ ["currency." + currencyId]: { $exists: false } },
+					{ ["currency." + currencyId]: chatActivity }]
 			};
 		}
 
@@ -281,12 +280,13 @@ async function showLeaderboard(db, interaction, currencyId, discordUserId, title
 
 		//get user eins ueber wert
 
-		let searchObj = {["currency." + currencyId]: { $lt: chatActivity }};
+		let searchObj = { ["currency." + currencyId]: { $lt: chatActivity } };
 
-		if(chatActivity == 0){
-			searchObj = {$or: [
-				{["currency." + currencyId]: {$exists: false}},
-				{["currency." + currencyId]: { $lt: chatActivity }}]
+		if (chatActivity == 0) {
+			searchObj = {
+				$or: [
+					{ ["currency." + currencyId]: { $exists: false } },
+					{ ["currency." + currencyId]: { $lt: chatActivity } }]
 			};
 		}
 
@@ -358,23 +358,23 @@ async function showLeaderboard(db, interaction, currencyId, discordUserId, title
 			}
 
 			await sharp('plugins/leaderboard/images/background2.png')
-			.composite(mergeArray)
-			.toFile('temp/finalpicture.png')
+				.composite(mergeArray)
+				.toFile('temp/finalpicture.png')
 
-		}else{
+		} else {
 			await sharp('plugins/leaderboard/images/background.png')
-			.composite(mergeArray)
-			.toFile('temp/finalpicture.png')
-			
+				.composite(mergeArray)
+				.toFile('temp/finalpicture.png')
+
 		}
 
 
 
-			/*
-		return await interaction.reply({
-			files: ['temp/finalpicture.png'],
-			ephemeral: true
-		})*/
+		/*
+	return await interaction.reply({
+		files: ['temp/finalpicture.png'],
+		ephemeral: true
+	})*/
 
 		return true
 

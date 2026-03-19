@@ -7,7 +7,7 @@ var ObjectId = require('mongodb').ObjectId;
 const { REST } = require("@discordjs/rest");
 const { Routes } = require("discord-api-types/v9");
 const log = require("./log.js");
-let { getUserCurrencyFromDatabase, updateUserFromDatabase } = require('./helper.js')
+
 
 
 /**
@@ -66,46 +66,18 @@ class VariableManager {
 
         if (isNaN(activityCounter)) return
 
-        let discordUserDatabase = await getUserCurrencyFromDatabase(discordUserId, db)
+        const UserData = require('./UserData.js');
+        let discordUserData = await UserData.get(discordUserId);
 
-        //wurde kein user gefunden nicht ausführen
-        if (discordUserDatabase) {
+        let oldValue = discordUserData.getCurrency(counterId);
+        if (!oldValue) oldValue = 0;
 
-            //karma gewichtung des users der den command ausführt
-            let counter = discordUserDatabase[counterId]
+        discordUserData.addCurrency(counterId, parseInt(activityCounter));
+        
+        // UserData.save() automatically manages triggering the events via process.send
+        await discordUserData.save(plugin);
 
-            if (!counter) counter = 0 // karmaWeighting != 0 weil 0 auch als undefined zählt
-            
-            const collection = db.collection('userCollection');
-
-            let miau = await updateUserFromDatabase(db, discordUserId,
-                {
-                    $inc: {
-                        ["currency." + counterId]: parseInt(activityCounter),	//add timestamp on last karma add
-                    }
-                }
-            )
-
-            let oldValue = miau.value.currency[counterId]
-            let newValue = miau.value.currency[counterId] + parseInt(activityCounter)
-
-            //undefined and null = 0
-            if(!oldValue) oldValue = 0
-            if(!newValue) newValue = 0 + parseInt(activityCounter)
-
-
-            console.log("triggerEvent Auslöser: "+oldValue+" -> "+newValue)
-            process.send({
-                manager: "triggerEvent",
-                triggerPluginId: plugin.id,
-                discordUserId: discordUserId,
-                currencyId: counterId,
-                oldValue: oldValue,
-                newValue: newValue
-            })
-
-        }
-        return discordUserDatabase;
+        return discordUserData.currencyData;
     }
 
 }

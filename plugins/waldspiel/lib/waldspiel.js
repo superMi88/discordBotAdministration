@@ -1,6 +1,4 @@
 const { ActionRowBuilder, ModalBuilder, TextInputBuilder, TextInputStyle, ButtonBuilder, SelectMenuBuilder, ButtonStyle, Events } = require('discord.js');
-let { getUserCurrencyFromDatabase, updateUserFromDatabase } = require("../../../discordBot/lib/helper.js")
-
 const UserData = require("../../../discordBot/lib/UserData.js");
 const System = require("../../../discordBot/lib/system.js");
 const { ObjectId } = require("mongodb");
@@ -195,7 +193,7 @@ module.exports = {
     async showMeinStorage(client, plugin, db, user, interaction, animalStorage, animalPlazierungsId, currentPage, searchQuery = "") {
         let userid = user.id
 
-        let discordUserDatabase = await getUserCurrencyFromDatabase(userid, db)
+        let discordUserDatabase = (await require('../../../discordBot/lib/UserData.js').get(userid)).currencyData
 
         // Filter by searchQuery if provided
         if (searchQuery) {
@@ -338,7 +336,8 @@ module.exports = {
 
         let userid = user.id
 
-        let discordUserDatabase = await getUserCurrencyFromDatabase(userid, db)
+        let discordUserData = await require('../../../discordBot/lib/UserData.js').get(userid)
+        let discordUserDatabase = { ...discordUserData.currencyData, ...(discordUserData.getPluginData(plugin) || {}) }
 
         //wurde kein user gefunden nicht ausführen
         if (discordUserDatabase) {
@@ -458,7 +457,8 @@ module.exports = {
 
         let userid = user.id
 
-        let discordUserDatabase = await getUserCurrencyFromDatabase(userid, db)
+        let discordUserData = await require('../../../discordBot/lib/UserData.js').get(userid)
+        let discordUserDatabase = { ...discordUserData.currencyData, ...(discordUserData.getPluginData(plugin) || {}) }
 
         //wurde kein user gefunden nicht ausführen
         if (discordUserDatabase) {

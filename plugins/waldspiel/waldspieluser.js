@@ -7,8 +7,6 @@ var CronJob = require('cron').CronJob;
 const { EmbedBuilder } = require('discord.js');
 const helper = require('../../discordBot/lib/helper.js');
 const { ActionRowBuilder, ModalBuilder, TextInputBuilder, TextInputStyle, ButtonBuilder, SelectMenuBuilder, ButtonStyle, Events } = require('discord.js');
-let { getUserCurrencyFromDatabase, updateUserFromDatabase } = require('../../discordBot/lib/helper.js')
-
 const { ObjectId } = require("mongodb");
 
 const PluginManager = require("../../discordBot/lib/PluginManager.js");
@@ -50,111 +48,77 @@ class WaldspielUser {
 	}
 
 	async getDiscordUserDatabase(){
-		
+        const UserData = require("../../discordBot/lib/UserData.js");
 		if(!this.discordUserDatabase){
-			this.discordUserDatabase = await getUserCurrencyFromDatabase(this.discordUserId, this.db)
-		}else{
+			this.discordUserDatabase = await UserData.get(this.discordUserId);
 		}
         return this.discordUserDatabase;
     }
 	
-	async getItemlist(){
+	async getItemlist(plugin){
 		let discordUserDatabase = await this.getDiscordUserDatabase()
-
-        let itemlist = discordUserDatabase.itemlist
+        let itemlist = discordUserDatabase.getPluginData(plugin, 'itemlist') ?? discordUserDatabase.currencyData.itemlist;
 		if (!itemlist) itemlist = []
-
 		return itemlist
     }
 
-	async getBackgroundlist(){
+	async getBackgroundlist(plugin){
 		let discordUserDatabase = await this.getDiscordUserDatabase()
-
-        let backgroundlist = discordUserDatabase.backgroundlist
+        let backgroundlist = discordUserDatabase.getPluginData(plugin, 'backgroundlist') ?? discordUserDatabase.currencyData.backgroundlist;
 		if (!backgroundlist) backgroundlist = []
-
 		return backgroundlist
     }
 
 	async getCurrencyCount(currencyId){
 		let discordUserDatabase = await this.getDiscordUserDatabase()
-
-        let currencyCount = discordUserDatabase[currencyId]
+        let currencyCount = discordUserDatabase.getCurrency(currencyId)
 		if (!currencyCount) currencyCount = 0
-
 		return currencyCount
     }
 	
-	async buyItem(itemId, price, currencyId){
-
-		let itemlist = await this.getItemlist()
+	async buyItem(itemId, price, currencyId, plugin){
+		let itemlist = await this.getItemlist(plugin)
 		let currencyCount = await this.getCurrencyCount(currencyId)
 
 		if (itemlist.includes(itemId)) {
-			return {
-				statusCode: statusCode.ALREADY_HAS_ITEM,
-			}
+			return { statusCode: statusCode.ALREADY_HAS_ITEM }
 		} 
 		
 		if (currencyCount < price) {
-			return {
-				statusCode: statusCode.NOT_ENOUGH_MONEY,
-				currencyCount: currencyCount
-			}
+			return { statusCode: statusCode.NOT_ENOUGH_MONEY, currencyCount: currencyCount }
 		} 
 
 		itemlist.push(itemId)
-		await updateUserFromDatabase(this.db, this.discordUserId, {
-				
-			$set: {
-				//["currency." + currencyId]: currencyCount - price,
-				["currency." + "itemlist"]: itemlist,
-			},
-			$inc: {
-				["currency." + currencyId]: parseInt(price)*-1
-			}
-		})
-		return {
-			statusCode: statusCode.SUCCESS
-		}
+        
+        let discordUserDatabase = await this.getDiscordUserDatabase()
+        discordUserDatabase.setPluginData(plugin, 'itemlist', itemlist);
+        discordUserDatabase.removeCurrency(currencyId, parseInt(price));
+        await discordUserDatabase.save(plugin);
+
+		return { statusCode: statusCode.SUCCESS }
 	}
 
-	async buyBackground(backgroundId, price, currencyId){
-
-		let backgroundlist = await this.getBackgroundlist()
+	async buyBackground(backgroundId, price, currencyId, plugin){
+		let backgroundlist = await this.getBackgroundlist(plugin)
 		let currencyCount = await this.getCurrencyCount(currencyId)
 
 		if (backgroundlist.includes(backgroundId)) {
-			return {
-				statusCode: statusCode.ALREADY_HAS_ITEM,
-			}
+			return { statusCode: statusCode.ALREADY_HAS_ITEM }
 		} 
 		
 		if (currencyCount < price) {
-			return {
-				statusCode: statusCode.NOT_ENOUGH_MONEY,
-				currencyCount: currencyCount
-			}
+			return { statusCode: statusCode.NOT_ENOUGH_MONEY, currencyCount: currencyCount }
 		} 
 
 		backgroundlist.push(backgroundId)
-		await updateUserFromDatabase(this.db, this.discordUserId, {
-				
-			$set: {
-				//["currency." + currencyId]: currencyCount - price,
-				["currency." + "backgroundlist"]: backgroundlist,
-			},
-			$inc: {
-				["currency." + currencyId]: parseInt(price)*-1
-			}
-		})
-		return {
-			statusCode: statusCode.SUCCESS
-		}
+        
+        let discordUserDatabase = await this.getDiscordUserDatabase()
+        discordUserDatabase.setPluginData(plugin, 'backgroundlist', backgroundlist);
+        discordUserDatabase.removeCurrency(currencyId, parseInt(price));
+        await discordUserDatabase.save(plugin);
+
+		return { statusCode: statusCode.SUCCESS }
 	}
-
-
-
 };
 
 module.exports = WaldspielUser

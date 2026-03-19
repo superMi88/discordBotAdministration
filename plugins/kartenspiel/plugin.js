@@ -6,9 +6,7 @@ var CronJob = require('cron').CronJob;
 const { EmbedBuilder } = require('discord.js');
 const helper = require('../../discordBot/lib/helper.js');
 const { ActionRowBuilder, ModalBuilder, TextInputBuilder, TextInputStyle, ButtonBuilder, SelectMenuBuilder, ButtonStyle, Events } = require('discord.js');
-let { getUserCurrencyFromDatabase, updateUserFromDatabase } = require('../../discordBot/lib/helper.js')
-
-
+const UserData = require("../../discordBot/lib/UserData.js");
 const PluginManager = require("../../discordBot/lib/PluginManager.js");
 
 const System = require("../../discordBot/lib/system.js");
@@ -36,7 +34,7 @@ class Plugin {
 
 			//test if message is from the correct server and no private message
 			if(plugin['var'].server != interaction.guildId) return 
-
+			
 			await createStarsMaybe(client, plugin, db, this, RANDOM_NUMBER)
 		})
 
@@ -87,7 +85,8 @@ class Plugin {
 					});
 				}
 
-				let discordUserDatabase = await getUserCurrencyFromDatabase(user.id, db)
+				let userData = await UserData.get(user.id);
+				let discordUserDatabase = userData.currencyData
 
 
 				//await createShop(client, plugin, db)
@@ -95,7 +94,7 @@ class Plugin {
 				//wurde kein user gefunden nicht ausführen
 				if (discordUserDatabase) {
 
-					var stars = discordUserDatabase[plugin['var'].stars ]
+					var stars = userData.getCurrency(plugin['var'].stars)
 					if (!stars) stars = 0
 
 					stars = parseInt(stars)
@@ -126,7 +125,7 @@ class Plugin {
 					.setDescription(`
 				**Sammle Sterne*
 				Sammle Sterne mit denen du Karten kaufen kannst
-
+ *
 				**Kaufe Karten**
 				Kaufe karten im Shop, so kannst du alle Kartensets vervollständigen
 		
@@ -158,16 +157,12 @@ class Plugin {
 
 
 				let discordUserId = interaction.user.id
-				let discordUserDatabase = await getUserCurrencyFromDatabase(discordUserId, db)
+				let userData = await UserData.get(discordUserId);
 
-				let starsUser = discordUserDatabase[plugin['var'].stars]
-				if (!starsUser) starsUser = 0
+				let starsUser = userData.getCurrency(plugin['var'].stars) || 0;
 
-				await updateUserFromDatabase(db, discordUserId, {
-					$set: {
-						["currency." + plugin['var'].berry]: starsUser + collectedStars,
-					}
-				})
+				userData.setCurrency(plugin['var'].berry, starsUser + collectedStars);
+				await userData.save(plugin);
 
 				await interaction.reply({ content: '<@' + interaction.user.id + '> hat ' + collectedStars + ' Sterne gesammelt' })
 
@@ -183,15 +178,13 @@ class Plugin {
 				let card = cardList[cartKey]
 
 				let discordUserId = interaction.user.id
-				let discordUserDatabase = await getUserCurrencyFromDatabase(discordUserId, db)
+				let userData = await UserData.get(discordUserId);
 
-				let cardlist = discordUserDatabase["cardlist-"+cartType]
-				if (!cardlist) cardlist = []
+				let cardlist = userData.getPluginData(plugin, "cardlist-"+cartType) || userData.getCurrency("cardlist-"+cartType) || [];
 
-				currencyId = plugin['var'].stars
+				let currencyId = plugin['var'].stars
 
-				let currencyCount = discordUserDatabase[currencyId]
-				if (!currencyCount) currencyCount = 0
+				let currencyCount = userData.getCurrency(currencyId) || 0;
 				if(!currencyId) return await interaction.reply({ content: 'Ein Fehler ist aufgetreten', ephemeral: true });
 
 				if (cardlist.includes(cartKey)) {
@@ -200,12 +193,10 @@ class Plugin {
 					if (currencyCount >= card.price) {
 
 						cardlist.push(cartKey)
-						await updateUserFromDatabase(db, discordUserId, {
-							$set: {
-								["currency." + currencyId]: currencyCount - card.price,
-								["currency." + "cardlist-"+cartType]: cardlist,
-							}
-						})
+						userData.setCurrency(currencyId, currencyCount - card.price);
+						userData.setPluginData(plugin, "cardlist-"+cartType, cardlist);
+						await userData.save(plugin);
+						
 						await interaction.reply({ content: 'Karte gekauft', ephemeral: true });
 					} else {
 						await interaction.reply({ content: 'Zu teuer du hast nur ' + currencyCount , ephemeral: true });
@@ -293,6 +284,26 @@ class Plugin {
 		)
 	}
 
+	async addEvents(plugin, eventsArray) {
+		const VariableManager = require("../../discordBot/lib/VariableManager.js");
+		
+		eventsArray.push({
+			pluginId: plugin.id,
+			pluginTag: plugin.pluginTag,
+			type: VariableManager.Event,
+			variable: plugin['var'].stars,
+			message: "Anzahl Sterne"
+		});
+
+		eventsArray.push({
+			pluginId: plugin.id,
+			pluginTag: plugin.pluginTag,
+			type: VariableManager.Event,
+			variable: plugin['var'].berry,
+			message: "Beeren/Sterne"
+		});
+	}
+
 };
 
 module.exports = new Plugin();
@@ -333,7 +344,8 @@ async function createStars(client, plugin, db, thisObject) {
 async function showSammelheft(client, plugin, db, user, interaction, shouldUpdate) {
 
 	let userid = user.id
-	let discordUserDatabase = await getUserCurrencyFromDatabase(userid, db)
+	let userData = await UserData.get(userid);
+	let discordUserDatabase = userData.currencyData
 
 	//wurde kein user gefunden nicht ausführen
 	if (discordUserDatabase) {
@@ -410,7 +422,8 @@ async function showSammelheft(client, plugin, db, user, interaction, shouldUpdat
 async function openSammelheft(client, plugin, db, user, interaction, shouldUpdate, type, page) {
 
 	let userid = user.id
-	let discordUserDatabase = await getUserCurrencyFromDatabase(userid, db)
+	let userData = await UserData.get(userid);
+	let discordUserDatabase = { ...userData.currencyData, ...(userData.getPluginData(plugin) || {}) }
 
 	//wurde kein user gefunden nicht ausführen
 	if (discordUserDatabase) {

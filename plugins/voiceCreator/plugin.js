@@ -9,9 +9,9 @@ const { ObjectId } = require("mongodb");
 
 const DatabaseManager = require("../../discordBot/lib/DatabaseManager.js");
 
-let { getUserCurrencyFromDatabase, updateUserFromDatabase } = require('../../discordBot/lib/helper.js')
-
 const { ModalBuilder, TextInputBuilder, TextInputStyle, StringSelectMenuBuilder, StringSelectMenuOptionBuilder, ButtonBuilder, ButtonStyle, RoleSelectMenuBuilder, UserSelectMenuBuilder, EmbedBuilder, ActionRowBuilder } = require('discord.js');
+const UserData = require("../../discordBot/lib/UserData.js");
+
 
 
 class Plugin {
@@ -68,16 +68,14 @@ class Plugin {
 								}
 
 								//update user dem der voiceChannel gehört
-								await updateUserFromDatabase(db, voiceChannel.userId, {
-									$set: {
-										["currency.voiceCreatorChannel_"+plugin.id]: {
-											name: oldState.channel.name,
-											userLimit: oldState.channel.userLimit,
-											permissions: userIds,
-											private: privateNumber
-										},
-									}
-								})
+								const userData = await UserData.get(voiceChannel.userId);
+								userData.setPluginData(plugin, "voiceCreatorChannel", {
+									name: oldState.channel.name,
+									userLimit: oldState.channel.userLimit,
+									permissions: userIds,
+									private: privateNumber
+								});
+								await userData.save();
 
 								let result = await collection.findOneAndUpdate(
 									{_id: ObjectId(plugin.id)},
@@ -125,9 +123,9 @@ class Plugin {
 
 
 				//get old channelname
-				let discordUserDatabase = await getUserCurrencyFromDatabase(user.id, db)
+				const userData = await UserData.get(user.id);
+				let voiceCreatorChannelName = userData.getPluginData(plugin, "voiceCreatorChannel") || userData.getCurrency("voiceCreatorChannel_"+plugin.id);
 
-				let voiceCreatorChannelName = discordUserDatabase["voiceCreatorChannel_"+plugin.id]
 				if (!voiceCreatorChannelName) voiceCreatorChannelName = 
 					{
 						name: user.username + "s Channel",

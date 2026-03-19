@@ -7,8 +7,6 @@ var CronJob = require('cron').CronJob;
 const { EmbedBuilder } = require('discord.js');
 const helper = require('../../discordBot/lib/helper.js');
 const { ActionRowBuilder, ModalBuilder, TextInputBuilder, TextInputStyle, ButtonBuilder, StringSelectMenuBuilder, StringSelectMenuOptionBuilder, ButtonStyle, Events } = require('discord.js');
-let { getUserCurrencyFromDatabase, updateUserFromDatabase } = require('../../discordBot/lib/helper.js')
-
 const { ObjectId } = require("mongodb");
 
 const PluginManager = require("../../discordBot/lib/PluginManager.js");
@@ -442,7 +440,7 @@ class Plugin {
 					{ $set: { animation: animationId } }
 				);
 
-				let discordUserDatabase = await getUserCurrencyFromDatabase(interaction.user.id, db);
+				let discordUserDatabase = (await require('../../discordBot/lib/UserData.js').get(interaction.user.id)).currencyData;
 				let animalId = 1;
 				if (discordUserDatabase.animalId1 && ObjectId(animalObjId).equals(discordUserDatabase.animalId1)) animalId = 1;
 				else if (discordUserDatabase.animalId2 && ObjectId(animalObjId).equals(discordUserDatabase.animalId2)) animalId = 2;
@@ -1092,7 +1090,7 @@ class Plugin {
 				}
 
 				let waldspieluser = new WaldspielUser(discordUserId)
-				let status = await waldspieluser.buyItem(itemId, price, currencyId)
+				let status = await waldspieluser.buyItem(itemId, price, currencyId, plugin)
 
 				switch (status.statusCode) {
 					case statusCode.SUCCESS:
@@ -1128,7 +1126,7 @@ class Plugin {
 				}
 
 				let waldspieluser = new WaldspielUser(discordUserId)
-				let status = await waldspieluser.buyBackground(backgroundId, price, currencyId)
+				let status = await waldspieluser.buyBackground(backgroundId, price, currencyId, plugin)
 
 				switch (status.statusCode) {
 					case statusCode.SUCCESS:
