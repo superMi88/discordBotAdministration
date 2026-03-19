@@ -633,7 +633,6 @@ class Plugin {
 
 				let animal = arrStorageAnimals[storageId]
 
-				const collection = db.collection('userCollection');
 				System.log(db, System.status.INFO, "[waldspiel]", interaction.user.username + "[" + interaction.user.id + "] holt Tier von storageId id:" + storageId)
 
 				discordUserData.setPluginData(plugin, 'animalId' + animalPlazierungsId, animal._id);
