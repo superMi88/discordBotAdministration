@@ -1,7 +1,7 @@
 const path = require('path');
 const fs = require('fs');
 const fsp = require('fs/promises');
-const AdmZip = require('adm-zip');
+const unzipper = require('unzipper');
 const PluginManager = require("../../../discordBot/lib/PluginManager.js");
 
 module.exports = async function (client, plugin, config, projectAlias, data) {
@@ -26,24 +26,19 @@ module.exports = async function (client, plugin, config, projectAlias, data) {
             fs.rmSync(worldPath, { recursive: true, force: true });
         }
 
-        let zip;
-        try {
-            zip = new AdmZip(sourcePath);
-        } catch (err) {
-            throw new Error("Die ZIP-Datei ist ungültig oder beschädigt.");
-        }
-
-        let entries = zip.getEntries();
+        // ZIP-Datei mit unzipper öffnen
+        const directory = await unzipper.Open.file(sourcePath);
+        const entries = directory.files;
         if (entries.length === 0) throw new Error("ZIP-Datei ist leer.");
 
-        const firstEntryPart = entries[0].entryName.split('/')[0];
-        const hasRootFolder = entries.every(e => e.entryName.startsWith(firstEntryPart + '/'));
+        const firstEntryPart = entries[0].path.split('/')[0];
+        const hasRootFolder = entries.every(e => e.path.startsWith(firstEntryPart + '/'));
 
         fs.mkdirSync(worldPath, { recursive: true });
 
         for (let i = 0; i < entries.length; i++) {
-            const entry = entries[i];
-            let relativePath = entry.entryName;
+            const file = entries[i];
+            let relativePath = file.path;
 
             if (hasRootFolder && firstEntryPart) {
                 relativePath = relativePath.slice(firstEntryPart.length + 1);
@@ -52,18 +47,24 @@ module.exports = async function (client, plugin, config, projectAlias, data) {
 
             const fullPath = path.join(worldPath, relativePath);
 
-            if (entry.isDirectory) {
-                fs.mkdirSync(fullPath, { recursive: true });
+            if (file.type === 'Directory') {
+                await fsp.mkdir(fullPath, { recursive: true });
             } else {
-                fs.mkdirSync(path.dirname(fullPath), { recursive: true });
-                fs.writeFileSync(fullPath, entry.getData());
+                await fsp.mkdir(path.dirname(fullPath), { recursive: true });
+                // Datei-Stream schreiben
+                await new Promise((resolve, reject) => {
+                    file.stream()
+                        .pipe(fs.createWriteStream(fullPath))
+                        .on('finish', resolve)
+                        .on('error', reject);
+                });
             }
 
             // Update Progress
             plugin.extractionProgress = Math.round(((i + 1) / entries.length) * 100);
 
-            // Allow event loop to process other requests (e.g. getStatus)
-            if (i % 5 === 0) {
+            // Allow event loop to process other requests
+            if (i % 10 === 0) {
                 await new Promise(resolve => setImmediate(resolve));
             }
         }
@@ -73,7 +74,8 @@ module.exports = async function (client, plugin, config, projectAlias, data) {
 
         return { saved: true, infoMessage: "Welt erfolgreich hochgeladen und entpackt", infoStatus: "Info" };
     } catch (err) {
-        console.error("Fehler beim Welt-Upload:", err);
+        console.error("Fehler beim Welt-Upload (unzipper):", err);
+        delete plugin.extractionProgress;
         return { saved: false, infoMessage: "Fehler beim Welt-Upload: " + err.message, infoStatus: "Error" };
     }
 }

@@ -10,7 +10,7 @@ const PluginManager = require("../../discordBot/lib/PluginManager.js");
 const path = require('path');
 const fs = require('fs');
 const fsp = require('fs/promises');
-const AdmZip = require('adm-zip');  // Neues Modul für das Entpacken
+const unzipper = require('unzipper');  // Neues Modul für das streaming Entpacken
 
 const { spawn, exec } = require('child_process');
 
@@ -74,69 +74,59 @@ class Plugin {
 		}
 
 		const fileName = plugin.var.file;
-
-		console.log("plugin und config")
-		console.log(plugin)
-		console.log(config)
-
 		const sourcePath = path.join(__dirname, '../../', 'uploads', projectAlias, plugin.botId, plugin.id, fileName);
 		const targetFolderPath = path.join(__dirname, '../../', 'MinecraftCurseForge', projectAlias, plugin.botId, plugin.id);
-		const targetFilePath = path.join(targetFolderPath, "server");
 
 		try {
 			console.log("Quellpfad:", sourcePath);
 			console.log("Zielpfad Folder(nur fürs Entpacken):", targetFolderPath);
-			//console.log("Zielpfad File(nur fürs Entpacken):", targetFilePath);
 
 			// Sicherstellen, dass die Quelldatei existiert
 			await fsp.access(sourcePath);
 
-			// ZIP-Datei validieren und entpacken
-			let zip;
-			try {
-				zip = new AdmZip(sourcePath); // nicht verschoben, also direkt von sourcePath lesen
-				if (zip.getEntries().length === 0) {
-					throw new Error("ZIP-Datei enthält keine Einträge.");
-				}
-			} catch (err) {
-				throw new Error("Die ZIP-Datei ist ungültig oder beschädigt.");
+			// ZIP-Datei mit unzipper öffnen (Streaming/Random Access statt komplettem Laden in den RAM)
+			const directory = await unzipper.Open.file(sourcePath);
+			if (directory.files.length === 0) {
+				throw new Error("ZIP-Datei enthält keine Einträge.");
 			}
 
-			// ZIP-Datei entpacken
-			//zip.extractAllTo(targetFolderPath, true);
+			// Erkenne gemeinsamen Wurzelordner (Logik beibehalten)
+			const rootFolder = directory.files[0].path.split('/')[0];
 
+			for (const file of directory.files) {
+				let relativePath = file.path;
 
-			const entries = zip.getEntries();
-
-			// Erkenne gemeinsamen Wurzelordner
-			const rootFolder = entries[0].entryName.split('/')[0];
-
-			// Extrahiere alle Einträge, aber ohne rootFolder im Pfad
-			entries.forEach(entry => {
-				let relativePath = entry.entryName;
-
-				// Entferne den ersten Ordneranteil
+				// Entferne den ersten Ordneranteil, falls zutreffend
 				if (relativePath.startsWith(rootFolder + '/')) {
 					relativePath = relativePath.slice(rootFolder.length + 1);
+				} else if (relativePath === rootFolder || relativePath === rootFolder + '/') {
+					// Den Wurzelordner selbst ignorieren
+					continue;
 				}
 
-				// Zielpfad berechnen
+				if (!relativePath) continue;
+
 				const fullPath = path.join(targetFolderPath, relativePath);
 
-				if (entry.isDirectory) {
-					fs.mkdirSync(fullPath, { recursive: true });
+				if (file.type === 'Directory') {
+					await fsp.mkdir(fullPath, { recursive: true });
 				} else {
-					fs.mkdirSync(path.dirname(fullPath), { recursive: true });
-					fs.writeFileSync(fullPath, entry.getData());
+					await fsp.mkdir(path.dirname(fullPath), { recursive: true });
+					// Datei-Stream schreiben
+					await new Promise((resolve, reject) => {
+						file.stream()
+							.pipe(fs.createWriteStream(fullPath))
+							.on('finish', resolve)
+							.on('error', reject);
+					});
 				}
-			});
+			}
 
-			console.log("ZIP-Datei wurde erfolgreich entpackt.");
-
+			console.log("ZIP-Datei wurde erfolgreich mit unzipper entpackt.");
 			return { saved: true, infoMessage: "Entpacken erfolgreich", infoStatus: "Info" };
 		} catch (err) {
-			console.error("Fehler beim Entpacken der Datei: ", err);
-			return { saved: false, infoMessage: "Fehler beim Entpacken", infoStatus: "Error" };
+			console.error("Fehler beim Entpacken der Datei (unzipper): ", err);
+			return { saved: false, infoMessage: "Fehler beim Entpacken: " + err.message, infoStatus: "Error" };
 		}
 	}
 
