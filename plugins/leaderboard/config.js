@@ -8,6 +8,7 @@ module.exports = {
 			fields: [
 				{  //name abhängig von type
 					type: "plugin", //definiert wie die felder heißen text und icon
+					pluginTag: "rolesystem",
 					name: "plugin", //datenbank name
 					required: true,
 				}

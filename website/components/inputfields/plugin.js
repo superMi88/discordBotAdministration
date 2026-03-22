@@ -52,7 +52,7 @@ export default function component(props) {
         mutate: mutateCurrency,
         isValidating: isValidatingCurrency,
         error: errorCurrency
-    } = useSWRImmutable(['/api/plugins/getAll', { projectAlias: projectAlias}], getApiFetcher())
+    } = useSWRImmutable(projectAlias ? ['/api/plugins/getAll', { botId: props.botId, projectAlias: projectAlias}] : null, getApiFetcher())
 
 
     async function handleEmojiButton(pluginId) {
@@ -116,6 +116,9 @@ export default function component(props) {
 
                             <div className={emojiStyles.emojiSelectField}>
                                 {dataAllPlugins.data.plugins.map(function (plugindatabase, i) { //hier anders currencys field different
+                                    if (props.field && props.field.pluginTag && props.field.pluginTag !== plugindatabase.pluginTag) {
+                                        return null;
+                                    }
                                     if (plugindatabase.name.includes(searchName)) { //hier searchvalue different
                                         //if selected == gerade durchlaufenes emoji -> dann select this
 
@@ -129,6 +132,7 @@ export default function component(props) {
                                         //die anzeige different bild text größe etc
                                         return (
                                             <div
+                                                key={i}
                                                 className={emojiStyles.emojiButton + " " + (selected ? emojiStyles.emojiSelected : "")}
                                                 onClick={(e) => handleEmojiButton(plugindatabase.pluginId)}//currencyId anders
                                             >
