@@ -10,8 +10,8 @@ class Plugin {
 
 		let channel = await client.channels.cache.get(plugin['var'].channelRules)
 
-		if (channel) {
-			let message = await channel.messages.fetch(plugin['var'].messageId)
+		if (channel && plugin['var'].messageId) {
+			let message = await channel.messages.fetch(plugin['var'].messageId).catch(() => null)
 		}
 	}
 	async create(plugin, config) {
@@ -48,12 +48,15 @@ class Plugin {
 
 
 		let allRuleIdsArray = []
-		
+		let channelId = ""
 
-		let message = await channel.send({ files: ["https://storage.googleapis.com/"+plugin['var'].image] })
-		let channelId = message.channelId
-		allRuleIdsArray.push(message.id)
-
+		if (channel && channel.send) {
+			let message = await channel.send({ files: ["https://storage.googleapis.com/"+plugin['var'].image] }).catch(() => null)
+			if (message) {
+				channelId = message.channelId
+				allRuleIdsArray.push(message.id)
+			}
+		}
 
 		for (let i = 0; i < plugin['var'].iconAndText1.length; i++) {
 			let iconAndText1Element = plugin['var'].iconAndText1[i]
@@ -64,10 +67,11 @@ class Plugin {
 				.setTitle(iconAndText1Element.headline)
 			
 			if(channel && channel.send){
-				let message = await channel.send({ embeds: [exampleEmbed] })
-				
-				allRuleIdsArray.push(message.id)
-				channelId = message.channelId
+				let message = await channel.send({ embeds: [exampleEmbed] }).catch(() => null)
+				if (message) {
+					allRuleIdsArray.push(message.id)
+					channelId = message.channelId
+				}
 			}
 		}
 
@@ -92,14 +96,21 @@ async function deleteMessage(client, plugin, db) {
 	const { channelId, messageIdArray } = await getMessageIdArray(db, plugin.id)
 
 	if (channelId && messageIdArray) {
-		let channel = await client.channels.fetch(channelId)
-
-		for (let i = 0; i < messageIdArray.length; i++) {
-			const messageId = messageIdArray[i];
-			let message = await channel.messages.fetch(messageId)
-			message.delete()
+		try {
+			let channel = await client.channels.fetch(channelId).catch(() => null)
+			
+			if (channel) {
+				for (let i = 0; i < messageIdArray.length; i++) {
+					const messageId = messageIdArray[i];
+					let message = await channel.messages.fetch(messageId).catch(() => null)
+					if (message) {
+						await message.delete().catch(() => null)
+					}
+				}
+			}
+		} catch (error) {
+			console.error("Error deleting old rule messages:", error);
 		}
-
 		
 		await saveMessageArray(db, plugin.id, '', [])
 	}
