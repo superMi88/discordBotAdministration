@@ -468,12 +468,16 @@ module.exports = {
             const row2 = new ActionRowBuilder()
             let row3 = null;
 
-            let animalObjId = discordUserDatabase["animalId" + animalId].toString()
+            let animalObjId = discordUserDatabase["animalId" + animalId] ? discordUserDatabase["animalId" + animalId].toString() : null;
 
-            if (discordUserDatabase["animalId" + animalId]) {
-                const { StringSelectMenuBuilder, StringSelectMenuOptionBuilder } = require('discord.js');
+            let animal = null;
+            if (animalObjId) {
                 const collection = db.collection('animals');
-                let animal = await collection.findOne({ _id: ObjectId(animalObjId) });
+                animal = await collection.findOne({ _id: ObjectId(animalObjId) });
+            }
+
+            if (animalObjId && animal) {
+                const { StringSelectMenuBuilder, StringSelectMenuOptionBuilder } = require('discord.js');
 
                 let ItemlistObj = new ItemList();
                 let Itemlist = ItemlistObj.getListAll();

@@ -1015,8 +1015,8 @@ module.exports = {
 
 function getAnimalFilepathStorage(type) {
 
-	if (!type) {
-		return 'plugins/waldspiel/images/items/Default.png' //return no item
+	if (!type || !Animallist[type]) {
+		return 'plugins/waldspiel/images/tiere/Empty.png' //return no item
 	}
 
 	return 'plugins/waldspiel/images/tiere/' + Animallist[type].filename + '.png'
@@ -1024,11 +1024,12 @@ function getAnimalFilepathStorage(type) {
 
 function getItemFilepathStorage(customization) {
 
-	if (!customization) {
-		return 'plugins/waldspiel/images/items/Default.png' //return no item
-	}
 	let ItemlistObj = new ItemList()
 	let Itemlist = ItemlistObj.getListAll()
+
+	if (!customization || !Itemlist[customization]) {
+		return 'plugins/waldspiel/images/tiere/Empty.png' //return no item
+	}
 
 	return 'plugins/waldspiel/images/items/' + Itemlist[customization].filename + '.png'
 }
@@ -1093,8 +1094,8 @@ async function getAnimalFilepath(discordUserDatabase, id) {
 	let animal = await collection.findOne({ _id: animalObjId })
 
 
-	if (!animal) {
-		return 'plugins/waldspiel/images/items/Default.png' //return no item
+	if (!animal || !Animallist[animal.type]) {
+		return 'plugins/waldspiel/images/tiere/Empty.png' //return no item
 	}
 
 	return 'plugins/waldspiel/images/tiere/' + Animallist[animal.type].filename + '.png'
