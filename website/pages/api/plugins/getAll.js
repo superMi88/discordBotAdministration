@@ -22,7 +22,15 @@ export default async function handler(req, res) {
                     query.botId = body.botId;
                 }
 
-                await db.collection('pluginCollection').find(query)
+                await db.collection('pluginCollection').find(query, {
+                    projection: {
+                        _id: 1,
+                        name: 1,
+                        pluginTag: 1,
+                        botId: 1,
+                        active: 1
+                    }
+                })
                 .map((doc) => {
                     doc['pluginId'] = doc._id;
                     delete doc['_id'];

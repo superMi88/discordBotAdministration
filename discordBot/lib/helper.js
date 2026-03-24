@@ -84,6 +84,11 @@ module.exports = {
             delete obj['_id']
         }
 
+        // Set isSaved explicitly so the frontend knows without having to compare
+        if (obj) {
+            obj.isSaved = !fs.existsSync('./cache/bot-' + botId + '/plugin-' + pluginId + '.txt');
+        }
+
         return obj
 
     },
