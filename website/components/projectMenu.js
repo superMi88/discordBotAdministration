@@ -1,17 +1,14 @@
 import styles from './layout.module.css'
 import Link from 'next/link'
-
-/*lib*/
-import { getApiFetcher } from '../lib/apifetcher'
-
-import DiscordImage from '@/components/helper/discordImage'
-import useSWRImmutable from 'swr/immutable'
-import cookie from 'js-cookie'
 import { useRouter } from 'next/router'
 import React from "react";
 
 /*Icons*/
 import IconList from '@/components/icons/list.js'
+import IconGroup from '@/components/icons/group.js'
+import IconPayments from '@/components/icons/payments.js'
+import IconServer from '@/components/icons/server.js'
+import IconError from '@/components/icons/error.js'
 
 /*Flexbox util*/
 import Flexbox from '@/components/button/flexbox'
@@ -24,32 +21,50 @@ export default function Layout(req) {
     const router = useRouter()
     const { projectAlias } = router.query
 
-    const botId = cookie.get(projectAlias + "-selectedBotId")
+    if (!selected) return null;
 
-    const {
-        data: dataBot,
-        //mutate: mutateBot,
-        //isValidating: isValidatingBot,
-        //error: errorBot
-    } = useSWRImmutable(projectAlias ? ['/api/bot/getInfo', { botId: botId, projectAlias: projectAlias }] : null, getApiFetcher())
+    if (selected.startsWith("bot")) {
+        return (
+            <div className={styles.selectWrapper}>
+                <div>
+                    <InsertLink href={"/" + projectAlias + "/bot"} text="Botliste" classNameToAdd="" icon={<IconList />} active={selected === "bot"} />
+                </div>
+            </div>
+        )
+    }
 
-    return (
-        <div className={styles.selectWrapper}>
-            <div className={styles.activeProjectAlias}> {projectAlias}</div>
+    if (selected === "userliste") {
+        return (
+            <div className={styles.navItemWrapper}>
+                <div className={styles.navItemInnerWrapper}>
+                    <InsertLink href={"/" + projectAlias + "/user"} text="Userliste" classNameToAdd="" icon={<IconGroup />} active={true} />
+                </div>
+            </div>
+        )
+    }
 
-            <InsertLink href={"/" + projectAlias + "/bot"} text="Botliste" classNameToAdd="" icon={<IconList />} active={selected == "bot"} />
+    if (selected === "currency") {
+        return (
+            <div className={styles.navItemWrapper}>
+                <div className={styles.navItemInnerWrapper}>
+                    <InsertLink href={"/" + projectAlias + "/currency"} text="Currency" classNameToAdd="" icon={<IconPayments />} active={true} />
+                </div>
+            </div>
+        )
+    }
 
-            {!dataBot ? "Loading Bot Data" :
-                <>
-                    <InsertLink href={"/" + projectAlias + `/bot/${dataBot.id}`} text="Bot" classNameToAdd="" element={
-                        <div className={styles.linkElementContainer}>
-                            <DiscordImage type="avatar" id={dataBot.id} avatar={dataBot.avatar} />
-                        </div>
-                    } active={selected == `bot-${dataBot.id}`} />
-                </>
-            }
-        </div>
-    )
+    if (selected === "server" || selected === "errorlog") {
+        return (
+            <div className={styles.navItemWrapper}>
+                <div className={styles.navItemInnerWrapper}>
+                    <InsertLink href={"/" + projectAlias + "/server"} text="Server" classNameToAdd="" icon={<IconServer />} active={selected === "server"} />
+                    <InsertLink href={"/" + projectAlias + "/log"} text="Log" classNameToAdd="" icon={<IconError />} active={selected === "errorlog"} />
+                </div>
+            </div>
+        )
+    }
+
+    return null;
 }
 
 function InsertLink({ href, text, classNameToAdd, icon, active, element, pluginCount }) {
