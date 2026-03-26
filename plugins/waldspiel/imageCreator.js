@@ -7,6 +7,7 @@ const textToSVG = TextToSVG.loadSync('discordBot/fonts/Quicksand-Bold.ttf');
 
 const { date } = require('./lib/date.js');
 const WaldCreator = require("./imageCreator/WaldCreator.js");
+const path = require('path');
 
 const Backgroundlist = require('./obj/BackgroundList.js');
 const ItemList = require("./obj/ItemList.js");
@@ -151,7 +152,7 @@ module.exports = {
 
 		const framesForSave = [];
 		for (const fb of frameBuffers) {
-			framesForSave.push(await WebP.Image.generateFrame({ buffer: fb.buffer, delay: fb.delay }));
+			framesForSave.push(await WebP.Image.generateFrame({ buffer: fb.buffer, delay: fb.delay, dispose: true, blend: false }));
 		}
 		const outPath = 'temp/finalpicture.webp';
 		await WebP.Image.save(outPath, { width, height, loops: 0, frames: framesForSave });
@@ -352,7 +353,7 @@ module.exports = {
 
 		const framesForSave = [];
 		for (const fb of frameBuffers) {
-			framesForSave.push(await WebP.Image.generateFrame({ buffer: fb.buffer, delay: fb.delay }));
+			framesForSave.push(await WebP.Image.generateFrame({ buffer: fb.buffer, delay: fb.delay, dispose: true, blend: false }));
 		}
 		const outPath = 'temp/finalpicture_animal.webp';
 		await WebP.Image.save(outPath, { width, height, loops: 0, frames: framesForSave });
@@ -402,7 +403,7 @@ module.exports = {
 				.webp({ quality: 90 })
 				.toBuffer();
 
-			frameBuffers.push(await WebP.Image.generateFrame({ buffer: frame, delay: 80 }));
+			frameBuffers.push(await WebP.Image.generateFrame({ buffer: frame, delay: 80, dispose: true, blend: false }));
 		}
 
 		const outPath = 'temp/finalpicture.webp';
@@ -628,7 +629,7 @@ module.exports = {
 
 		const framesForSave = [];
 		for (const fb of frameBuffers) {
-			framesForSave.push(await WebP.Image.generateFrame({ buffer: fb.buffer, delay: fb.delay }));
+			framesForSave.push(await WebP.Image.generateFrame({ buffer: fb.buffer, delay: fb.delay, dispose: true, blend: false }));
 		}
 		const outPath = 'temp/finalpicture_animations.webp';
 		await WebP.Image.save(outPath, { width, height, loops: 0, frames: framesForSave });
@@ -668,9 +669,9 @@ module.exports = {
 			let tag = pageBackgrounds[i];
 			const wc = new WaldCreator(tag);
 			const backgroundData = wc.background;
-			
+
 			let isOwned = ownedBackgrounds.includes(tag);
-			
+
 			const roundedMask = Buffer.from(
 				`<svg><rect x="0" y="0" width="${cellW - 20}" height="50" rx="6" ry="6" fill="#fff" /></svg>`
 			);
@@ -685,7 +686,7 @@ module.exports = {
 				let lockIconBuf = await sharp('plugins/waldspiel/images/sprites/lock_icon.svg').resize(24, 24).png().toBuffer();
 				cellComposites.push({ input: lockIconBuf, left: Math.round((cellW - 20) / 2 - 12), top: Math.round(50 / 2 - 12) });
 			}
-			
+
 			// Add mask last to clip everything
 			cellComposites.push({ input: roundedMask, blend: 'dest-in' });
 
@@ -693,9 +694,9 @@ module.exports = {
 				.resize(cellW - 20, 50)
 				.composite(cellComposites)
 				.toBuffer();
-			
+
 			frameComposites.push({ input: bgPreviewBuffer, left: Math.round(left), top: Math.round(top) });
-			
+
 			let label = isOwned ? `${startIdx + i + 1}. ${backgroundData.name}` : `🔒 ${startIdx + i + 1}. ${backgroundData.name}`;
 			let textColor = isOwned ? "#fff" : "#aaa";
 			bgSvg += `<text x="${centerX}" y="${yText}" font-family="Arial, Helvetica, sans-serif" font-size="11px" fill="${textColor}" text-anchor="middle">${label}</text>`;
@@ -1001,6 +1002,119 @@ module.exports = {
 		return outPath;
 	},
 
+	async renderSingleAnimal(discordUserDatabase, position = 2, userId = 'temp') {
+		const sharp = require('sharp');
+		const WebP = require('node-webpmux');
+
+		console.log("renderSingleAnimal")
+		console.log(discordUserDatabase)
+		console.log(position)
+		console.log(userId)
+
+		if (!animalExist(discordUserDatabase, position)) {
+			// Return a placeholder or transparent image if no animal exists
+			const emptyBuf = await sharp({
+				create: {
+					width: 200,
+					height: 200,
+					channels: 4,
+					background: { r: 0, g: 0, b: 0, alpha: 0 }
+				}
+			}).png().toBuffer();
+			const outPath = `temp/animal_not_found_${userId}.png`;
+			await sharp(emptyBuf).toFile(outPath);
+			return path.resolve(outPath);
+		}
+
+		let animalOverlays = [];
+		let staticOverlays = [];
+		let itemDetails = await getItemFilepaths(discordUserDatabase, position);
+		for (const item of itemDetails) {
+			const decorationBuf = await sharp(item.path).resize(150).toBuffer();
+			if (item.animation) {
+				animalOverlays.push({ input: decorationBuf });
+			} else {
+				staticOverlays.push({ input: decorationBuf, left: 0, top: 0 });
+			}
+		}
+
+		const baseImgPath = await getAnimalFilepath(discordUserDatabase, position);
+		const animalBuf = await sharp(baseImgPath).resize(150).composite(animalOverlays).png().toBuffer();
+		const animType = await getAnimalAnimation(discordUserDatabase, position);
+
+		const width = 200;
+		const height = 200;
+		const frames = 20;
+		const frameBuffers = [];
+
+		const framePaths = [];
+		for (let i = 0; i < frames; i++) {
+			let sqH = 1, sqW = 1, offX = 0, rot = 0, y = 25;
+			const progress = i / frames;
+
+			if (animType === 'ATMEN') {
+				sqH = 1 - 0.03 * Math.sin(progress * Math.PI * 2);
+			} else if (animType === 'WACKELN') {
+				offX = 2 * Math.sin(progress * Math.PI * 2);
+				rot = 0.01 * Math.sin(progress * Math.PI * 2);
+			} else if (animType === 'WOBBELN') {
+				sqH = 1 - 0.03 * Math.sin(progress * Math.PI * 4);
+				offX = 5 * Math.sin(progress * Math.PI * 2);
+				rot = 0.05 * Math.sin(progress * Math.PI * 2);
+			} else if (animType === 'SPRINGEN') {
+				const frameInJump = i % frames;
+				const jumpProgress = frameInJump / frames;
+				y -= 50 * Math.sin(Math.PI * jumpProgress);
+
+				if (frameInJump < 6) {
+					const sp = 1 - frameInJump / 6;
+					sqH = 1 - 0.3 * sp;
+					sqW = 1 + 0.3 * sp;
+				} else if (frameInJump >= frames - 6) {
+					const sp = (frameInJump - (frames - 6)) / 6;
+					sqH = 1 - 0.3 * sp;
+					sqW = 1 + 0.3 * sp;
+				}
+			}
+
+			const newH = Math.round(150 * sqH);
+			const newW = Math.round(150 * sqW);
+			const rotDeg = rot * (180 / Math.PI);
+
+			let frameAnimalBuf = await sharp(animalBuf)
+				.resize(newW, newH)
+				.rotate(rotDeg, { background: { r: 0, g: 0, b: 0, alpha: 0 } })
+				.png()
+				.toBuffer();
+
+			const meta = await sharp(frameAnimalBuf).metadata();
+			const finalLeft = Math.round(100 + offX - meta.width / 2);
+			const finalTop = Math.round(y + 75 - meta.height / 2);
+
+			let composites = [{ input: frameAnimalBuf, left: finalLeft, top: finalTop }];
+			for (const sOverlay of staticOverlays) {
+				composites.push({ input: sOverlay.input, left: Math.round(100 - 75), top: Math.round(y) });
+			}
+
+			const framePath = `temp/animal_middle_${userId}_frame_${i}.png`;
+			await sharp({
+				create: {
+					width,
+					height,
+					channels: 4,
+					background: { r: 0, g: 0, b: 0, alpha: 0 }
+				}
+			})
+				.composite(composites)
+				.png()
+				.toFile(framePath);
+
+			framePaths.push(path.resolve(framePath));
+		}
+
+		return framePaths;
+	},
+
 
 
 
@@ -1016,10 +1130,10 @@ module.exports = {
 function getAnimalFilepathStorage(type) {
 
 	if (!type || !Animallist[type]) {
-		return 'plugins/waldspiel/images/tiere/Empty.png' //return no item
+		return path.join(__dirname, 'images/tiere/Empty.png') //return no item
 	}
 
-	return 'plugins/waldspiel/images/tiere/' + Animallist[type].filename + '.png'
+	return path.join(__dirname, 'images/tiere/' + Animallist[type].filename + '.png')
 }
 
 function getItemFilepathStorage(customization) {
@@ -1028,10 +1142,10 @@ function getItemFilepathStorage(customization) {
 	let Itemlist = ItemlistObj.getListAll()
 
 	if (!customization || !Itemlist[customization]) {
-		return 'plugins/waldspiel/images/tiere/Empty.png' //return no item
+		return path.join(__dirname, 'images/tiere/Empty.png') //return no item
 	}
 
-	return 'plugins/waldspiel/images/items/' + Itemlist[customization].filename + '.png'
+	return path.join(__dirname, 'images/items/' + Itemlist[customization].filename + '.png')
 }
 
 
@@ -1040,12 +1154,12 @@ function getUserBackgroundFilepath(discordUserDatabase) {
 
 	var background = discordUserDatabase["background"]
 	if (!background) {
-		return 'plugins/waldspiel/images/backgrounds/Default.png'
+		return path.join(__dirname, 'images/backgrounds/Default.png')
 	}
 
 	const Background = getBackgroundByTag(background)
 
-	return 'plugins/waldspiel/images/backgrounds/' + Background.filename + '.png'
+	return path.join(__dirname, 'images/backgrounds/' + Background.filename + '.png')
 }
 
 async function getItemFilepaths(discordUserDatabase, id) {
@@ -1072,7 +1186,7 @@ async function getItemFilepaths(discordUserDatabase, id) {
 
 	for (const itemId of activeItems) {
 		items.push({
-			path: 'plugins/waldspiel/images/items/' + Itemlist[itemId].filename + '.png',
+			path: path.join(__dirname, 'images/items/' + Itemlist[itemId].filename + '.png'),
 			animation: Itemlist[itemId].animation !== false
 		});
 	}
@@ -1095,10 +1209,10 @@ async function getAnimalFilepath(discordUserDatabase, id) {
 
 
 	if (!animal || !Animallist[animal.type]) {
-		return 'plugins/waldspiel/images/tiere/Empty.png' //return no item
+		return path.join(__dirname, 'images/tiere/Empty.png') //return no item
 	}
 
-	return 'plugins/waldspiel/images/tiere/' + Animallist[animal.type].filename + '.png'
+	return path.join(__dirname, 'images/tiere/' + Animallist[animal.type].filename + '.png')
 }
 
 
