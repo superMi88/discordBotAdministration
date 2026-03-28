@@ -1,22 +1,34 @@
 const { ActionRowBuilder, ButtonBuilder, ButtonStyle, Events } = require('discord.js');
 const UserData = require("../../../../lib/UserData.js");
+const sharp = require('sharp');
+const WaldCreator = require('../../imageCreator/WaldCreator.js');
+const { date } = require('../../lib/date.js');
+const path = require('path');
 
 class EasterEvent {
     constructor() {
         this.userWhoCollectedOsterkorb = [];
     }
 
-    // Aktiv von 1 Woche vor Ostern bis 3 Tage danach
     isExtensionActive() {
+
+        return true
+
         const now = new Date();
         const year = now.getFullYear();
-        // 1 week before until 3 days after
         const easter = this._getEaster(year);
+
+        // Monday before Easter: easter - 6 days
         const start = new Date(easter);
-        start.setDate(easter.getDate() - 7);
+        start.setDate(easter.getDate() - 6);
+        start.setHours(0, 0, 0, 0);
+
+        // Easter Monday: easter + 1 day
         const end = new Date(easter);
-        end.setDate(easter.getDate() + 4); // 3 days after (exclusive)
-        return now >= start && now < end;
+        end.setDate(easter.getDate() + 1);
+        end.setHours(23, 59, 59, 999);
+
+        return now >= start && now <= end;
     }
 
     _getEaster(year) {
@@ -39,11 +51,9 @@ class EasterEvent {
 
     async getShop(client, plugin, shopChannel, createItemShop, createBackgroundShop) {
         if (!this.isExtensionActive()) return;
-        if (plugin['var'].eventOstern) {
-            await shopChannel.send({ files: ['plugins/waldspiel/images/shop/bannerOstern.png'] })
-            await createItemShop(require("./items.js"))
-            await createBackgroundShop(require("./backgrounds.js"))
-        }
+        await shopChannel.send({ files: ['plugins/waldspiel/images/shop/bannerOstern.png'] })
+        await createItemShop(require("./items.js"))
+        await createBackgroundShop(require("./backgrounds.js"))
     }
 
     getItems() {
@@ -55,15 +65,15 @@ class EasterEvent {
     }
 
     async onCreateWald(client, plugin, db) {
-        if (!this.isExtensionActive()) return;
-        if (plugin['var'].eventOstern) {
-            if (Math.floor(Math.random() * 150) === 5 ||
-                Math.floor(Math.random() * 150) === 6 ||
-                Math.floor(Math.random() * 150) === 7) {
+        // can be used for additional hooks if needed
+    }
 
-                await this.spawnOsterKorb(client, plugin, db);
-            }
-        }
+    async onEventSpawning(client, plugin, db) {
+        if (!this.isExtensionActive()) return false;
+
+        // Always spawn if this hook is called (the chance is handled by the caller’s switch)
+        await this.spawnOsterKorb(client, plugin, db);
+        return true;
     }
 
     async onInteraction(interaction, client, plugin, db) {
@@ -95,7 +105,7 @@ class EasterEvent {
             .addComponents(
                 new ButtonBuilder()
                     .setCustomId('collectOsterkorb')
-                    .setLabel('Abernten')
+                    .setLabel('Einsammeln')
                     .setStyle(ButtonStyle.Primary),
             );
 
@@ -109,8 +119,23 @@ class EasterEvent {
         );
 
 
+        const dateinfo = date()
+        let tag = 'DEFAULT'
+        if (dateinfo.isSummer) tag = "SUMMER"
+        if (dateinfo.isWinter) tag = "WINTER"
+        if (dateinfo.isSpring) tag = "SPRING"
+        if (dateinfo.isAutumn) tag = "AUTUMN"
+
+        const waldcreator = new WaldCreator(tag)
+        const imagePath = path.join(__dirname, 'images/eierkorb.png');
+        waldcreator.setMergeArray([
+            { input: await sharp(imagePath).resize(250).toBuffer(), left: 100, top: 50 }
+        ])
+
+        await waldcreator.createImage()
+
         await channel.send({
-            files: ['./plugins/waldspiel/extensions/EasterEvent/images/osterkorb.png'],
+            files: ['temp/finalpicture.png'],
             components: [rowBusch]
         })
     }
@@ -127,9 +152,8 @@ class EasterEvent {
         let discordUserId = interaction.user.id
         let discordUserData = await UserData.get(discordUserId)
 
-        let eggs = discordUserData.getCurrency(plugin['var'].eggs) || 0;
-        discordUserData.setCurrency(plugin['var'].eggs, eggs + 1);
-        await discordUserData.save();
+        discordUserData.addCurrency(plugin['var'].eggs, 1);
+        await discordUserData.save(plugin);
 
         await interaction.reply({ content: '<@' + interaction.user.id + '> hat ein Osterei erhalten' })
     }

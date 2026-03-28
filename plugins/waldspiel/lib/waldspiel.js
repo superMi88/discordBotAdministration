@@ -36,76 +36,76 @@ module.exports = {
         try {
 
 
-        this.userWhoCollectedSweets = []
+            this.userWhoCollectedSweets = []
 
-        this.animal = true;
+            this.animal = true;
 
-        var randomKey = function (obj) {
-            var keys = Object.keys(obj);
-            return keys[keys.length * Math.random() << 0];
-        };
-
-
-
-        const dateInfo = date();
+            var randomKey = function (obj) {
+                var keys = Object.keys(obj);
+                return keys[keys.length * Math.random() << 0];
+            };
 
 
-        // Filtere die Tiere nach Verfügbarkeit
-        const filteredAnimals = Object.entries(Animallist).reduce((result, [key, animal]) => {
-            const isSeasonMatch = !animal.season || // Keine Einschränkung bei `season`
-                (dateInfo.isWinter && animal.season.includes("Winter")) ||
-                (dateInfo.isSummer && animal.season.includes("Summer")) ||
-                (dateInfo.isSpring && animal.season.includes("Spring")) ||
-                (dateInfo.isAutumn && animal.season.includes("Autumn"));
 
-            const isTimeOfDayMatch = !animal.timeOfDay || // Keine Einschränkung bei `timeOfDay`
-                (dateInfo.isDay && animal.timeOfDay.includes("Day")) ||
-                (dateInfo.isNight && animal.timeOfDay.includes("Night"));
+            const dateInfo = date();
 
-            if (isSeasonMatch && isTimeOfDayMatch) {
-                result[key] = animal; // Tier zur gefilterten Liste hinzufügen
+
+            // Filtere die Tiere nach Verfügbarkeit
+            const filteredAnimals = Object.entries(Animallist).reduce((result, [key, animal]) => {
+                const isSeasonMatch = !animal.season || // Keine Einschränkung bei `season`
+                    (dateInfo.isWinter && animal.season.includes("Winter")) ||
+                    (dateInfo.isSummer && animal.season.includes("Summer")) ||
+                    (dateInfo.isSpring && animal.season.includes("Spring")) ||
+                    (dateInfo.isAutumn && animal.season.includes("Autumn"));
+
+                const isTimeOfDayMatch = !animal.timeOfDay || // Keine Einschränkung bei `timeOfDay`
+                    (dateInfo.isDay && animal.timeOfDay.includes("Day")) ||
+                    (dateInfo.isNight && animal.timeOfDay.includes("Night"));
+
+                if (isSeasonMatch && isTimeOfDayMatch) {
+                    result[key] = animal; // Tier zur gefilterten Liste hinzufügen
+                }
+                return result;
+            }, {});
+
+            let animalId = randomKey(filteredAnimals)
+
+            let channel = await client.channels.fetch(plugin['var'].gameChannel)
+
+            //delete all messages in channel
+            let fetched = await channel.messages.fetch({ limit: 100 });
+
+            try {
+                await channel.bulkDelete(fetched);
+            } catch (error) {
+                if (error.code === 50034) {
+                    console.log("❌ Enthält Nachrichten älter als 14 Tage wird ignoriert");
+                } else {
+                    console.error("Unerwarteter Fehler:", error);
+                }
             }
-            return result;
-        }, {});
 
-        let animalId = randomKey(filteredAnimals)
+            const row = new ActionRowBuilder()
+                .addComponents(
+                    new ButtonBuilder()
+                        .setCustomId('catchAnimal-' + animalId)
+                        .setLabel('Füttern und Einsammeln (' + BERRY_COST + ' Beeren)')
+                        .setStyle(ButtonStyle.Primary),
+                );
 
-        let channel = await client.channels.fetch(plugin['var'].gameChannel)
-
-        //delete all messages in channel
-        let fetched = await channel.messages.fetch({ limit: 100 });
-
-        try {
-            await channel.bulkDelete(fetched);
-        } catch (error) {
-            if (error.code === 50034) {
-                console.log("❌ Enthält Nachrichten älter als 14 Tage wird ignoriert");
-            } else {
-                console.error("Unerwarteter Fehler:", error);
+            const extraButtons = ExtensionManager.getButtonsForEvent(client, plugin, 'createAnimal');
+            if (extraButtons.length > 0) {
+                row.addComponents(...extraButtons);
             }
-        }
 
-        const row = new ActionRowBuilder()
-            .addComponents(
-                new ButtonBuilder()
-                    .setCustomId('catchAnimal-' + animalId)
-                    .setLabel('Füttern und Einsammeln (' + BERRY_COST + ' Beeren)')
-                    .setStyle(ButtonStyle.Primary),
-            );
+            this.addAnleitung(row)
 
-        const extraButtons = ExtensionManager.getButtonsForEvent(client, plugin, 'createAnimal');
-        if (extraButtons.length > 0) {
-            row.addComponents(...extraButtons);
-        }
+            const outPath = await ImageCreator.createAnimal(animalId, dateInfo)
 
-        this.addAnleitung(row)
-
-        const outPath = await ImageCreator.createAnimal(animalId, dateInfo)
-
-        await channel.send({
-            files: [outPath],
-            components: [row]
-        })
+            await channel.send({
+                files: [outPath],
+                components: [row]
+            })
         } finally {
             if (!skipLock) this.busy = false;
         }
@@ -117,70 +117,70 @@ module.exports = {
 
         try {
 
-        this.userWhoCollectedBeerys = []
+            this.userWhoCollectedBeerys = []
 
-        let channel = await client.channels.fetch(plugin['var'].gameChannel)
+            let channel = await client.channels.fetch(plugin['var'].gameChannel)
 
-        //delete all messages in channel
-        let fetched = await channel.messages.fetch({ limit: 100 });
+            //delete all messages in channel
+            let fetched = await channel.messages.fetch({ limit: 100 });
 
-        try {
-            await channel.bulkDelete(fetched);
-        } catch (error) {
-            if (error.code === 50034) {
-                console.log("❌ Enthält Nachrichten älter als 14 Tage wird ignoriert");
-            } else {
-                console.error("Unerwarteter Fehler:", error);
+            try {
+                await channel.bulkDelete(fetched);
+            } catch (error) {
+                if (error.code === 50034) {
+                    console.log("❌ Enthält Nachrichten älter als 14 Tage wird ignoriert");
+                } else {
+                    console.error("Unerwarteter Fehler:", error);
+                }
             }
-        }
 
-        const rowBusch = new ActionRowBuilder()
-            .addComponents(
-                new ButtonBuilder()
-                    .setCustomId('collectBerry')
-                    .setLabel('Abernten')
-                    .setStyle(ButtonStyle.Primary),
-            );
+            const rowBusch = new ActionRowBuilder()
+                .addComponents(
+                    new ButtonBuilder()
+                        .setCustomId('collectBerry')
+                        .setLabel('Abernten')
+                        .setStyle(ButtonStyle.Primary),
+                );
 
-        const extraButtons = ExtensionManager.getButtonsForEvent(client, plugin, 'createBusch');
-        if (extraButtons.length > 0) {
-            rowBusch.addComponents(...extraButtons);
-        }
+            const extraButtons = ExtensionManager.getButtonsForEvent(client, plugin, 'createBusch');
+            if (extraButtons.length > 0) {
+                rowBusch.addComponents(...extraButtons);
+            }
 
-        this.addAnleitung(rowBusch)
-
+            this.addAnleitung(rowBusch)
 
 
-        const sharp = require('sharp')
 
-        const dateinfo = date()
+            const sharp = require('sharp')
 
-        let tag = 'DEFAULT'
+            const dateinfo = date()
 
-        if (dateinfo.isSummer) tag = "SUMMER"
-        if (dateinfo.isWinter) tag = "WINTER"
-        if (dateinfo.isSpring) tag = "SPRING"
-        if (dateinfo.isAutumn) tag = "AUTUMN"
+            let tag = 'DEFAULT'
 
-        const waldcreator = new WaldCreator(tag)
+            if (dateinfo.isSummer) tag = "SUMMER"
+            if (dateinfo.isWinter) tag = "WINTER"
+            if (dateinfo.isSpring) tag = "SPRING"
+            if (dateinfo.isAutumn) tag = "AUTUMN"
 
-        if (dateinfo.isSummer || dateinfo.isSpring || dateinfo.isAutumn) {
-            waldcreator.setMergeArray([
-                { input: await sharp('plugins/waldspiel/images/beerenbusch.png').toBuffer(), left: 200, top: 140 }
-            ])
-        }
-        if (dateinfo.isWinter) {
-            waldcreator.setMergeArray([
-                { input: await sharp('plugins/waldspiel/images/beerenbusch-winter.png').toBuffer(), left: 200, top: 140 }
-            ])
-        }
+            const waldcreator = new WaldCreator(tag)
 
-        await waldcreator.createImage()
+            if (dateinfo.isSummer || dateinfo.isSpring || dateinfo.isAutumn) {
+                waldcreator.setMergeArray([
+                    { input: await sharp('plugins/waldspiel/images/beerenbusch.png').toBuffer(), left: 200, top: 140 }
+                ])
+            }
+            if (dateinfo.isWinter) {
+                waldcreator.setMergeArray([
+                    { input: await sharp('plugins/waldspiel/images/beerenbusch-winter.png').toBuffer(), left: 200, top: 140 }
+                ])
+            }
 
-        await channel.send({
-            files: ['temp/finalpicture.png'],
-            components: [rowBusch]
-        })
+            await waldcreator.createImage()
+
+            await channel.send({
+                files: ['temp/finalpicture.png'],
+                components: [rowBusch]
+            })
         } finally {
             if (!skipLock) this.busy = false;
         }
@@ -255,7 +255,7 @@ module.exports = {
                 let animal = animalsOnCurrentPage[i];
                 let animalType = Animallist[animal.type].name;
                 let animalLabel = animal.name ? `${animal.name} (${animalType})` : animalType;
-                
+
                 selectOptions.push(
                     new StringSelectMenuOptionBuilder()
                         .setLabel(`${startIndex + i + 1}. ${animalLabel}`)
@@ -585,45 +585,46 @@ module.exports = {
 
         try {
 
-        if (forceRefresh) {
-            switch (this.getRandomInt(2)) {
+            if (forceRefresh) {
+                await ExtensionManager.onEventSpawning(client, plugin, db);
+
+                /*
+                switch (this.getRandomInt(3)) {
+                    case 0:
+                        await this.createBusch(client, plugin, db, true)
+                        break;
+                    case 1:
+                        await this.createAnimal(client, plugin, db, true)
+                        break;
+                    case 2:
+                        await ExtensionManager.onEventSpawning(client, plugin, db);
+                        break;
+                    default:
+                        break;
+                }*/
+            }
+
+            switch (this.getRandomInt(RANDOM_NUMBER)) {
                 case 0:
+                case 1:
+                case 2:
                     await this.createBusch(client, plugin, db, true)
                     break;
-                case 1:
+                case 3:
+                case 4:
                     await this.createAnimal(client, plugin, db, true)
+                    break;
+                case 5:
+                case 6:
+                case 7:
+                    await ExtensionManager.onEventSpawning(client, plugin, db);
                     break;
                 default:
                     break;
             }
-        }
 
-        switch (this.getRandomInt(RANDOM_NUMBER)) {
-            case 0:
-            case 1:
-            case 2:
-                await this.createBusch(client, plugin, db, true)
-                break;
-            case 3:
-            case 4:
-                await this.createAnimal(client, plugin, db, true)
-                break;
-            /* Cases 5,6,7 moved to EasterEvent extension */
-            /*
-            case 5:
-            case 6:
-            case 7:
-                if (plugin['var'].eventOstern) {
-                    await this.createOsterKorb(client, plugin, db)
-                }
-                break;
-            */
-            default:
-                break;
-        }
-
-        /* Hook for Extensions to spawn their own events */
-        await ExtensionManager.onCreateWald(client, plugin, db);
+            /* Hook for Extensions to spawn their own events */
+            await ExtensionManager.onCreateWald(client, plugin, db);
         } finally {
             this.busy = false;
         }

@@ -105,9 +105,7 @@ class Plugin {
 						case 5:
 						case 6:
 						case 7:
-							if (plugin['var'].eventOstern) {
-								await waldspiel.createOsterKorb(client, plugin, db)
-							}
+							await ExtensionManager.onEventSpawning(client, plugin, db);
 							break;
 						default:
 							break;
@@ -1170,6 +1168,20 @@ class Plugin {
 				type: VariableManager.Trigger,
 				variable: plugin['var'].berry,
 				message: "löst den trigger aus berry"
+			},
+			{
+				pluginId: plugin.id,
+				pluginTag: plugin.pluginTag,
+				type: VariableManager.Trigger,
+				variable: plugin['var'].eggs,
+				message: "löst den trigger aus eggs"
+			},
+			{
+				pluginId: plugin.id,
+				pluginTag: plugin.pluginTag,
+				type: VariableManager.Trigger,
+				variable: plugin['var'].sweets,
+				message: "löst den trigger aus sweets"
 			},
 		)
 
