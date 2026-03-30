@@ -12,8 +12,6 @@ class EasterEvent {
 
     isExtensionActive() {
 
-        return true
-
         const now = new Date();
         const year = now.getFullYear();
         const easter = this._getEaster(year);

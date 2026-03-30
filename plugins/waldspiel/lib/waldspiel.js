@@ -586,9 +586,9 @@ module.exports = {
         try {
 
             if (forceRefresh) {
-                await ExtensionManager.onEventSpawning(client, plugin, db);
+                //await ExtensionManager.onEventSpawning(client, plugin, db);
 
-                /*
+
                 switch (this.getRandomInt(3)) {
                     case 0:
                         await this.createBusch(client, plugin, db, true)
@@ -601,7 +601,7 @@ module.exports = {
                         break;
                     default:
                         break;
-                }*/
+                }
             }
 
             switch (this.getRandomInt(RANDOM_NUMBER)) {
