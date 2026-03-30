@@ -55,6 +55,17 @@ export default function Layout({ children, selected, props }) {
 
   const [showMenu, setShowMenu] = useState(false);
   const [openProjectMenu, setOpenProjectMenu] = useState(false);
+  const [sidebarVisible, setSidebarVisible] = useState(true);
+
+  // Initialize from localStorage safely on client side
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const storedSidebar = localStorage.getItem('sidebarVisible');
+      if (storedSidebar !== null) {
+        setSidebarVisible(storedSidebar === 'true');
+      }
+    }
+  }, []);
 
   useEffect(() => {
     // only execute all the code below in client side
@@ -75,11 +86,11 @@ export default function Layout({ children, selected, props }) {
 
   //stylename for menu -> disabled/enabled style
   const getStyleName = (e) => {
-    if (showMenu) {
-      return styles.enabled
-    } else {
-      return styles.disabled
+    let styleNames = showMenu ? styles.enabled : styles.disabled;
+    if (!sidebarVisible) {
+      styleNames += " " + styles.navigationMainHidden;
     }
+    return styleNames;
   }
 
   const loginfetcher = (url, accessToken) =>
@@ -112,22 +123,41 @@ export default function Layout({ children, selected, props }) {
     setProject()
   }
 
+  const toggleSidebar = () => {
+    const newState = !sidebarVisible;
+    setSidebarVisible(newState);
+    localStorage.setItem('sidebarVisible', newState);
+  }
+
   return (
     <LayoutBlank>
+      {/* Full width column container so top menu visually spans 100% */}
+      <div style={{ display: 'flex', flexDirection: 'column', width: '100%', minHeight: '100vh' }}>
 
-      <div className={`${styles.navigationMain} ${getStyleName()}`}>
-        <ProjectMenu selected={selected} />
-        <BotPluginList selected={selected} />
-      </div>
+        {/* Top Menu visually unlimited */}
+        <TopMenu selected={selected} toggleSidebar={toggleSidebar} sidebarVisible={sidebarVisible} />
 
-      <div className={styles.rightMainContent}>
+        {/* Lower container holding sidebar and main content side-by-side, constrained to max 1200px */}
+        <div style={{ display: 'flex', flexGrow: 1, width: '100%', maxWidth: '1200px', margin: '0 auto' }}>
 
-        <TopMenu selected={selected} />
+          <div className={`${styles.navigationMain} ${getStyleName()}`}>
+            <ProjectMenu selected={selected} />
+            {selected && selected.startsWith("bot") && (
+              <BotPluginList selected={selected} />
+            )}
+          </div>
 
-        <div id="content">
-          {children}
+          <div className={styles.rightMainContent} style={{ flexGrow: 1, maxWidth: '100%' }}>
+
+            <div id="content" style={{ maxWidth: '100%' }}>
+              {children}
+            </div>
+          </div>
+
         </div>
+
       </div>
+
       <div id="navSmartphone">
         <i id="openMenuButton" className="button material-icons md-24 md-light" onClick={(e) => setShowMenu(!showMenu)} >menu</i>
         {/*<i className="button material-icons md-24 md-light">search</i>*/}

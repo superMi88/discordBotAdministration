@@ -18,11 +18,6 @@ export default function Profile() {
 
   return ( //wenn die id übergeben wurde war es erfolgreich
     <Layout selected={"userliste"}>
-      <div className="content">
-        <div className={utilStyles.contentBox}>
-          Userliste
-        </div>
-      </div>
 
       <Userliste />
 

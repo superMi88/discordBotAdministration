@@ -124,7 +124,7 @@ export default function component(props) {
           case "plugin":
             return (
               <div key={i} className={componentStyle.fieldWrapper}>
-                <InputPlugin editPlugin={props.editPlugin} arrayId={arrayId} arrayKey={arrayKey} mutatePluginsWrapper={props.mutatePluginsWrapper} mutatePlugin={mutatePlugin} botId={props.botId} pluginId={props.pluginId} block={block} databaseObject={dataPlugins} databasename={field.name} />
+                <InputPlugin editPlugin={props.editPlugin} arrayId={arrayId} arrayKey={arrayKey} mutatePluginsWrapper={props.mutatePluginsWrapper} mutatePlugin={mutatePlugin} botId={props.botId} pluginId={props.pluginId} block={block} databaseObject={dataPlugins} databasename={field.name} field={field} />
               </div>
             )
           case "date":

@@ -29,7 +29,7 @@ class WaldCreator {
 
         //add mergeArray if exists
         if(Array.isArray(this.mergeArray) && this.mergeArray.length > 0){
-            sharpobj.composite(this.mergeArray)
+            sharpobj = sharpobj.composite(this.mergeArray)
         }
 
         //TODO: generate unique filename

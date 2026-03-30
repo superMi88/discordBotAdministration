@@ -53,7 +53,7 @@ let objCommand = {
 discordBot()
 async function discordBot() {
 
-    let DatabaseManager = require("./lib/DatabaseManager.js");
+    let DatabaseManager = require("../lib/DatabaseManager.js");
     await DatabaseManager.create(botStruct.projectAlias)
 
     let db = DatabaseManager.get()

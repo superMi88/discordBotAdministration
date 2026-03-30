@@ -5,7 +5,7 @@ var CronJob = require('cron').CronJob;
 const { EmbedBuilder, Events } = require('discord.js');
 const { interactionSlashCommand } = require('../../discordBot/lib/helper.js');
 const VariableManager = require("../../discordBot/lib/VariableManager.js");
-const DatabaseManager = require("../../discordBot/lib/DatabaseManager.js");
+const DatabaseManager = require("../../lib/DatabaseManager.js");
 const PluginManager = require("../../discordBot/lib/PluginManager.js");
 
 class Plugin {

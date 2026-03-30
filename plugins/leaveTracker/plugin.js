@@ -8,7 +8,7 @@ var CronJob = require('cron').CronJob;
 const { ChannelType } = require('discord.js');
 const { PermissionsBitField } = require('discord.js');
 const { EmbedBuilder, Events } = require('discord.js');
-const DatabaseManager = require("../../discordBot/lib/DatabaseManager.js");
+const DatabaseManager = require("../../lib/DatabaseManager.js");
 const PluginManager = require("../../discordBot/lib/PluginManager.js");
 
 class Plugin {

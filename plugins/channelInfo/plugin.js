@@ -7,7 +7,7 @@ const { interactionSlashCommand } = require('../../discordBot/lib/helper.js');
 const VariableManager = require("../../discordBot/lib/VariableManager.js");
 const helper = require("../../discordBot/lib/helper.js");
 const PluginManager = require("../../discordBot/lib/PluginManager.js");
-const DatabaseManager = require("../../discordBot/lib/DatabaseManager.js");
+const DatabaseManager = require("../../lib/DatabaseManager.js");
 
 
 class Plugin {

@@ -1,14 +1,13 @@
-
 import React, { useEffect, useState } from "react";
 
 /*lib*/
-import { apiFetcher, getApiFetcher } from '@/lib/apifetcher'
+import { apiFetcher } from '@/lib/apifetcher'
 
 /*Button*/
 import InputText from '@/components/button/inputText.js'
 import { useRouter } from 'next/router';
 
-export default function component(props) {
+export default function PluginName(props) {
 
     const router = useRouter()
     const [projectAlias, setProjectAlias] = useState(false);
@@ -17,32 +16,70 @@ export default function component(props) {
         setProjectAlias(router.query.projectAlias)
     }, [router.isReady]);
 
-    const [pluginName, setPluginName] = useState(props.plugin.name) //wenn nicht gesetzt dann auf 0 setzen
+    const [pluginName, setPluginName] = useState(props.plugin.name)
+    const [saveStatus, setSaveStatus] = useState("saved") // "saved", "unsaved", "saving"
 
-    let botId = props.botId
     let plugin = props.plugin
 
-    if (props.pluginName) {
-        return <div>load component</div>
-    }
+    useEffect(() => {
+        // Initiale Projekt-Alias Werte nicht direkt fetchen
+        if (!projectAlias) return;
+
+        // Falls wir nichts geändert haben, auch nicht speichern
+        if (pluginName === props.plugin.name && saveStatus === "saved") {
+            return;
+        }
+
+        const delayDebounceFn = setTimeout(async () => {
+            // Check in case user reverted back to the original name manually before timeout
+            if (pluginName === props.plugin.name) {
+                setSaveStatus("saved")
+                return;
+            }
+            
+            setSaveStatus("saving")
+            
+            plugin.name = pluginName
+            
+            // Kompatibiltät für DB pluginId Notation und Bot runtime id
+            const targetId = plugin.pluginId || plugin.id || plugin._id;
+            
+            try {
+                let returnValue = await apiFetcher('/plugins/setPluginName', {
+                    pluginId: targetId,
+                    pluginName: pluginName,
+                    projectAlias: projectAlias
+                }).then(async (data) => {
+                    return (await data.json()).response
+                })
+
+                if (props.mutatePlugin) {
+                    props.mutatePlugin()
+                }
+                setSaveStatus("saved")
+            } catch (error) {
+                console.error("Fehler beim Speichern des Namens:", error);
+                setSaveStatus("unsaved")
+            }
+
+        }, 5000)
+
+        return () => clearTimeout(delayDebounceFn)
+    }, [pluginName, projectAlias, props.plugin.name])
+
+    let borderStyle = "var(--border-transparent)"; // Default ist transparent wenn gesaved
+    if (saveStatus === "unsaved") borderStyle = "2px solid red";
+    if (saveStatus === "saving") borderStyle = "2px solid orange";
+    if (saveStatus === "saved") borderStyle = "2px solid green";
 
     return (
-        <InputText value={pluginName} setValue={async (e) => {
-
-            setPluginName(e)
-            plugin.name = e
-
-            let returnValue = await apiFetcher('/plugins/setPluginName', {
-                pluginId: props.plugin.id,
-                pluginName: e,
-                projectAlias: projectAlias
-            }).then(async (data) => {
-                return (await data.json()).response
-            })
-
-            props.mutatePlugin()
-        }
-        } />
+        <InputText 
+            value={pluginName} 
+            style={{ border: borderStyle, transition: "border 0.2s" }}
+            setValue={(e) => {
+                setPluginName(e)
+                setSaveStatus("unsaved")
+            }} 
+        />
     );
 }
-
