@@ -52,7 +52,7 @@ import * as Hooks from "@/hooks";
 
 
 //children können ausgegeben werden zb. in main <main>{children}</main>
-export default function Layout({ selected }) {
+export default function Layout({ selected, toggleSidebar, sidebarVisible }) {
 
     const decodedToken = Hooks.useDecodedToken();
 
@@ -69,7 +69,22 @@ export default function Layout({ selected }) {
     }
 
     return (
-        <Flexbox className={styles.rightNav}>
+        <div className={styles.rightNav}>
+            <div style={{ maxWidth: '1200px', margin: '0 auto', width: '100%' }}>
+                <Flexbox>
+            <FlexItem>
+                <div className={styles.sidebarToggler} onClick={toggleSidebar} style={{ padding: '20px 10px', cursor: 'pointer', display: 'flex', alignItems: 'center' }}>
+                    <i className="material-icons md-24 md-light">{sidebarVisible ? 'menu_open' : 'menu'}</i>
+                </div>
+            </FlexItem>
+            <FlexItem>
+                <div style={{ padding: '0 20px 0 10px', display: 'flex', alignItems: 'center', fontWeight: 'bold', fontSize: '18px', color: 'var(--color1)' }}>
+                    {projectAlias}
+                </div>
+            </FlexItem>
+            <FlexItem>
+                <InsertLink href={"/" + projectAlias + "/bot"} text="Botliste" classNameToAdd="" icon={<IconList />} active={selected && selected.startsWith("bot")} />
+            </FlexItem>
             <FlexItem>
                 <InsertLink href={"/" + projectAlias + "/user"} text="Userliste" classNameToAdd="" icon={<IconGroup />} active={selected == "userliste"} />
             </FlexItem>
@@ -79,10 +94,7 @@ export default function Layout({ selected }) {
             {!(decodedToken && decodedToken.admin) ? "" :
                 <>
                     <FlexItem>
-                        <InsertLink href={"/" + projectAlias + "/server"} text="Server" classNameToAdd="" icon={<IconServer />} active={selected == "server"} />
-                    </FlexItem>
-                    <FlexItem>
-                        <InsertLink href={"/" + projectAlias + "/log"} text="Log" classNameToAdd="" icon={<IconError />} active={selected == "errorlog"} />
+                        <InsertLink href={"/" + projectAlias + "/server"} text="Server" classNameToAdd="" icon={<IconServer />} active={selected === "server" || selected === "errorlog"} />
                     </FlexItem>
                 </>
             }
@@ -119,7 +131,9 @@ export default function Layout({ selected }) {
                     </div>
                 }
             </FlexItem>
-        </Flexbox>
+                </Flexbox>
+            </div>
+        </div>
     )
 
 

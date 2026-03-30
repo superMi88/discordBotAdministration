@@ -61,7 +61,7 @@ export default function bot() {
         <>
             <div className="content">
                 <div className={utilStyles.contentBox}>
-                    Currency
+                    Currency, hier können Currencys angelegt werden für die bots, also währungen wie geld usw.
                 </div>
             </div>
 

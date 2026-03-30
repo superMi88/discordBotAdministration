@@ -6,14 +6,13 @@ const { SlashCommandBuilder } = require('@discordjs/builders');
 var CronJob = require('cron').CronJob;
 const { ActionRowBuilder, ModalBuilder, TextInputBuilder, TextInputStyle, ButtonBuilder, SelectMenuBuilder, ButtonStyle, Events } = require('discord.js');
 
-
-let { getUserFromDatabase, getPluginFromDatabase } = require('../../discordBot/lib/helper.js')
 const { interactionSlashCommand } = require('../../discordBot/lib/helper.js');
 
 const PluginManager = require("../../discordBot/lib/PluginManager.js");
 const helper = require("../../discordBot/lib/helper.js");
+const UserData = require("../../lib/UserData.js");
 const VariableManager = require("../../discordBot/lib/VariableManager.js");
-const DatabaseManager = require("../../discordBot/lib/DatabaseManager.js");
+const DatabaseManager = require("../../lib/DatabaseManager.js");
 
 class Plugin {
 	async execute(client, plugin) {
@@ -37,25 +36,25 @@ class Plugin {
 
 					for (let i = 0; i < plugin['var'].iconAndText1.length; i++) {
 						const obj = plugin['var'].iconAndText1[i];
-	
-						console.log(obj.currency1+" == "+currencyId)
+
+						console.log(obj.currency1 + " == " + currencyId)
 
 						if (obj.currency1 == currencyId) {
 							currencyId = obj.currency1
-	
+
 							if (obj.title) title = obj.title
 						}
-	
+
 					}
 
 					let erfolgreich = await showLeaderboard(db, interaction, currencyId, userId, title)
-					if(erfolgreich){
+					if (erfolgreich) {
 						return await interaction.update({
 							content: "",
 							files: ['temp/finalpicture.png'],
 							ephemeral: true
 						})
-					}else{
+					} else {
 						return await interaction.update({
 							content: 'Ein Fehler ist aufgetreten',
 							ephemeral: true
@@ -101,16 +100,16 @@ class Plugin {
 
 				const row = new ActionRowBuilder()
 
-					for (let i = 0; i < plugin['var'].iconAndText1.length; i++) {
-						const obj = plugin['var'].iconAndText1[i];
+				for (let i = 0; i < plugin['var'].iconAndText1.length; i++) {
+					const obj = plugin['var'].iconAndText1[i];
 
-						row.addComponents(
-							new ButtonBuilder()
-								.setCustomId(plugin.id + "-" + obj.currency1 + "-" + discordUserId)
-								.setLabel(obj.name1)
-								.setStyle(ButtonStyle.Secondary),
-						);
-					}
+					row.addComponents(
+						new ButtonBuilder()
+							.setCustomId(plugin.id + "-" + obj.currency1 + "-" + discordUserId)
+							.setLabel(obj.name1)
+							.setStyle(ButtonStyle.Secondary),
+					);
+				}
 
 				//konnte keine currencyId gefunden werden war die eingabe Falsch
 				if (!currencyId) {
@@ -123,19 +122,19 @@ class Plugin {
 
 
 				let erfolgreich = await showLeaderboard(db, interaction, currencyId, discordUserId, title)
-				if(erfolgreich){
+				if (erfolgreich) {
 					return await interaction.reply({
 						files: ['temp/finalpicture.png'],
 						components: [row],
 						ephemeral: true
 					})
-				}else{
+				} else {
 					return await interaction.reply({
 						content: 'Ein Fehler ist aufgetreten',
 						ephemeral: true
 					});
 				}
-				
+
 
 			}
 
@@ -146,7 +145,7 @@ class Plugin {
 	async save(plugin, config) {
 
 		let status = await PluginManager.save(plugin, config)
-		if(!status.saved){
+		if (!status.saved) {
 			return status
 		}
 
@@ -219,7 +218,7 @@ function getUsername(user) {
 
 
 
-	
+
 	//let str = user.username
 	let str = user.globalName
 
@@ -231,78 +230,68 @@ function getUsername(user) {
 }
 
 function getValue(user, currencyId) {
-	let value = 0
-
-	if (user.currency && user.currency[currencyId]) {
-		value = user.currency[currencyId]
-	}
-
-
-
-	return value
+	let value = user.getCurrency(currencyId);
+	return value || 0;
 }
 
 function getIndex(gleichUserArray, discordId) {
 	for (let i = 0; i < gleichUserArray.length; i++) {
 		const element = gleichUserArray[i];
 		if (discordId == element.discordId) {
-			return i
+			return i;
 		}
 	}
+	return -1;
 }
 
 
 
 async function showLeaderboard(db, interaction, currencyId, discordUserId, title) {
-	let discordUserDatabase = await getUserFromDatabase(discordUserId, db)
+	let discordUserDatabase = await UserData.get(discordUserId);
 
 	//wurde kein user gefunden nicht ausführen
 	if (discordUserDatabase) {
 
-		var chatActivity = discordUserDatabase['currency'][currencyId]
-		if (!chatActivity) chatActivity = 0
-		chatActivity = parseInt(chatActivity)
+		var chatActivity = discordUserDatabase.getCurrency(currencyId);
+		if (!chatActivity) chatActivity = 0;
+		chatActivity = parseInt(chatActivity);
 
 		/**/
 
-		let DatabaseManager = require("../../discordBot/lib/DatabaseManager.js");
-		let db = DatabaseManager.get()
-
-		var ObjectId = require('mongodb').ObjectId;
-		const collection = db.collection('userCollection');
-
-		let top10 = await collection.find().sort({ ["currency." + currencyId]: -1, discordId: 1 }).limit(10).toArray();
+		let top10 = await UserData.find({}, { ["currency." + currencyId]: -1, discordId: 1 }, 10);
 
 		//get user eins ueber wert
-		let ueberUserArray = await collection.find({ ["currency." + currencyId]: { $gt: chatActivity } }).sort({ ["currency." + currencyId]: 1, discordId: 1 }).limit(1).toArray();
-		let ueberUser = ueberUserArray[0]
+		let ueberUserArray = await UserData.find({ ["currency." + currencyId]: { $gt: chatActivity } }, { ["currency." + currencyId]: 1, discordId: 1 }, 1);
+		let ueberUser = ueberUserArray[0];
 
-		$searchObj = {["currency." + currencyId]: chatActivity}
-		
-		if(chatActivity == 0){
-			$searchObj = {$or: [
-				{["currency." + currencyId]: {$exists: false}},
-				{["currency." + currencyId]: chatActivity}]
-			}
+		let $searchObj = { ["currency." + currencyId]: chatActivity };
+
+		if (chatActivity == 0) {
+			$searchObj = {
+				$or: [
+					{ ["currency." + currencyId]: { $exists: false } },
+					{ ["currency." + currencyId]: chatActivity }]
+			};
 		}
 
 		//get all user gleich dem wert da ist natührlich auch der user dabei um den es geht
-		let gleichUserArray = await collection.find($searchObj).sort({ ["currency." + currencyId]: 1, discordId: 1 }).toArray();
+		let gleichUserArray = await UserData.find($searchObj, { ["currency." + currencyId]: 1, discordId: 1 });
 
 
 		//get user eins ueber wert
 
-		let searchObj = {["currency." + currencyId]: { $lt: chatActivity }}
+		let searchObj = { ["currency." + currencyId]: { $lt: chatActivity } };
 
-		if(chatActivity == 0){
-			searchObj = {$or: [
-				{["currency." + currencyId]: {$exists: false}},
-				{["currency." + currencyId]: { $lt: chatActivity }}]
-			}
+		if (chatActivity == 0) {
+			searchObj = {
+				$or: [
+					{ ["currency." + currencyId]: { $exists: false } },
+					{ ["currency." + currencyId]: { $lt: chatActivity } }]
+			};
 		}
 
-		let kleinerUserArray = await collection.find(searchObj).sort({ ["currency." + currencyId]: -1, discordId: 1 }).limit(1).toArray();
-		let kleinerUser = kleinerUserArray[0]
+		let kleinerUserArray = await UserData.find(searchObj, { ["currency." + currencyId]: -1, discordId: 1 }, 1);
+		let kleinerUser = kleinerUserArray[0];
 
 		let index = getIndex(gleichUserArray, discordUserDatabase.discordId)
 
@@ -320,7 +309,7 @@ async function showLeaderboard(db, interaction, currencyId, discordUserId, title
 
 
 
-		let count = await collection.countDocuments({ ["currency." + currencyId]: { $gt: chatActivity } });
+		let count = await UserData.count({ ["currency." + currencyId]: { $gt: chatActivity } });
 
 		//rechne wie viele mit dem glechen wert drüber sind abhand des indexes
 		count = count + index
@@ -369,23 +358,23 @@ async function showLeaderboard(db, interaction, currencyId, discordUserId, title
 			}
 
 			await sharp('plugins/leaderboard/images/background2.png')
-			.composite(mergeArray)
-			.toFile('temp/finalpicture.png')
+				.composite(mergeArray)
+				.toFile('temp/finalpicture.png')
 
-		}else{
+		} else {
 			await sharp('plugins/leaderboard/images/background.png')
-			.composite(mergeArray)
-			.toFile('temp/finalpicture.png')
-			
+				.composite(mergeArray)
+				.toFile('temp/finalpicture.png')
+
 		}
 
 
 
-			/*
-		return await interaction.reply({
-			files: ['temp/finalpicture.png'],
-			ephemeral: true
-		})*/
+		/*
+	return await interaction.reply({
+		files: ['temp/finalpicture.png'],
+		ephemeral: true
+	})*/
 
 		return true
 

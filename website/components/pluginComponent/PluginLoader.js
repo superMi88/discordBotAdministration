@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import dynamic from 'next/dynamic';
 import PluginComponent from '@/components/pluginComponent/pluginComponent';
+import PluginComponentWrapper from '@/components/pluginComponent/pluginComponentWrapper';
 
 const PluginLoader = (props) => {
     const { plugin } = props;
@@ -37,11 +38,12 @@ const PluginLoader = (props) => {
         };
     }, [plugin?.pluginTag]);
 
+    let ComponentToRender = PluginComponent;
     if (hasCustomUI && CustomUI) {
-        return <CustomUI {...props} />;
+        ComponentToRender = CustomUI;
     }
 
-    return <PluginComponent {...props} />;
+    return <PluginComponentWrapper {...props} childComponent={ComponentToRender} />;
 };
 
 export default PluginLoader;

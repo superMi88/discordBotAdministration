@@ -17,6 +17,7 @@ export default function component(props) {
   return (
     <input
       className={styles.textfield} type="text"
+      style={props.style}
       onChange={
         async (e) => {
           props.setValue(e.target.value);

@@ -7,11 +7,11 @@ const { PermissionFlagsBits } = require('discord.js');
 const PluginManager = require("../../discordBot/lib/PluginManager.js");
 const { ObjectId } = require("mongodb");
 
-const DatabaseManager = require("../../discordBot/lib/DatabaseManager.js");
-
-let { getUserCurrencyFromDatabase, updateUserFromDatabase } = require('../../discordBot/lib/helper.js')
+const DatabaseManager = require("../../lib/DatabaseManager.js");
 
 const { ModalBuilder, TextInputBuilder, TextInputStyle, StringSelectMenuBuilder, StringSelectMenuOptionBuilder, ButtonBuilder, ButtonStyle, RoleSelectMenuBuilder, UserSelectMenuBuilder, EmbedBuilder, ActionRowBuilder } = require('discord.js');
+const UserData = require("../../lib/UserData.js");
+
 
 
 class Plugin {
@@ -63,21 +63,19 @@ class Plugin {
 								if(!doEveryoneHasConnectPermissions && !doEveryoneHasViewPermissions) privateNumber = 2
 
 								const index = userIds.indexOf(newState.guild.id);
-								if (index && index > -1) { // only splice array when item is found
+								if (index > -1) { // only splice array when item is found
 									userIds.splice(index, 1); // 2nd parameter means remove one item only
 								}
 
 								//update user dem der voiceChannel gehört
-								await updateUserFromDatabase(db, voiceChannel.userId, {
-									$set: {
-										["currency.voiceCreatorChannel_"+plugin.id]: {
-											name: oldState.channel.name,
-											userLimit: oldState.channel.userLimit,
-											permissions: userIds,
-											private: privateNumber
-										},
-									}
-								})
+								const userData = await UserData.get(voiceChannel.userId);
+								userData.setPluginData(plugin.pluginTag, plugin.id, {
+									name: oldState.channel.name,
+									userLimit: oldState.channel.userLimit,
+									permissions: userIds,
+									private: privateNumber
+								});
+								await userData.save();
 
 								let result = await collection.findOneAndUpdate(
 									{_id: ObjectId(plugin.id)},
@@ -125,76 +123,79 @@ class Plugin {
 
 
 				//get old channelname
-				let discordUserDatabase = await getUserCurrencyFromDatabase(user.id, db)
+				const userData = await UserData.get(user.id);
+				let voiceCreatorChannelNameData = userData.getPluginData(plugin) || userData.getCurrency("voiceCreatorChannel_"+plugin.id);
+				
+				let voiceCreatorChannelName = (voiceCreatorChannelNameData && typeof voiceCreatorChannelNameData === 'object') ? voiceCreatorChannelNameData : {};
 
-				let voiceCreatorChannelName = discordUserDatabase["voiceCreatorChannel_"+plugin.id]
-				if (!voiceCreatorChannelName) voiceCreatorChannelName = 
+				// Handle old format migration
+				if (voiceCreatorChannelName.voiceCreatorChannel) {
+					voiceCreatorChannelName = voiceCreatorChannelName.voiceCreatorChannel;
+				}
+
+				if (!voiceCreatorChannelName || !voiceCreatorChannelName.name) voiceCreatorChannelName = 
 					{
 						name: user.username + "s Channel",
 						userLimit: 5
 					}
 
-
-				//permission Array mit dem channel besitzer schon voreingestellt
-				let permissionOverwritesArray = [
-					{
-						id: user.id,
-						allow: [PermissionFlagsBits.ViewChannel, PermissionFlagsBits.Connect],
-					},
-				]
-
-				if(!voiceCreatorChannelName.permissions) voiceCreatorChannelName.permissions = []
-
-				//remove @everyone from permission array
-				const index = voiceCreatorChannelName.permissions.indexOf(newState.guild.id);
-				if (index && index > -1) { // only splice array when item is found
-					voiceCreatorChannelName.permissions.splice(index, 1); // 2nd parameter means remove one item only
-				}
-
-				for (const userId of voiceCreatorChannelName.permissions) {
-
-					//if die eingetragene userId keine userId sonderndie @everyone Id(guildId) dann nicht eintragen //TODO beim abspeichern direkt ürüfen
-					if(!(userId == newState.guild.id)){
-						permissionOverwritesArray.push({
-							id: userId,
-							allow: [PermissionFlagsBits.ViewChannel, PermissionFlagsBits.Connect],
-						})
-					}
-
-					
-				}
+				// Filter out invalid IDs and duplicates to prevent discord.js crash
+				const seenIds = new Set();
+				let finalOverwrites = [];
 				
-				//public
-				if(voiceCreatorChannelName.private == 0){
-					//set everyone rule to open
-					permissionOverwritesArray.push({
-						id: newState.guild.roles.everyone.id,
-						allow: [PermissionFlagsBits.Connect],
-					})
+				// Helper to validate ID is a numeric string (snowflake)
+				const isValidId = (id) => typeof id === 'string' && /^\d{17,20}$/.test(id);
+
+				// Ensure owner is added first
+				if (user && isValidId(user.id)) {
+					finalOverwrites.push({
+						id: user.id,
+						type: 1, // Member
+						allow: PermissionFlagsBits.ViewChannel | PermissionFlagsBits.Connect
+					});
+					seenIds.add(user.id);
 				}
-				//private
-				if(voiceCreatorChannelName.private == 1){
-					//set everyone rule to closed
-					permissionOverwritesArray.push({
-						id: newState.guild.roles.everyone.id,
-						deny: [PermissionFlagsBits.Connect],
-					})
+
+				// Add additional user permissions
+				if (voiceCreatorChannelName.permissions && Array.isArray(voiceCreatorChannelName.permissions)) {
+					for (const userId of voiceCreatorChannelName.permissions) {
+						let sId = String(userId || "");
+						if (isValidId(sId) && sId !== newState.guild.id && !seenIds.has(sId)) {
+							// Determine if it's a role or member (assume member if not role)
+							const isRole = newState.guild.roles.cache.has(sId);
+							finalOverwrites.push({
+								id: sId,
+								type: isRole ? 0 : 1, // 0 = Role, 1 = Member
+								allow: PermissionFlagsBits.ViewChannel | PermissionFlagsBits.Connect
+							});
+							seenIds.add(sId);
+						}
+					}
 				}
-				//private and unsichtbar
-				if(voiceCreatorChannelName.private == 2){
-					//set everyone rule to closed
-					permissionOverwritesArray.push({
-						id: newState.guild.roles.everyone.id,
-						deny: [PermissionFlagsBits.Connect, PermissionFlagsBits.ViewChannel],//1030095522482106388, 970393899073933352
-					})
+
+				// Add everyone overwrite based on privacy
+				if (newState.guild.roles.everyone && isValidId(newState.guild.roles.everyone.id)) {
+					let everyoneId = newState.guild.roles.everyone.id;
+					if (!seenIds.has(everyoneId)) {
+						if (voiceCreatorChannelName.private == 0) {
+							finalOverwrites.push({ id: everyoneId, type: 0, allow: PermissionFlagsBits.Connect });
+						} else if (voiceCreatorChannelName.private == 1) {
+							finalOverwrites.push({ id: everyoneId, type: 0, deny: PermissionFlagsBits.Connect });
+						} else if (voiceCreatorChannelName.private == 2) {
+							finalOverwrites.push({ id: everyoneId, type: 0, deny: PermissionFlagsBits.Connect | PermissionFlagsBits.ViewChannel });
+						}
+						seenIds.add(everyoneId);
+					}
 				}
+
+				console.log(`[VoiceCreator] Creating channel "${voiceCreatorChannelName.name}" for ${user.username} with ${finalOverwrites.length} overwrites.`);
 
 				let createdChannel = await channel.guild.channels.create({
 					name: voiceCreatorChannelName.name,
 					userLimit: voiceCreatorChannelName.userLimit,
 					type: ChannelType.GuildVoice,
 					parent: channel,
-					permissionOverwrites: permissionOverwritesArray,
+					permissionOverwrites: finalOverwrites,
 					position: 20
 				});
 
@@ -511,10 +512,6 @@ async function sendVoiceChannelOptions(plugin, createdChannel, guildId, interact
 	let defaultUsersOrRoles = Array.from( createdChannel.permissionOverwrites.cache.keys() );
 
 	let index = defaultUsersOrRoles.indexOf(guildId);
-
-	if(!index){
-		index = 0
-	}
 
 	if (index > -1) { // only splice array when item is found
 		defaultUsersOrRoles.splice(index, 1); // 2nd parameter means remove one item only

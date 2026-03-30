@@ -105,7 +105,7 @@ export default function component() {
         
         {data !== undefined? 
           data.map((value, index) => {
-            return (<Userinfo discordId={value.discordId} value={value} dataNode={dataNode} dataCurrency={dataCurrency} projectAlias={projectAlias}/>)
+            return (<Userinfo discordId={value.discordId} value={value} dataNode={dataNode} dataCurrency={dataCurrency} projectAlias={projectAlias} mutate={mutate}/>)
           })
 
         : ""}
@@ -170,6 +170,7 @@ function Coins(props) {
                 value: value,
                 projectAlias: props.projectAlias
               })
+              if (props.mutate) props.mutate()
             }}
           />
         </FlexItem>
@@ -194,10 +195,10 @@ function Userinfo(props) {
   //wenn user auf einem vorhandenen Server ist wird [0] da  sein wenn nicht ist er auf keinem Server mehr
   //TODO hier nich was schaffen für leute die auf keinem server sind 
 
-  if (!discordUser.currency) discordUser.currency = {}
+  if (!discordUser.currencyData) discordUser.currencyData = {}
 
   //sollte kein wert gesetzt sein setze den wert auf 0
-  if (!discordUser.currency[dataCurrency.data.currencyId]) discordUser.currency[dataCurrency.data.currencyId] = 0
+  if (!discordUser.currencyData[dataCurrency.data.currencyId]) discordUser.currencyData[dataCurrency.data.currencyId] = 0
 
   if (dataNode.guilds.length > 0) { //if(currency.guildId)
 
@@ -255,14 +256,30 @@ function Userinfo(props) {
             {dataCurrency.data.currencys.map(function (currency, i) {
               return (
                 <Coins
+                  key={currency.currencyId}
                   text={currency.currencyName}
-                  coins={discordUser.currency[currency.currencyId]}
+                  coins={discordUser.currencyData ? discordUser.currencyData[currency.currencyId] : 0}
                   currencyId={currency.currencyId}
                   discordId={discordUser.discordId}
                   projectAlias={props.projectAlias}
+                  mutate={props.mutate}
                 />
               )
             })}
+
+            {discordUser.pluginData && Object.keys(discordUser.pluginData).length > 0 && (
+              <div style={{ marginTop: '20px', borderTop: '1px solid #444', paddingTop: '10px' }}>
+                <div style={{ fontWeight: 'bold', marginBottom: '10px' }}>Plugin Daten (Neues Objekt):</div>
+                {Object.entries(discordUser.pluginData).map(([pluginKey, pluginValue]) => (
+                  <div key={pluginKey} style={{ marginBottom: '10px', fontSize: '0.9em', background: '#222', padding: '8px', borderRadius: '4px' }}>
+                    <div style={{ color: '#0099ff', fontWeight: 'bold' }}>{pluginKey}</div>
+                    <pre style={{ margin: '5px 0', fontSize: '0.8em', color: '#ccc', overflow: 'auto' }}>
+                      {JSON.stringify(pluginValue, null, 2)}
+                    </pre>
+                  </div>
+                ))}
+              </div>
+            )}
 
 
           </div>

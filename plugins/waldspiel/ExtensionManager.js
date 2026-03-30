@@ -199,6 +199,20 @@ class ExtensionManager {
             }
         }
     }
+
+    async onEventSpawning(client, plugin, db) {
+        for (const ext of this.extensions) {
+            if (typeof ext.onEventSpawning === 'function') {
+                try {
+                    const result = await ext.onEventSpawning(client, plugin, db);
+                    if (result === true) return true; // Extension handled it
+                } catch (err) {
+                    console.warn(`[ExtensionManager] Fehler bei onEventSpawning in ${ext.constructor.name}:`, err.message);
+                }
+            }
+        }
+        return false;
+    }
 }
 
 module.exports = new ExtensionManager(); // Singleton

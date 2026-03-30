@@ -4,7 +4,6 @@ import useSWRImmutable from 'swr/immutable'
 import useSWR from 'swr'
 import React, { useEffect, useState } from "react";
 
-import BotMenu from '@/components/helper/botMenu';
 
 import cookie from 'js-cookie'
 
@@ -126,11 +125,6 @@ export default function bot({ botexist, botId, pluginTag }) {
   console.log(pluginTag)
 
 
-  let test = <BotMenu botId={botId} />
-
-  console.log("hhhhhhhhhhhhhhh")
-  console.log(test)
-
   return (
     <Layout selected={`bot-${botId}-${pluginTag}`}>
 
@@ -141,11 +135,6 @@ export default function bot({ botexist, botId, pluginTag }) {
         :
 
         <>
-          <div className="content">
-            {test}
-
-          </div>
-
           <div>
             <div className="content">
               {
