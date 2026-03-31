@@ -3,74 +3,66 @@ module.exports = {
 	shortDescription: "Announcement",
 	blocks: [
 		{
-			type: "alone", //definiert wie die felder heißen text und icon
-			description: "channel wo der Selfrole block angezeigt werden soll",
+			type: "iconAndText",
+			name: "announcementRoles",
+			description: "Rollen die gepingt werden sollen",
 			fields: [
-				{  //name abhängig von type
-					type: "roles", //definiert wie die felder heißen text und icon
-					name: "announcementRole", //datenbank name
-					//optionen für das text feld
+				{
+					type: "roles",
+					name: "roleId",
+					required: true,
 				}
 			]
 		},
 		{
-			type: "alone", //definiert wie die felder heißen text und icon
-			description: "channel wo der Selfrole block angezeigt werden soll",
+			type: "alone",
+			description: "Channel wo das Announcement gesendet werden soll",
 			fields: [
-				{  //name abhängig von type
-					type: "channel", //definiert wie die felder heißen text und icon
-					name: "channel1", //datenbank name
-					options: { //nicht vorhanden = false
+				{
+					type: "channel",
+					name: "channel1", 
+					options: { 
 						voice: false,
 						text: true,
 						announcement: true,
 						category: false
 					},
 					required: true
-					//optionen für das text feld
 				}
 			]
 		},
 		{
-			type: "alone", //definiert wie die felder heißen text und icon
-			description: "Titel für den Selfrole Block",
+			type: "alone",
+			description: "Titel für das Announcement",
 			fields: [
-				{  //name abhängig von type
-					type: "text", //definiert wie die felder heißen text und icon
-					name: "title", //datenbank name
-					regex: "^[a-zA-Z0-9\\s]+$",
+				{
+					type: "text", 
+					name: "title", 
 					required: true,
 					maxZeichen: 50
-					//optionen für das text feld
 				}
 			]
 		},
 		{
-			type: "alone", //definiert wie die felder heißen text und icon
-			description: "Beschreibung für den das Embed",
+			type: "alone",
+			description: "Beschreibung für das Embed",
 			fields: [
-				{  //name abhängig von type
-					type: "textarea", //definiert wie die felder heißen text und icon
-					name: "description", //datenbank name
-					regex: "^[a-zA-Z0-9\\s]+$",
+				{
+					type: "textarea", 
+					name: "description", 
 					required: true,
 					maxZeichen: 1500
-
-					//optionen für das text feld
 				}
 			]
 		},
 		{
-			type: "alone", //definiert wie die felder heißen text und icon
-			description: "Anhang",
+			type: "alone",
+			description: "Anhang (optionale Nachricht)",
 			fields: [
-				{  //name abhängig von type
-					type: "textarea", //definiert wie die felder heißen text und icon
-					name: "followupMessage", //datenbank name
-					regex: "^[a-zA-Z0-9\\s]+$",
+				{
+					type: "textarea", 
+					name: "followupMessage", 
 					maxZeichen: 1500
-
-					//optionen für das text feld
 				}
 			]
 		}
@@ -78,18 +70,19 @@ module.exports = {
 	buttons: [
 		{
 			name: "Create",
-			onClick: "create" //calls function name on click
+			onClick: "create"
 		},
 		{
 			name: "Update",
-			onClick: "update" //calls function name on click
+			onClick: "update"
 		},
 		{
 			name: "Delete",
-			onClick: "delete" //calls function name on click
+			onClick: "delete"
 		}
 	]
 };
+
 
 
 

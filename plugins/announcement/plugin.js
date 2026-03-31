@@ -43,11 +43,21 @@ class Plugin {
 		let messageText = await this.getMessageText(plugin)
 		let followUpMessageText = await this.getfollowUpMessageText(plugin)
 
+		let pingContent = "";
+		if (plugin['var'].announcementRoles && Array.isArray(plugin['var'].announcementRoles)) {
+			plugin['var'].announcementRoles.forEach(role => {
+				if (role.roleId) {
+					pingContent += `<@&${role.roleId}> `;
+				}
+			});
+			if (pingContent.length > 0) pingContent += "\n";
+		}
+
 		let channel = await client.channels.cache.get(plugin['var'].channel1)
 		if(channel && channel.send){
 			let message = await channel.send(
 				{ 
-					content: '<@&'+plugin['var'].announcementRole+'>\n', 
+					content: pingContent, 
 					embeds: [messageText] 
 				})
 			if(followUpMessageText){
@@ -64,6 +74,7 @@ class Plugin {
 
 		return ({ saved: true, infoMessage: "Embed wurde erstellt", infoStatus: "Info" })
 	}
+
 	async update(plugin, config) {
 		
 		let client = dataManager.client
@@ -77,12 +88,25 @@ class Plugin {
 		let messageText = await this.getMessageText(plugin)
 		let followUpMessageText = await this.getfollowUpMessageText(plugin)
 
+		let pingContent = "";
+		if (plugin['var'].announcementRoles && Array.isArray(plugin['var'].announcementRoles)) {
+			plugin['var'].announcementRoles.forEach(role => {
+				if (role.roleId) {
+					pingContent += `<@&${role.roleId}> `;
+				}
+			});
+			if (pingContent.length > 0) pingContent += "\n";
+		}
+
 		const { channelId, messageId, followUpMessageId } = await getMessageId(db, plugin.id)
 		try {
 			let channel = await client.channels.fetch(channelId)
 
 			let message = await channel.messages.fetch(messageId)
-			message.edit({ embeds: [messageText] })
+			message.edit({ 
+				content: pingContent,
+				embeds: [messageText] 
+			})
 
 			if(followUpMessageId){
 				let followUpMessage = await channel.messages.fetch(followUpMessageId)
@@ -96,6 +120,7 @@ class Plugin {
 
 		return ({ saved: true, infoMessage: "Embed wurde geupdatet", infoStatus: "Info" })
 	}
+
 	async delete(plugin, config) {
 		
 		let client = dataManager.client
