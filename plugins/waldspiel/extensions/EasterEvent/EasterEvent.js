@@ -130,10 +130,10 @@ class EasterEvent {
             { input: await sharp(imagePath).resize(250).toBuffer(), left: 100, top: 50 }
         ])
 
-        await waldcreator.createImage()
+        const filename = await waldcreator.createImage()
 
         await channel.send({
-            files: ['temp/finalpicture.png'],
+            files: [filename],
             components: [rowBusch]
         })
     }

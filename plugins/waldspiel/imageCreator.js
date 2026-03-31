@@ -11,6 +11,7 @@ const path = require('path');
 
 const Backgroundlist = require('./obj/BackgroundList.js');
 const ItemList = require("./obj/ItemList.js");
+const fs = require('fs');
 
 function getQuicksandPath(text, x, y, size, color = "white", anchor = "start") {
 	const metrics = textToSVG.getMetrics(text, { fontSize: size });
@@ -224,18 +225,22 @@ module.exports = {
 			bgSvg += `</svg>`;
 			let textOverlayBuf = await sharp(Buffer.from(bgSvg)).png().toBuffer();
 
+			const outPath = 'temp/finalpicture_storage.png';
 			// Hintergrundbild und Tiere zusammenfügen
 			await sharp('plugins/waldspiel/images/backgrounds/select.png')
 				.composite([
 					{ input: textOverlayBuf, left: 0, top: 0 },
 					...frameComposites
 				])
-				.toFile('temp/finalpicture.png');
+				.toFile(outPath);
+			return outPath;
 
 		} else {
+			const outPath = 'temp/finalpicture_storage.png';
 			// Falls kein Tier vorhanden ist, nur das Hintergrundbild verwenden
 			await sharp('plugins/waldspiel/images/backgrounds/select.png')
-				.toFile('temp/finalpicture.png');
+				.toFile(outPath);
+			return outPath;
 		}
 	},
 
@@ -364,11 +369,14 @@ module.exports = {
 		const sharp = require('sharp');
 		const WebP = require('node-webpmux');
 
-		let tag = 'DEFAULT';
-		if (dateinfo.isSummer) tag = "SUMMER";
-		if (dateinfo.isWinter) tag = "WINTER";
-		if (dateinfo.isSpring) tag = "SPRING";
-		if (dateinfo.isAutumn) tag = "AUTUMN";
+		const tag = dateinfo.isSummer ? 'SUMMER' : dateinfo.isWinter ? 'WINTER' : dateinfo.isSpring ? 'SPRING' : dateinfo.isAutumn ? 'AUTUMN' : 'DEFAULT';
+		const outPath = `plugins/waldspiel/images/cache/animal_${animalId}_${tag}.webp`;
+
+		if (fs.existsSync(outPath)) {
+			return outPath;
+		}
+
+		console.log("createAnimal: " + outPath);
 
 		const waldcreator = new WaldCreator(tag);
 		const backgroundBuffer = await sharp('plugins/waldspiel/images/backgrounds/' + waldcreator.background.filename + '.png')
@@ -406,7 +414,12 @@ module.exports = {
 			frameBuffers.push(await WebP.Image.generateFrame({ buffer: frame, delay: 80, dispose: true, blend: false }));
 		}
 
-		const outPath = 'temp/finalpicture.webp';
+		// Ensure the cache directory exists
+		const cacheDir = 'plugins/waldspiel/images/cache';
+		if (!fs.existsSync(cacheDir)) {
+			fs.mkdirSync(cacheDir, { recursive: true });
+		}
+
 		await WebP.Image.save(outPath, { width, height, loops: 0, frames: frameBuffers });
 		return outPath;
 	},
@@ -770,10 +783,12 @@ module.exports = {
 		}
 
 
+		const outPath = 'temp/finalpicture_itemshop.png';
 		await sharp('plugins/waldspiel/images/shopItems.png')
 			.composite(mergeArray)
-			.toFile('temp/finalpicture.png')
+			.toFile(outPath)
 
+		return outPath;
 	},
 
 	async showBackpack(plugin, itemArray) {
@@ -891,6 +906,15 @@ module.exports = {
 	},
 
 	async createBerryCollectImage(member, collectedBerrys, roleBonus, boosterBonus, totalCollected, roleName) {
+		const outPath = `plugins/waldspiel/images/cache/${collectedBerrys}-${roleBonus}-${boosterBonus}-collectBerry.png`;
+
+		if (fs.existsSync(outPath)) {
+			return outPath;
+		}
+
+		console.log("createBerryCollectImage: " + outPath);
+
+
 		const sharp = require('sharp');
 		const width = 550;
 		const height = 80;
@@ -950,7 +974,12 @@ module.exports = {
 			left: width - 155, top: 4
 		});
 
-		const outPath = 'temp/berry_collect.png';
+		// Ensure the cache directory exists
+		const cacheDir = 'plugins/waldspiel/images/cache';
+		if (!fs.existsSync(cacheDir)) {
+			fs.mkdirSync(cacheDir, { recursive: true });
+		}
+
 		await sharp('plugins/waldspiel/images/backgrounds/collect_berry.png')
 			.resize(550, 80)
 			.composite(mergeArray)
