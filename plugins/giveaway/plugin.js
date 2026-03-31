@@ -201,7 +201,7 @@ async function endGiveaway(client, plugin, db) {
 	const pluginCollection = db.collection('pluginCollection');
 	//const selectedPlugin = await pluginCollection.findOne({ _id: ObjectId(plugin.selectedPluginId) })
 
-	const allUsersEntered = await UserData.find({ ["currency." + "giveaway_" + plugin.id]: true })
+	const allUsersEntered = await UserData.find({ ["currencyData." + "giveaway_" + plugin.id]: true })
 
 	let channel = await client.channels.fetch(plugin['var'].giveawayChannel)
 	let guild = await client.guilds.fetch(channel.guild.id);

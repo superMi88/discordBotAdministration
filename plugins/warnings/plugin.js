@@ -57,7 +57,7 @@ class Plugin {
 			}
 			if (interaction.commandName == plugin['var'].warnlistCommand) {
 
-				let userlist = await UserData.find({ "currency.warnings": { $gt: 0 } });
+				let userlist = await UserData.find({ "currencyData.warnings": { $gt: 0 } });
 
 				let warnlistText = ""
 				for (let i = 0; i < userlist.length; i++) {

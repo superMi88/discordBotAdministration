@@ -30,7 +30,7 @@ class Plugin {
 			new CronJob('0 * * * * *', async function () {
 				
 				
-				let arrUserWithRole = await UserData.find({ ["currency.boosterRole_" + plugin.id]: { $exists: true } });
+				let arrUserWithRole = await UserData.find({ ["currencyData.boosterRole_" + plugin.id]: { $exists: true } });
 
 				console.log(arrUserWithRole)
 
