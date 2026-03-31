@@ -3,7 +3,7 @@ module.exports = {
 
         //erstelle PluginManager
         const PluginManager = require("../lib/PluginManager.js");
-        const DatabaseManager = require("../lib/DatabaseManager.js");
+        const DatabaseManager = require("../../lib/DatabaseManager.js");
     
         let allPlugins = PluginManager.getAll()
 
