@@ -897,12 +897,9 @@ module.exports = {
 
 		let mergeArray = [];
 
-		// User Name
-		const displayName = member.displayName || (member.user ? member.user.username : 'Spieler');
-		const nameText = displayName.length > 14 ? displayName.substring(0, 12) + "..." : displayName;
 		mergeArray.push({
 			input: Buffer.from(`<svg width="${width}" height="${height}" xmlns="http://www.w3.org/2000/svg">
-				${getQuicksandPath(nameText + " hat Beeren geerntet!", 30, 16, 20, "white")}
+				${getQuicksandPath("Du hast Beeren geerntet!", 30, 16, 20, "white")}
 			</svg>`),
 			left: 0, top: -1
 		});
@@ -1393,7 +1390,7 @@ function getBackgroundByTag(tag) {
 	if (dateInfo.isDay) {
 		retunObj["filename"] = currentBackground.filename.day;
 		if (currentBackground.filename.dayoverlay) {
-			retunObj["overlay"] = currentBackground.filename.nightoverlay;
+			retunObj["overlay"] = currentBackground.filename.dayoverlay;
 		}
 	}
 
