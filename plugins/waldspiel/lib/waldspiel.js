@@ -976,7 +976,7 @@ module.exports = {
         const filenameBerry = await ImageCreator.createBerryCollectImage(interaction.member, collectedBerrys, roleBonus, boosterBonus, collectedBerrysWithBonus, roleName);
 
         await interaction.deferUpdate();
-        await interaction.channel.send({ files: [filenameBerry] })
+        await interaction.channel.send({ content: '<@' + interaction.user.id + '>', files: [filenameBerry] })
     },
 
     async collectOsterkorb(interaction, plugin, db) {
