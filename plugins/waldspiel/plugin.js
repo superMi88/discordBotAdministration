@@ -306,7 +306,8 @@ class Plugin {
 				let discordUserData = await UserData.get(user.id);
 
 				if (discordUserData) {
-					let filename = await ImageCreator.createMeinWald(discordUserData.currencyData)
+					let discordUserDatabase = { ...discordUserData.currencyData, ...(discordUserData.getPluginData(plugin) || {}) }
+					let filename = await ImageCreator.createMeinWald(discordUserDatabase)
 
 
 					let postChannel = await client.channels.fetch(plugin['var'].postChannel)
@@ -438,7 +439,8 @@ class Plugin {
 					{ $set: { animation: animationId } }
 				);
 
-				let discordUserDatabase = (await require('../../lib/UserData.js').get(interaction.user.id)).currencyData;
+				let discordUserData = await require('../../lib/UserData.js').get(interaction.user.id);
+				let discordUserDatabase = { ...discordUserData.currencyData, ...(discordUserData.getPluginData(plugin) || {}) }
 				let animalId = 1;
 				if (discordUserDatabase.animalId1 && ObjectId(animalObjId).equals(discordUserDatabase.animalId1)) animalId = 1;
 				else if (discordUserDatabase.animalId2 && ObjectId(animalObjId).equals(discordUserDatabase.animalId2)) animalId = 2;

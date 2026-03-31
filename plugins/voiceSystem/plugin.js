@@ -16,7 +16,7 @@ class Plugin {
 				||
 				(oldState.channel && oldState.channel.parentId === plugin['var'].voiceCategory)
 			) {
-				checkVoiceChannel(client, plugin, newState);
+				checkVoiceChannel(client, plugin, oldState, newState);
 			}
 		});
 
@@ -48,10 +48,10 @@ module.exports = new Plugin();
 // Voice-Wechsel strikt nacheinander abgearbeitet werden.
 let executionQueue = Promise.resolve();
 
-async function checkVoiceChannel(client, plugin, newState = null) {
+async function checkVoiceChannel(client, plugin, oldState = null, newState = null) {
 	// Die aktuelle Ausführung in die Queue einreihen, damit sie wartet, bis der Vorgänger fertig ist
 	executionQueue = executionQueue.then(async () => {
-		await executeCheckVoiceChannel(client, plugin, newState);
+		await executeCheckVoiceChannel(client, plugin, oldState, newState);
 	}).catch(err => {
 		console.error("Fehler in Voice-Queue:", err);
 	});
@@ -59,7 +59,7 @@ async function checkVoiceChannel(client, plugin, newState = null) {
 }
 
 // Die eigentliche Logik ausgelagert, damit die Queue sie aufrufen kann
-async function executeCheckVoiceChannel(client, plugin, newState = null) {
+async function executeCheckVoiceChannel(client, plugin, oldState = null, newState = null) {
 	let categoryChannel;
 	try {
 		categoryChannel = await client.channels.fetch(plugin['var'].voiceCategory, { force: true });
@@ -97,7 +97,17 @@ async function executeCheckVoiceChannel(client, plugin, newState = null) {
 
 		// Zu viele leere Kanäle aussortieren
 		while (emptyVoices.length > 1) {
-			let ch = emptyVoices.pop();
+			let index = -1;
+			if (oldState && oldState.channelId) {
+				index = emptyVoices.findIndex(ch => ch.id === oldState.channelId);
+			}
+
+			let ch;
+			if (index !== -1) {
+				ch = emptyVoices.splice(index, 1)[0];
+			} else {
+				ch = emptyVoices.pop();
+			}
 			channelsToDelete.push(ch);
 		}
 

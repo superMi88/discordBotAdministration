@@ -175,10 +175,10 @@ module.exports = {
                 ])
             }
 
-            await waldcreator.createImage()
+            const filename = await waldcreator.createImage()
 
             await channel.send({
-                files: ['temp/finalpicture.png'],
+                files: [filename],
                 components: [rowBusch]
             })
         } finally {
@@ -307,7 +307,7 @@ module.exports = {
                 );
             }
 
-            await ImageCreator.createMeinStorage(animalStorage, currentPage, searchQuery)
+            const filename = await ImageCreator.createMeinStorage(animalStorage, currentPage, searchQuery)
 
             let components = [];
             if (animalPlazierungsId !== 'noedit' && animalsOnCurrentPage.length > 0) {
@@ -316,7 +316,7 @@ module.exports = {
             components.push(rowButtons);
 
             return await interaction.update({
-                files: ['temp/finalpicture.png'],
+                files: [filename],
                 components: components,
                 ephemeral: true
             });
@@ -662,9 +662,9 @@ module.exports = {
 
             var createItemShop = async function (itemlist) {
                 let shopNormal = thisobj.getShopActionRow(plugin, itemlist)
-                await ImageCreator.createItemShop(plugin, shopNormal.itemId1, shopNormal.itemId2, shopNormal.itemId3)
+                const filename = await ImageCreator.createItemShop(plugin, shopNormal.itemId1, shopNormal.itemId2, shopNormal.itemId3)
                 await shopChannel.send({
-                    files: ['temp/finalpicture.png'],
+                    files: [filename],
                     components: [shopNormal.actionRow]
                 })
             };
@@ -976,7 +976,7 @@ module.exports = {
         const filenameBerry = await ImageCreator.createBerryCollectImage(interaction.member, collectedBerrys, roleBonus, boosterBonus, collectedBerrysWithBonus, roleName);
 
         await interaction.deferUpdate();
-        await interaction.channel.send({ files: [filenameBerry] })
+        await interaction.channel.send({ content: '<@' + interaction.user.id + '>', files: [filenameBerry] })
     },
 
     async collectOsterkorb(interaction, plugin, db) {

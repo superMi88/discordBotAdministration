@@ -258,39 +258,39 @@ async function showLeaderboard(db, interaction, currencyId, discordUserId, title
 
 		/**/
 
-		let top10 = await UserData.find({}, { ["currency." + currencyId]: -1, discordId: 1 }, 10);
+		let top10 = await UserData.find({}, { ["currencyData." + currencyId]: -1, discordId: 1 }, 10);
 
 		//get user eins ueber wert
-		let ueberUserArray = await UserData.find({ ["currency." + currencyId]: { $gt: chatActivity } }, { ["currency." + currencyId]: 1, discordId: 1 }, 1);
+		let ueberUserArray = await UserData.find({ ["currencyData." + currencyId]: { $gt: chatActivity } }, { ["currencyData." + currencyId]: 1, discordId: 1 }, 1);
 		let ueberUser = ueberUserArray[0];
 
-		let $searchObj = { ["currency." + currencyId]: chatActivity };
+		let $searchObj = { ["currencyData." + currencyId]: chatActivity };
 
 		if (chatActivity == 0) {
 			$searchObj = {
 				$or: [
-					{ ["currency." + currencyId]: { $exists: false } },
-					{ ["currency." + currencyId]: chatActivity }]
+					{ ["currencyData." + currencyId]: { $exists: false } },
+					{ ["currencyData." + currencyId]: chatActivity }]
 			};
 		}
 
 		//get all user gleich dem wert da ist natührlich auch der user dabei um den es geht
-		let gleichUserArray = await UserData.find($searchObj, { ["currency." + currencyId]: 1, discordId: 1 });
+		let gleichUserArray = await UserData.find($searchObj, { ["currencyData." + currencyId]: 1, discordId: 1 });
 
 
 		//get user eins ueber wert
 
-		let searchObj = { ["currency." + currencyId]: { $lt: chatActivity } };
+		let searchObj = { ["currencyData." + currencyId]: { $lt: chatActivity } };
 
 		if (chatActivity == 0) {
 			searchObj = {
 				$or: [
-					{ ["currency." + currencyId]: { $exists: false } },
-					{ ["currency." + currencyId]: { $lt: chatActivity } }]
+					{ ["currencyData." + currencyId]: { $exists: false } },
+					{ ["currencyData." + currencyId]: { $lt: chatActivity } }]
 			};
 		}
 
-		let kleinerUserArray = await UserData.find(searchObj, { ["currency." + currencyId]: -1, discordId: 1 }, 1);
+		let kleinerUserArray = await UserData.find(searchObj, { ["currencyData." + currencyId]: -1, discordId: 1 }, 1);
 		let kleinerUser = kleinerUserArray[0];
 
 		let index = getIndex(gleichUserArray, discordUserDatabase.discordId)
@@ -309,7 +309,7 @@ async function showLeaderboard(db, interaction, currencyId, discordUserId, title
 
 
 
-		let count = await UserData.count({ ["currency." + currencyId]: { $gt: chatActivity } });
+		let count = await UserData.count({ ["currencyData." + currencyId]: { $gt: chatActivity } });
 
 		//rechne wie viele mit dem glechen wert drüber sind abhand des indexes
 		count = count + index
@@ -325,6 +325,8 @@ async function showLeaderboard(db, interaction, currencyId, discordUserId, title
 		const SPACE_NUMBER = 230
 
 		const SPACE_RANKLIST_TOP = 70
+
+		console.log(top10)
 
 		mergeArray.push({ input: getTextBuffer(title, 130, 30, "middle", 20), left: 0, top: 0 })
 
