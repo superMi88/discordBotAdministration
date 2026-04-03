@@ -27,7 +27,7 @@ module.exports = async function (client, plugin, config, projectAlias, data) {
             fs.appendFileSync(logFile, `> ${input}\n`);
         } catch (e) { }
 
-        const success = plugin.processes[filename].stdin.write(input + '\r\n');
+        const success = plugin.processes[filename].stdin.write(input.trim() + '\n');
         if (!success) {
             console.warn("Stdin buffer full, unexpected.");
         }
