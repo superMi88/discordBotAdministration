@@ -457,7 +457,8 @@ class Plugin {
 
 				let discordUserId = interaction.user.id;
 				let discordUserData = await UserData.get(discordUserId);
-				let backgroundlistdatabase = discordUserData.getCurrency("backgroundlist") || [];
+				let cData = discordUserData.currencyData;
+				let backgroundlistdatabase = (discordUserData.getPluginData(plugin, 'backgroundlist') ?? cData.backgroundlist) || [];
 
 				// Safety check: is it owned? (DEFAULT and SUMMER are always allowed)
 				if (itemId !== 0 && itemId !== "DEFAULT" && itemId !== "SUMMER" && !backgroundlistdatabase.includes(itemId)) {
