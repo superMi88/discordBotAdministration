@@ -38,12 +38,12 @@ const PluginLoader = (props) => {
         };
     }, [plugin?.pluginTag]);
 
-    let ComponentToRender = PluginComponent;
     if (hasCustomUI && CustomUI) {
-        ComponentToRender = CustomUI;
+        return <CustomUI {...props} />;
     }
 
-    return <PluginComponentWrapper {...props} childComponent={ComponentToRender} />;
+    return <PluginComponentWrapper {...props} childComponent={PluginComponent} />;
 };
+
 
 export default PluginLoader;
