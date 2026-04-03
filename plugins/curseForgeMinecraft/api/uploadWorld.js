@@ -1,7 +1,7 @@
 const path = require('path');
 const fs = require('fs');
 const fsp = require('fs/promises');
-const AdmZip = require('adm-zip');
+const unzipper = require('unzipper');
 const PluginManager = require("../../../discordBot/lib/PluginManager.js");
 
 module.exports = async function (client, plugin, config, projectAlias, data) {
@@ -26,24 +26,24 @@ module.exports = async function (client, plugin, config, projectAlias, data) {
             fs.rmSync(worldPath, { recursive: true, force: true });
         }
 
-        let zip;
+        let directory;
         try {
-            zip = new AdmZip(sourcePath);
+            directory = await unzipper.Open.file(sourcePath);
         } catch (err) {
-            throw new Error("Die ZIP-Datei ist ungültig oder beschädigt.");
+            throw new Error("Die ZIP-Datei ist ungültig oder beschädigt: " + err.message);
         }
 
-        let entries = zip.getEntries();
+        const entries = directory.files;
         if (entries.length === 0) throw new Error("ZIP-Datei ist leer.");
 
-        const firstEntryPart = entries[0].entryName.split('/')[0];
-        const hasRootFolder = entries.every(e => e.entryName.startsWith(firstEntryPart + '/'));
+        const firstEntryPart = entries[0].path.split('/')[0];
+        const hasRootFolder = entries.every(e => e.path.startsWith(firstEntryPart + '/'));
 
         fs.mkdirSync(worldPath, { recursive: true });
 
         for (let i = 0; i < entries.length; i++) {
             const entry = entries[i];
-            let relativePath = entry.entryName;
+            let relativePath = entry.path;
 
             if (hasRootFolder && firstEntryPart) {
                 relativePath = relativePath.slice(firstEntryPart.length + 1);
@@ -52,18 +52,24 @@ module.exports = async function (client, plugin, config, projectAlias, data) {
 
             const fullPath = path.join(worldPath, relativePath);
 
-            if (entry.isDirectory) {
+            if (entry.type === 'Directory') {
                 fs.mkdirSync(fullPath, { recursive: true });
             } else {
                 fs.mkdirSync(path.dirname(fullPath), { recursive: true });
-                fs.writeFileSync(fullPath, entry.getData());
+                await new Promise((resolve, reject) => {
+                    entry.stream()
+                        .pipe(fs.createWriteStream(fullPath))
+                        .on('finish', resolve)
+                        .on('error', reject);
+                });
             }
 
             // Update Progress
             plugin.extractionProgress = Math.round(((i + 1) / entries.length) * 100);
 
             // Allow event loop to process other requests (e.g. getStatus)
-            if (i % 5 === 0) {
+            // with streaming we might want to do this less frequently or just rely on the await Promise
+            if (i % 10 === 0) {
                 await new Promise(resolve => setImmediate(resolve));
             }
         }
@@ -77,3 +83,4 @@ module.exports = async function (client, plugin, config, projectAlias, data) {
         return { saved: false, infoMessage: "Fehler beim Welt-Upload: " + err.message, infoStatus: "Error" };
     }
 }
+
