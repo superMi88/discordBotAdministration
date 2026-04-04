@@ -20,6 +20,8 @@ import Button from '@/components/button/button.js'
 import Flexbox from '@/components/button/flexbox';
 import FlexItem from '@/components/button/flexItem';
 
+import PluginName from '@/components/pluginComponent/pluginName';
+
 /*lib*/
 import { apiFetcher, getApiFetcher } from '@/lib/apifetcher'
 import * as Lib from "@/lib";
@@ -122,7 +124,7 @@ export default function PluginComponent(props) {
           }
         </FlexItem>
         <FlexItem type="max">
-          <div style={{ fontWeight: "bold", fontSize: "1.2rem" }}></div>
+          <PluginName botId={botId} projectAlias={projectAlias} plugin={plugin} mutatePlugin={mutatePlugin} />
         </FlexItem>
         <FlexItem>
           <Button text={"reset"} color={"delete"} onClick={
@@ -145,7 +147,7 @@ export default function PluginComponent(props) {
       <div className={pluginComponentStyles.channelName}>
 
         {
-          activePlugin.blocks.map(function (block, i) {
+          activePlugin && activePlugin.blocks && activePlugin.blocks.map(function (block, i) {
 
             switch (block.type) {
               case "iconAndText":
@@ -184,7 +186,7 @@ export default function PluginComponent(props) {
         {
           <div className={pluginComponentStyles.buttonflexbox}>
             { //erstelle alle buttons
-              activePlugin.buttons.map(function (buttons, i) {
+              activePlugin && activePlugin.buttons && activePlugin.buttons.map(function (buttons, i) {
                 //buttons.onClick is the command
                 return (
                   <Button key={i} text={buttons.name} color={"color"} onClick={
