@@ -47,6 +47,18 @@ module.exports = {
                     required: false
                 }
             ]
+        },
+        {
+            type: "alone",
+            description: "Waldspiel Plugin (Required for Forest Data)",
+            fields: [
+                {
+                    type: "plugin",
+                    name: "waldspielPluginId",
+                    pluginTag: "waldspiel",
+                    required: true
+                }
+            ]
         }
     ],
     buttons: [

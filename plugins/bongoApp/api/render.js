@@ -12,10 +12,9 @@ module.exports = async function (client, plugin, config, projectAlias, data) {
         // Ensure database for current project
         await DatabaseManager.create(projectAlias);
 
-        const PluginManagerAlt = require('../../discordBot/lib/PluginManager.js');
-        const allPlugins = PluginManagerAlt.getAll() || [];
-        const waldspielPlugin = allPlugins.find(p => p.pluginTag === 'waldspiel');
-        const waldspielId = waldspielPlugin ? waldspielPlugin.id : "643556763768cdbc42f8d899";
+        // Use the waldspielId determined during plugin initialization
+        const waldspielId = plugin.waldspielId;
+        if (!waldspielId) return { status: 'error', message: 'Waldspiel Plugin ID not configured' };
 
         const userData = await UserData.get(userId);
         if (!userData) return { status: 'error', message: 'User not found' };

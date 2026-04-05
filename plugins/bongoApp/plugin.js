@@ -10,6 +10,17 @@ const PluginManager = require('../../discordBot/lib/PluginManager.js');
 const dataManager = require('../../discordBot/lib/dataManager.js');
 const { Events } = require('discord.js');
 
+// --- LOGGER ---
+const logFile = path.resolve(__dirname, '../../logs/bongoApp.log');
+if (!fs.existsSync(path.dirname(logFile))) fs.mkdirSync(path.dirname(logFile), { recursive: true });
+
+const bongoLog = (msg) => {
+    const timestamp = new Date().toLocaleString('de-DE');
+    const logMsg = `[${timestamp}] ${msg}\n`;
+    fs.appendFileSync(logFile, logMsg);
+    console.log(`[BongoApp] ${msg}`);
+};
+
 module.exports = {
 
     app: null,
@@ -23,13 +34,19 @@ module.exports = {
      * @param {string} projectAlias 
      */
     async execute(client, plugin, projectAlias) {
-        console.log(`[BongoApp] Plugin initialized for project: ${projectAlias}`);
+        bongoLog(`[BongoApp] Plugin initialized for project: ${projectAlias}`);
 
         // Configuration from the database (UI fields)
         const pluginVar = plugin.var || {};
 
         // Use provided secret or fallback to process.env.JWT_SECRET
         const jwtSecret = pluginVar.jwtSecret || process.env.JWT_SECRET || "SUPER_SECRET_BONGO_KEY";
+
+        // Use the waldspielId determined during plugin initialization
+        const waldspielId = plugin.waldspielId;
+        if (!waldspielId) {
+            bongoLog(`[BongoApp] Waldspiel Plugin ID not configured. Some features will be disabled.`);
+        }
 
         // Use provided client ID or fallback to the current bot's ID
         const clientId = pluginVar.discordClientId || client.user.id;
@@ -40,18 +57,25 @@ module.exports = {
         const redirectUri = pluginVar.redirectUri || `http://localhost:3001/api/auth/discord/callback`;
 
         if (!clientSecret) {
-            console.warn(`[BongoApp] WARNING: Discord Client Secret is missing! Auth will fail. Please set it in the plugin settings.`);
+            bongoLog(`[BongoApp] WARNING: Discord Client Secret is missing! Auth will fail. Please set it in the plugin settings.`);
         }
 
         // Initialize state
         plugin.activeUsers = {};
         plugin.loginBridge = {};
 
-        // Dynamically find Waldspiel plugin ID
+        // --- WALDSPIEL CONFIG ---
         const allPlugins = PluginManager.getAll() || [];
         const waldspielPlugin = allPlugins.find(p => p.pluginTag === 'waldspiel');
-        plugin.waldspielId = waldspielPlugin ? waldspielPlugin.id : "643556763768cdbc42f8d899";
-        console.log(`[BongoApp] Using Waldspiel ID: ${plugin.waldspielId}`);
+
+        // Use ID from config, then fallback to dynamic detection via 'waldspiel' tag
+        plugin.waldspielId = pluginVar.waldspielPluginId || (waldspielPlugin ? waldspielPlugin.id : null);
+
+        if (!plugin.waldspielId) {
+            bongoLog(`[BongoApp] WARNING: Waldspiel Plugin ID could not be determined! Waldspiel features will be disabled.`);
+        } else {
+            bongoLog(`[BongoApp] Using Waldspiel ID: ${plugin.waldspielId}`);
+        }
 
         // Create HTTP server for both Express and Socket.io
         const app = express();
@@ -71,7 +95,7 @@ module.exports = {
          * @param {string} discordUserId 
          */
         const signalUserUpdate = (discordUserId) => {
-            console.log(`[BongoApp] Checking update signal for ${discordUserId}`);
+            bongoLog(`[BongoApp] Checking update signal for ${discordUserId}`);
             const bongoUsername = Object.keys(plugin.activeUsers).find(name =>
                 (plugin.activeUsers[name].discordId === discordUserId) || (plugin.activeUsers[name].id === discordUserId)
             );
@@ -82,9 +106,9 @@ module.exports = {
                     name: bongoUsername,
                     ...plugin.activeUsers[bongoUsername]
                 });
-                console.log(`[BongoApp] Signal SENT for user: ${bongoUsername} at ${now}`);
+                bongoLog(`[BongoApp] Signal SENT for user: ${bongoUsername} at ${now}`);
             } else {
-                console.log(`[BongoApp] User with Discord ID ${discordUserId} is not currently in BongoApp, ignoring update.`);
+                bongoLog(`[BongoApp] User with Discord ID ${discordUserId} is not currently in BongoApp, ignoring update.`);
             }
         };
 
@@ -92,7 +116,7 @@ module.exports = {
         // Listen for waldspiel-related interactions that change the forest state
         client.on(Events.InteractionCreate, async (interaction) => {
 
-            console.log(`[BongoApp] Waldspiel interaction detectedxx: ${interaction.customId}`);
+            bongoLog(`[BongoApp] Waldspiel interaction detectedxx: ${interaction.customId}`);
             if (!interaction.customId) return;
 
             const relevantPrefixes = [
@@ -116,7 +140,7 @@ module.exports = {
             );
 
             if (isWaldspielUpdate) {
-                console.log(`[BongoApp] Waldspiel interaction detected: ${interaction.customId}`);
+                bongoLog(`[BongoApp] Waldspiel interaction detected: ${interaction.customId}`);
                 // Wait longer for forest to finish database work before signaling update
                 setTimeout(() => signalUserUpdate(interaction.user.id), 3000);
             }
@@ -192,7 +216,7 @@ module.exports = {
 
                 res.send('<h1>Erfolgreich!</h1><p>Du kannst dieses Fenster jetzt schließen und zurück zur Bongo App gehen.</p>');
             } catch (error) {
-                console.error('Discord Auth Error:', error.response?.data || error.message);
+                bongoLog('Discord Auth Error:', error.response?.data || error.message);
                 res.status(500).send('Authentication failed');
             }
         });
@@ -234,24 +258,31 @@ module.exports = {
             try {
                 const UserData = require('../../lib/UserData.js');
                 const DatabaseManager = require('../../lib/DatabaseManager.js');
-                const userData = await UserData.get(discordId);
-                const waldspielKey = `waldspiel-${plugin.waldspielId}`;
-                const waldspielData = userData.pluginData?.[waldspielKey];
+                
+                const waldspielId = plugin.waldspielId;
+                if (!waldspielId) {
+                    bongoLog(`[BongoApp] Cannot fetch animal for join: Waldspiel ID missing`);
+                } else {
+                    const userData = await UserData.get(discordId);
+                    const waldspielKey = `waldspiel-${waldspielId}`;
+                    const waldspielData = userData.pluginData?.[waldspielKey];
 
-                if (waldspielData) {
-                    // Try slot 2 first (legacy preference), then slot 1, then slot 3
-                    const animalId = waldspielData.animalId2 || waldspielData.animalId1 || waldspielData.animalId3;
+                    if (waldspielData) {
+                        // Try slot 2 first (legacy preference), then slot 1, then slot 3
+                        const animalId = waldspielData.animalId2 || waldspielData.animalId1 || waldspielData.animalId3;
 
-                    if (animalId) {
-                        const db = DatabaseManager.get();
-                        const animal = await db.collection('animals').findOne({ _id: animalId });
-                        if (animal && animal.name) {
-                            displayName = animal.name;
+                        if (animalId) {
+                            const db = DatabaseManager.get();
+                            const animal = await db.collection('animals').findOne({ _id: animalId });
+                            if (animal && animal.name) {
+                                displayName = animal.name;
+                            }
                         }
                     }
                 }
             } catch (e) {
-                console.error(`[JOIN] Error fetching animal name: ${e.message}`);
+                bongoLog(`[JOIN] CRITICAL Error fetching animal name for ${discordId}: ${e.message}`);
+                bongoLog(e.stack);
             }
 
             const now = Date.now();
@@ -260,7 +291,7 @@ module.exports = {
             plugin.activeUsers[name].name = name;
 
             io.emit('user_joined', { name, ...userObj });
-            console.log(`[BongoApp] User ${name} joined. lastUpdated: ${now}`);
+            bongoLog(`[BongoApp] User ${name} joined with DisplayName: "${displayName}" (ID: ${discordId}). lastUpdated: ${now}`);
 
             res.status(200).send({ status: 'joined', user: req.user, displayName });
         });
@@ -276,7 +307,7 @@ module.exports = {
                 if (slot) plugin.activeUsers[name].slot = slot;
 
                 io.emit('user_updated', { ...plugin.activeUsers[name] });
-                console.log(`[BongoApp] User ${name} updated. Skin: ${skin}, Slot: ${slot}`);
+                bongoLog(`[BongoApp] User ${name} updated. Skin: ${skin}, Slot: ${slot}`);
                 res.status(200).send({ status: 'updated', lastUpdated: now });
             } else {
                 res.status(404).send({ error: 'User not joined' });
@@ -336,11 +367,13 @@ module.exports = {
                 }
 
                 const renderResult = await ImageCreator.renderSingleAnimal(waldspielData, position, userId);
+                bongoLog(`[RENDER] Render successful for ${userId} at pos ${position}. Frames: ${Array.isArray(renderResult) ? renderResult.length : (renderResult.frames ? renderResult.frames.length : 'unknown object')}`);
                 const frames = Array.isArray(renderResult) ? renderResult : renderResult.frames;
 
                 res.status(200).json({ status: 'success', frames });
             } catch (error) {
-                console.error("[Bongo Render API] Error:", error.message);
+                bongoLog(`[RENDER] CRITICAL Error for ${userId}: ${error.message}`);
+                bongoLog(error.stack);
                 res.status(500).json({ status: 'error', message: error.toString() });
             }
         });
@@ -353,21 +386,21 @@ module.exports = {
         });
 
         this.server = server.listen(port, async () => {
-            console.log(`[BongoApp] Backend bridge with WebSockets running at http://localhost:${port}`);
+            bongoLog(`[BongoApp] Backend bridge with WebSockets running at http://localhost:${port}`);
         });
 
         this.server.on('error', (e) => {
             if (e.code === 'EADDRINUSE') {
-                console.warn(`[BongoApp] Port ${port} is already in use. Server not started, but bot is continuing...`);
+                bongoLog(`[BongoApp] Port ${port} is already in use. Server not started, but bot is continuing...`);
             } else {
-                console.error(`[BongoApp] Express server error:`, e);
+                bongoLog(`[BongoApp] Express server error:`, e);
             }
         });
 
         io.on('connection', (socket) => {
-            console.log("[BongoApp] New client socket connected");
-            socket.on('disconnect', () => {
-                console.log("[BongoApp] Client socket disconnected");
+            bongoLog(`[BongoApp] New client socket connected: ${socket.id}`);
+            socket.on('disconnect', (reason) => {
+                bongoLog(`[BongoApp] Client socket disconnected: ${socket.id} (Reason: ${reason})`);
             });
         });
 
@@ -381,7 +414,7 @@ module.exports = {
 
         // Restart the Express server with new settings
         if (pluginInstance.server) {
-            console.log(`[BongoApp] Restarting Express server to apply new settings...`);
+            bongoLog(`[BongoApp] Restarting Express server to apply new settings...`);
             pluginInstance.server.close();
         }
 
