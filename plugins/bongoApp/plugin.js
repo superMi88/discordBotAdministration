@@ -255,7 +255,7 @@ module.exports = {
             }
 
             const now = Date.now();
-            const userObj = { id: discordId, discordId, skin, lastSeen: now, lastUpdated: now, displayName };
+            const userObj = { id: discordId, discordId, skin, lastSeen: now, lastUpdated: now, displayName, slot: 2 };
             plugin.activeUsers[name] = userObj;
             plugin.activeUsers[name].name = name;
 
@@ -267,14 +267,16 @@ module.exports = {
 
         app.post('/api/bongo/update', verifyToken, async (req, res) => {
             const name = req.user.username;
-            const { skin } = req.body;
+            const { skin, slot } = req.body;
 
             if (plugin.activeUsers[name]) {
                 const now = Date.now();
                 plugin.activeUsers[name].lastUpdated = now;
                 if (skin) plugin.activeUsers[name].skin = skin;
+                if (slot) plugin.activeUsers[name].slot = slot;
 
                 io.emit('user_updated', { ...plugin.activeUsers[name] });
+                console.log(`[BongoApp] User ${name} updated. Skin: ${skin}, Slot: ${slot}`);
                 res.status(200).send({ status: 'updated', lastUpdated: now });
             } else {
                 res.status(404).send({ error: 'User not joined' });
@@ -315,10 +317,21 @@ module.exports = {
                 const waldspielData = userData.pluginData?.[waldspielKey];
                 if (!waldspielData) return res.status(404).json({ error: 'Waldspiel data not found' });
 
-                // Find first available animal slot
+                // Determine animal slot position (Priority: query param > session slot > fallback)
+                const querySlot = parseInt(req.query.slot);
                 let position = 2;
-                if (!waldspielData.animalId2) {
-                    if (waldspielData.animalId1) position = 1;
+                
+                if (!isNaN(querySlot)) {
+                    position = querySlot;
+                } else {
+                    let bongoUser = Object.values(plugin.activeUsers).find(u => u.discordId === userId);
+                    position = bongoUser?.slot || 2;
+                }
+
+                // If chosen slot is empty, search for ANY available animal
+                if (!waldspielData["animalId" + position]) {
+                    if (waldspielData.animalId2) position = 2;
+                    else if (waldspielData.animalId1) position = 1;
                     else if (waldspielData.animalId3) position = 3;
                 }
 
@@ -341,6 +354,14 @@ module.exports = {
 
         this.server = server.listen(port, async () => {
             console.log(`[BongoApp] Backend bridge with WebSockets running at http://localhost:${port}`);
+        });
+
+        this.server.on('error', (e) => {
+            if (e.code === 'EADDRINUSE') {
+                console.warn(`[BongoApp] Port ${port} is already in use. Server not started, but bot is continuing...`);
+            } else {
+                console.error(`[BongoApp] Express server error:`, e);
+            }
         });
 
         io.on('connection', (socket) => {
