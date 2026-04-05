@@ -64,9 +64,24 @@ module.exports = {
         plugin.activeUsers = {};
         plugin.loginBridge = {};
 
-        // --- WALDSPIEL CONFIG ---
+        // Dynamically find Waldspiel plugin ID
         const allPlugins = PluginManager.getAll() || [];
         const waldspielPlugin = allPlugins.find(p => p.pluginTag === 'waldspiel');
+        plugin.waldspielId = waldspielPlugin ? waldspielPlugin.id : "643556763768cdbc42f8d899";
+
+        // Logging helper
+        const logDir = path.join(__dirname, '../../logs');
+        if (!fs.existsSync(logDir)) fs.mkdirSync(logDir, { recursive: true });
+        const logFile = path.join(logDir, 'bongo-app.log');
+
+        const logToFile = (message) => {
+            const timestamp = new Date().toISOString();
+            const logMessage = `[${timestamp}] ${message}\n`;
+            console.log(`[BongoLog] ${message}`);
+            fs.appendFileSync(logFile, logMessage);
+        };
+
+        logToFile(`BongoApp Plugin started (ID: ${plugin.id}, WaldspielID: ${plugin.waldspielId})`);
 
         // Use ID from config, then fallback to dynamic detection via 'waldspiel' tag
         plugin.waldspielId = pluginVar.waldspielPluginId || (waldspielPlugin ? waldspielPlugin.id : null);
@@ -258,14 +273,31 @@ module.exports = {
             try {
                 const UserData = require('../../lib/UserData.js');
                 const DatabaseManager = require('../../lib/DatabaseManager.js');
-                
+
                 const waldspielId = plugin.waldspielId;
                 if (!waldspielId) {
                     bongoLog(`[BongoApp] Cannot fetch animal for join: Waldspiel ID missing`);
                 } else {
+                    logToFile(`JOIN request for discordId: ${discordId}`);
                     const userData = await UserData.get(discordId);
-                    const waldspielKey = `waldspiel-${waldspielId}`;
-                    const waldspielData = userData.pluginData?.[waldspielKey];
+
+                    // Better data detection: if fixed ID fails, search for any waldspiel tag
+                    const waldspielKey = `waldspiel-${plugin.waldspielId}`;
+                    let waldspielData = userData.pluginData?.[waldspielKey];
+
+                    if (!waldspielData) {
+                        logToFile(`Exact match for ${waldspielKey} not found. Searching for alternative waldspiel tags...`);
+                        const altKeys = Object.keys(userData.pluginData || {}).filter(k => k.startsWith('waldspiel-'));
+                        if (altKeys.length > 0) {
+                            let waldspielKeyFinal = altKeys[0];
+                            waldspielData = userData.pluginData[waldspielKeyFinal];
+                            logToFile(`Found data in alternative key: ${waldspielKeyFinal}`);
+                        }
+                    }
+
+                    if (!waldspielData) {
+                        logToFile(`WARNING: No Waldspiel data found at all for user ${discordId}`);
+                    }
 
                     if (waldspielData) {
                         // Try slot 2 first (legacy preference), then slot 1, then slot 3
@@ -339,19 +371,37 @@ module.exports = {
                 const DatabaseManager = require('../../lib/DatabaseManager.js');
 
                 const currentProjectAlias = reqProjectAlias || projectAlias;
+                logToFile(`RENDER request for userId: ${userId} (Project: ${currentProjectAlias})`);
+
                 await DatabaseManager.create(currentProjectAlias);
 
                 const userData = await UserData.get(userId);
-                if (!userData) return res.status(404).json({ error: 'User not found' });
+                if (!userData) {
+                    logToFile(`RENDER error: User ${userId} not found in DB`);
+                    return res.status(404).json({ error: 'User not found in database' });
+                }
 
                 const waldspielKey = `waldspiel-${plugin.waldspielId}`;
-                const waldspielData = userData.pluginData?.[waldspielKey];
-                if (!waldspielData) return res.status(404).json({ error: 'Waldspiel data not found' });
+                let waldspielData = userData.pluginData?.[waldspielKey];
 
-                // Determine animal slot position (Priority: query param > session slot > fallback)
+                // Robust check for any waldspiel-ID key (for live system transitions)
+                if (!waldspielData) {
+                    const altKeys = Object.keys(userData.pluginData || {}).filter(k => k.startsWith('waldspiel-'));
+                    if (altKeys.length > 0) {
+                        const waldspielKeyFinal = altKeys[0];
+                        waldspielData = userData.pluginData[waldspielKeyFinal];
+                        logToFile(`RENDER: Using alternative data key: ${waldspielKeyFinal}`);
+                    }
+                }
+
+                if (!waldspielData) {
+                    logToFile(`RENDER error: No Waldspiel data (waldspiel-*) found for user ${userId}`);
+                    return res.status(404).json({ error: 'Waldspiel data (User Forest) not found' });
+                }
+
+                // Determine animal slot position
                 const querySlot = parseInt(req.query.slot);
                 let position = 2;
-                
                 if (!isNaN(querySlot)) {
                     position = querySlot;
                 } else {
@@ -367,13 +417,18 @@ module.exports = {
                 }
 
                 const renderResult = await ImageCreator.renderSingleAnimal(waldspielData, position, userId);
-                bongoLog(`[RENDER] Render successful for ${userId} at pos ${position}. Frames: ${Array.isArray(renderResult) ? renderResult.length : (renderResult.frames ? renderResult.frames.length : 'unknown object')}`);
-                const frames = Array.isArray(renderResult) ? renderResult : renderResult.frames;
+                logToFile(`[RENDER] Render successful for ${userId} at pos ${position}.`);
+
+                const framePaths = Array.isArray(renderResult) ? renderResult : renderResult.frames;
+                const frames = framePaths.map(fpath => {
+                    const buffer = fs.readFileSync(fpath);
+                    return buffer.toString('base64');
+                });
 
                 res.status(200).json({ status: 'success', frames });
             } catch (error) {
                 bongoLog(`[RENDER] CRITICAL Error for ${userId}: ${error.message}`);
-                bongoLog(error.stack);
+                logToFile(`RENDER CRITICAL ERROR: ${error.message}`);
                 res.status(500).json({ status: 'error', message: error.toString() });
             }
         });
