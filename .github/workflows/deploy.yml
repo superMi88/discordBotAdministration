@@ -23,8 +23,9 @@ jobs:
             export NVM_DIR="/root/.nvm"
             [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"
 
-            # Code aktualisieren
-            git pull origin master
+            # Code forcieren (überschreibt lokale Änderungen auf dem Server)
+            git fetch origin master
+            git reset --hard origin/master
             
             # Dependencies installieren
             npm install
