@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { verifyJwtToken } from "./auth";
 
-export async function middleware(req) {
+export async function proxy(req) {
   const { pathname } = req.nextUrl;
 
   // 1. Skip middleware for internal stuff, homepage, and favicon

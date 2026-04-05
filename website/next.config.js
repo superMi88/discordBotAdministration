@@ -3,9 +3,19 @@
  */
 module.exports = {
   images: {
-    domains: [
-      'cdn.discordapp.com',
-      'api-cdn.myanimelist.net'
+    remotePatterns: [
+      {
+        protocol: 'https',
+        hostname: 'cdn.discordapp.com',
+        port: '',
+        pathname: '/**',
+      },
+      {
+        protocol: 'https',
+        hostname: 'api-cdn.myanimelist.net',
+        port: '',
+        pathname: '/**',
+      }
     ],
   },
   webpack: (config) => {

@@ -34,7 +34,7 @@ class ExtensionManager {
 
             if (modulePath) {
                 try {
-                    const ExtensionClass = require(modulePath);
+                    const ExtensionClass = eval('require')(modulePath);
                     const instance = new ExtensionClass();
                     this.extensions.push(instance);
                 } catch (err) {
