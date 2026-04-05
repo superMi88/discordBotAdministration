@@ -6,12 +6,22 @@ module.exports = async function (client, plugin, config, projectAlias, data) {
     try {
         const UserData = require('../../../lib/UserData.js');
         const DatabaseManager = require('../../../lib/DatabaseManager.js');
+        const PluginManager = require('../../discordBot/lib/PluginManager.js');
+        const allPlugins = PluginManager.getAll() || [];
+        const waldspielPlugin = allPlugins.find(p => p.pluginTag === 'waldspiel');
+        const waldspielId = waldspielPlugin ? waldspielPlugin.id : "643556763768cdbc42f8d899";
+        
         const userData = await UserData.get(discordId);
-        const waldspielData = userData.pluginData?.['waldspiel-643556763768cdbc42f8d899'];
-        if (waldspielData && waldspielData.animalId2) {
-            const db = DatabaseManager.get();
-            const animal = await db.collection('animals').findOne({ _id: waldspielData.animalId2 });
-            if (animal && animal.name) displayName = animal.name;
+        const waldspielKey = `waldspiel-${waldspielId}`;
+        const waldspielData = userData.pluginData?.[waldspielKey];
+
+        if (waldspielData) {
+            const animalId = waldspielData.animalId2 || waldspielData.animalId1 || waldspielData.animalId3;
+            if (animalId) {
+                const db = DatabaseManager.get();
+                const animal = await db.collection('animals').findOne({ _id: animalId });
+                if (animal && animal.name) displayName = animal.name;
+            }
         }
     } catch (e) { }
 

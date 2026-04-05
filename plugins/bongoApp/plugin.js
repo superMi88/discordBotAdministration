@@ -24,18 +24,18 @@ module.exports = {
      */
     async execute(client, plugin, projectAlias) {
         console.log(`[BongoApp] Plugin initialized for project: ${projectAlias}`);
-        
+
         // Configuration from the database (UI fields)
         const pluginVar = plugin.var || {};
-        
+
         // Use provided secret or fallback to process.env.JWT_SECRET
         const jwtSecret = pluginVar.jwtSecret || process.env.JWT_SECRET || "SUPER_SECRET_BONGO_KEY";
-        
+
         // Use provided client ID or fallback to the current bot's ID
         const clientId = pluginVar.discordClientId || client.user.id;
-        
+
         const clientSecret = pluginVar.discordClientSecret;
-        
+
         // Construct redirect URI or use provided one
         const redirectUri = pluginVar.redirectUri || `http://localhost:3001/api/auth/discord/callback`;
 
@@ -46,6 +46,12 @@ module.exports = {
         // Initialize state
         plugin.activeUsers = {};
         plugin.loginBridge = {};
+
+        // Dynamically find Waldspiel plugin ID
+        const allPlugins = PluginManager.getAll() || [];
+        const waldspielPlugin = allPlugins.find(p => p.pluginTag === 'waldspiel');
+        plugin.waldspielId = waldspielPlugin ? waldspielPlugin.id : "643556763768cdbc42f8d899";
+        console.log(`[BongoApp] Using Waldspiel ID: ${plugin.waldspielId}`);
 
         // Create HTTP server for both Express and Socket.io
         const app = express();
@@ -65,44 +71,54 @@ module.exports = {
          * @param {string} discordUserId 
          */
         const signalUserUpdate = (discordUserId) => {
-            const bongoUsername = Object.keys(plugin.activeUsers).find(name => plugin.activeUsers[name].id === discordUserId);
+            console.log(`[BongoApp] Checking update signal for ${discordUserId}`);
+            const bongoUsername = Object.keys(plugin.activeUsers).find(name =>
+                (plugin.activeUsers[name].discordId === discordUserId) || (plugin.activeUsers[name].id === discordUserId)
+            );
             if (bongoUsername) {
-                const now = new Date();
+                const now = Date.now();
                 plugin.activeUsers[bongoUsername].lastUpdated = now;
-                io.emit('user_updated', { 
-                    name: bongoUsername, 
-                    ...plugin.activeUsers[bongoUsername] 
+                io.emit('user_updated', {
+                    name: bongoUsername,
+                    ...plugin.activeUsers[bongoUsername]
                 });
-                console.log(`[BongoApp] Auto-detected update for user: ${bongoUsername}`);
+                console.log(`[BongoApp] Signal SENT for user: ${bongoUsername} at ${now}`);
+            } else {
+                console.log(`[BongoApp] User with Discord ID ${discordUserId} is not currently in BongoApp, ignoring update.`);
             }
         };
 
         // --- INTERACTION AUTO-DETECTION ---
         // Listen for waldspiel-related interactions that change the forest state
         client.on(Events.InteractionCreate, async (interaction) => {
+
+            console.log(`[BongoApp] Waldspiel interaction detectedxx: ${interaction.customId}`);
             if (!interaction.customId) return;
 
             const relevantPrefixes = [
+                'selectCustomizationDropdown',
                 'selectedCustomization',
                 'selectedAnimation',
                 'setBackgroundCustomization',
                 'changeName',
                 'selectStorageDropdown',
                 'sendToStorage',
-                'selectedStorageDropdown'
+                'selectedStorageDropdown',
+                'waldspiel-',
+                'w-',
+                'storage-',
+                'item-',
+                'animal-'
             ];
 
-            const isWaldspielUpdate = relevantPrefixes.some(prefix => 
-                interaction.customId === prefix || interaction.customId.startsWith(prefix + '-')
+            const isWaldspielUpdate = relevantPrefixes.some(prefix =>
+                interaction.customId === prefix || interaction.customId.startsWith(prefix)
             );
 
             if (isWaldspielUpdate) {
-                // If it's a modal submit, we wait a bit for database consistency
-                if (interaction.isModalSubmit()) {
-                    setTimeout(() => signalUserUpdate(interaction.user.id), 2000);
-                } else {
-                    signalUserUpdate(interaction.user.id);
-                }
+                console.log(`[BongoApp] Waldspiel interaction detected: ${interaction.customId}`);
+                // Wait longer for forest to finish database work before signaling update
+                setTimeout(() => signalUserUpdate(interaction.user.id), 3000);
             }
         });
 
@@ -137,7 +153,7 @@ module.exports = {
 
         // --- AUTH ENDPOINTS ---
         app.get('/api/auth/config', (req, res) => {
-            res.json({ 
+            res.json({
                 clientId: clientId,
                 projectAlias: projectAlias
             });
@@ -198,12 +214,13 @@ module.exports = {
             const active = Object.keys(plugin.activeUsers)
                 .filter(name => (now - plugin.activeUsers[name].lastSeen) < 120000)
                 .map(name => ({
-                    id: plugin.activeUsers[name].id,
+                    id: plugin.activeUsers[name].discordId || plugin.activeUsers[name].id,
+                    discordId: plugin.activeUsers[name].discordId || plugin.activeUsers[name].id,
                     name: name,
                     skin: plugin.activeUsers[name].skin,
                     isMe: name === req.user.username,
                     displayName: plugin.activeUsers[name].displayName,
-                    lastUpdated: plugin.activeUsers[name].lastUpdated
+                    lastUpdated: new Date(plugin.activeUsers[name].lastUpdated).toISOString()
                 }));
             res.json(active);
         });
@@ -212,43 +229,52 @@ module.exports = {
             const { skin } = req.body;
             const name = req.user.username;
             const discordId = req.user.id;
-            
+
             let displayName = name;
             try {
                 const UserData = require('../../lib/UserData.js');
                 const DatabaseManager = require('../../lib/DatabaseManager.js');
                 const userData = await UserData.get(discordId);
-                const waldspielData = userData.pluginData?.['waldspiel-643556763768cdbc42f8d899'];
-                if (waldspielData && waldspielData.animalId2) {
-                    const db = DatabaseManager.get();
-                    const animal = await db.collection('animals').findOne({ _id: waldspielData.animalId2 });
-                    if (animal && animal.name) {
-                        displayName = animal.name;
+                const waldspielKey = `waldspiel-${plugin.waldspielId}`;
+                const waldspielData = userData.pluginData?.[waldspielKey];
+
+                if (waldspielData) {
+                    // Try slot 2 first (legacy preference), then slot 1, then slot 3
+                    const animalId = waldspielData.animalId2 || waldspielData.animalId1 || waldspielData.animalId3;
+
+                    if (animalId) {
+                        const db = DatabaseManager.get();
+                        const animal = await db.collection('animals').findOne({ _id: animalId });
+                        if (animal && animal.name) {
+                            displayName = animal.name;
+                        }
                     }
                 }
             } catch (e) {
                 console.error(`[JOIN] Error fetching animal name: ${e.message}`);
             }
 
-            const now = new Date();
-            const userObj = { id: discordId, skin, lastSeen: now, lastUpdated: now, displayName };
+            const now = Date.now();
+            const userObj = { id: discordId, discordId, skin, lastSeen: now, lastUpdated: now, displayName };
             plugin.activeUsers[name] = userObj;
-            
+            plugin.activeUsers[name].name = name;
+
             io.emit('user_joined', { name, ...userObj });
-            
+            console.log(`[BongoApp] User ${name} joined. lastUpdated: ${now}`);
+
             res.status(200).send({ status: 'joined', user: req.user, displayName });
         });
 
         app.post('/api/bongo/update', verifyToken, async (req, res) => {
             const name = req.user.username;
             const { skin } = req.body;
-            
+
             if (plugin.activeUsers[name]) {
-                const now = new Date();
+                const now = Date.now();
                 plugin.activeUsers[name].lastUpdated = now;
                 if (skin) plugin.activeUsers[name].skin = skin;
-                
-                io.emit('user_updated', { name, ...plugin.activeUsers[name] });
+
+                io.emit('user_updated', { ...plugin.activeUsers[name] });
                 res.status(200).send({ status: 'updated', lastUpdated: now });
             } else {
                 res.status(404).send({ error: 'User not joined' });
@@ -285,10 +311,18 @@ module.exports = {
                 const userData = await UserData.get(userId);
                 if (!userData) return res.status(404).json({ error: 'User not found' });
 
-                const waldspielData = userData.pluginData?.['waldspiel-643556763768cdbc42f8d899'];
+                const waldspielKey = `waldspiel-${plugin.waldspielId}`;
+                const waldspielData = userData.pluginData?.[waldspielKey];
                 if (!waldspielData) return res.status(404).json({ error: 'Waldspiel data not found' });
 
-                const renderResult = await ImageCreator.renderSingleAnimal(waldspielData, 2, userId);
+                // Find first available animal slot
+                let position = 2;
+                if (!waldspielData.animalId2) {
+                    if (waldspielData.animalId1) position = 1;
+                    else if (waldspielData.animalId3) position = 3;
+                }
+
+                const renderResult = await ImageCreator.renderSingleAnimal(waldspielData, position, userId);
                 const frames = Array.isArray(renderResult) ? renderResult : renderResult.frames;
 
                 res.status(200).json({ status: 'success', frames });
