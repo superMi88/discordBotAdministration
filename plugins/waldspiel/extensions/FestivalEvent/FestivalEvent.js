@@ -1,8 +1,7 @@
-const { ActionRowBuilder, ButtonBuilder, ButtonStyle, Events, AttachmentBuilder } = require('discord.js');
+const { ActionRowBuilder, ButtonBuilder, ButtonStyle, Events, AttachmentBuilder, EmbedBuilder } = require('discord.js');
 const UserData = require("../../../../lib/UserData.js");
-const DatabaseManager = require("../../../../lib/DatabaseManager.js");
 const sharp = require('sharp');
-const WebP = require('node-webpmux');
+const GIFEncoder = require('gifencoder');
 const path = require('path');
 const fs = require('fs');
 
@@ -14,9 +13,7 @@ class FestivalEvent {
         this.pointer = path.join(this.imageDir, 'wheel_pointer.png');
 
         this.wheelIdle = path.join(this.imageDir, 'wheel_idle.webp');
-        this.wheelSpinning = path.join(this.imageDir, 'wheel_spinning.webp');
 
-        // Results mapping to 1-16
         this.outcomes = [
             { label: "1", value: 10, msg: "Nr 1! Einsatz zurück!" },
             { label: "2", value: 20, msg: "Nr 2! Doppelter Gewinn!" },
@@ -35,15 +32,48 @@ class FestivalEvent {
             { label: "15", value: 12, msg: "Nr 15! Ein kleiner Bonus." },
             { label: "16", value: 0, msg: "Nr 16... Endstation." }
         ];
+
+        this.winnersPath = path.join(__dirname, 'winners.json');
+        this.winners = this.loadWinners();
+        this.mainMessageId = null;
+    }
+
+    loadWinners() {
+        if (fs.existsSync(this.winnersPath)) {
+            try {
+                return JSON.parse(fs.readFileSync(this.winnersPath, 'utf8'));
+            } catch (e) {
+                console.warn("[Festival-Extension] Fehler beim Laden der Gewinner:", e.message);
+                return [];
+            }
+        }
+        return [];
+    }
+
+    saveWinners() {
+        try {
+            fs.writeFileSync(this.winnersPath, JSON.stringify(this.winners, null, 2));
+        } catch (e) {
+            console.warn("[Festival-Extension] Fehler beim Speichern der Gewinner:", e.message);
+        }
+    }
+
+    addWinner(username, prizeMsg, prizeValue) {
+        if (prizeValue <= 0) return; // Only track actual wins
+        this.winners.unshift({ user: username, prize: prizeMsg.split('!')[0] || prizeMsg, date: new Date().toISOString() });
+        if (this.winners.length > 3) {
+            this.winners = this.winners.slice(0, 3);
+        }
+        this.saveWinners();
     }
 
     isExtensionActive() {
-        return true;
+        return false;
     }
 
     async preExecute(client, plugin) {
         if (!this.isExtensionActive()) return;
-        console.log('[Festival-Extension] gestartet (16 Segmente)');
+        console.log('[Festival-Extension] gestartet (GIF Animation)');
 
         await this.prepareImages();
 
@@ -69,7 +99,6 @@ class FestivalEvent {
             let channel = guild.channels.cache.find(c => c.name === channelName || c.name.includes('jahrmarkt') || c.name.includes('festplatz'));
 
             if (!channel) {
-                console.log("[Festival-Extension] Erstelle Jahrmarkt-Kanal...");
                 channel = await guild.channels.create({
                     name: channelName,
                     type: 0,
@@ -85,73 +114,82 @@ class FestivalEvent {
                 }
             }
 
-            const messages = await channel.messages.fetch({ limit: 5 });
-            if (messages.size === 0) {
-                await this.sendWelcomeMessage(channel);
+            // Find the main message if it exists
+            const messages = await channel.messages.fetch({ limit: 20 });
+            const mainMsg = messages.find(m => m.author.id === client.user.id && m.content.includes("Willkommen auf dem Jahrmarkt"));
+
+            if (mainMsg) {
+                this.mainMessageId = mainMsg.id;
             }
+
+            await this.updateMainMessage(channel);
         } catch (err) {
             console.warn("[Festival-Extension] Fehler:", err.message);
         }
     }
 
-    async sendWelcomeMessage(target) {
-        const attachment = new AttachmentBuilder(this.wheelIdle, { name: 'glücksrad.webp' });
-        
-        const embed = {
-            title: "🎪 Jahrmarkt am Strand",
-            description: "Versuche dein Glück am Glücksrad (16 Felder!). Aktuell **gratis zum Testen!**",
-            image: { url: 'attachment://glücksrad.webp' },
-            color: 0xFFA500
-        };
-
-        const button = new ButtonBuilder()
-            .setCustomId('festival_spin')
-            .setLabel('Am Rad drehen (Gratis zum Testen!)')
-            .setStyle(ButtonStyle.Primary);
-        
-        const row = new ActionRowBuilder().addComponents(button);
-
-        await target.send({
-            embeds: [embed],
-            files: [attachment],
-            components: [row]
-        });
-    }
 
     async prepareImages() {
         if (!fs.existsSync(this.imageDir)) return;
 
-        const wheelSize = 189;
+        const width = 550;
+        const height = 300;
+
+        const innerMeta = await sharp(this.wheelInner).metadata();
+        const wheelSize = innerMeta.width;
         const pointerSize = 60;
-        const pointerX = 275 - Math.floor(pointerSize / 2);
-        const pointerY = 150 - Math.floor(wheelSize / 2) - 10;
+
+        const pointerX = Math.round(width / 2 - pointerSize / 2);
+        const pointerY = Math.round(height / 2 - wheelSize / 2 - 10);
 
         const bgBuf = await sharp(this.background).toBuffer();
         const pntBuf = await sharp(this.pointer).resize(pointerSize).toBuffer();
 
+        // 2. Spinning Animations (als WebP!)
+        const WebP = require('node-webpmux');
+        const { createCanvas, loadImage } = require('canvas');
+        const totalFrames = 60;
+
+        // Load images for canvas once
+        const canvasBg = await loadImage(this.background);
+        const canvasWheel = await loadImage(this.wheelInner);
+        const canvasPointer = await loadImage(this.pointer);
+
+        const wheelW = canvasWheel.width;
+        const wheelH = canvasWheel.height;
+        const pntW = 60;
+        const pntH = canvasPointer.height * (60 / canvasPointer.width);
+
+        const drawFullFrame = (ctx, angle) => {
+            ctx.clearRect(0, 0, width, height);
+            ctx.drawImage(canvasBg, 0, 0, width, height);
+            ctx.save();
+            ctx.translate(width / 2, height / 2);
+            ctx.rotate(-angle * Math.PI / 180);
+            ctx.drawImage(canvasWheel, -wheelW / 2, -wheelH / 2, wheelW, wheelH);
+            ctx.restore();
+            ctx.drawImage(canvasPointer, width / 2 - pntW / 2, height / 2 - wheelH / 2 - 10, pntW, pntH);
+        };
+
         // 1. Idle
         if (!fs.existsSync(this.wheelIdle)) {
-            const inner = await sharp(this.wheelInner).toBuffer();
-            const centerX = 275 - Math.floor(wheelSize / 2);
-            const centerY = 150 - Math.floor(wheelSize / 2);
-            await sharp(bgBuf)
-                .composite([
-                    { input: inner, left: centerX, top: centerY },
-                    { input: pntBuf, left: pointerX, top: pointerY }
-                ])
-                .webp()
-                .toFile(this.wheelIdle);
+            const cvs = createCanvas(width, height);
+            drawFullFrame(cvs.getContext('2d'), 0);
+            const webpIdle = await sharp(cvs.toBuffer('image/png')).webp().toBuffer();
+            fs.writeFileSync(this.wheelIdle, webpIdle);
         }
 
-        // 2. Spinning Animations (für 16 Resultate!)
-        const totalFrames = 70;
+        // 2. Animations
         for (let r = 0; r < 16; r++) {
             const spinPath = path.join(this.imageDir, `wheel_spin_${r}.webp`);
             if (!fs.existsSync(spinPath)) {
-                console.log(`[Festival-Extension] Generiere flüssige Animation (v2) für Resultat ${r + 1}...`);
-                const frameBuffers = [];
-                const finalAngle = r * (360 / 16);
-                const totalRotation = (360 * 2) + finalAngle;
+                console.log(`[Festival-Extension] Generiere WebP (Canvas) für Resultat ${r + 1}...`);
+                const finalResultAngle = r * (360 / 16);
+                const totalRotation = (360 * 2) + finalResultAngle;
+                const frameObjects = [];
+
+                const cvs = createCanvas(width, height);
+                const ctx = cvs.getContext('2d');
 
                 for (let i = 0; i < totalFrames; i++) {
                     const t = i / (totalFrames - 1);
@@ -167,125 +205,211 @@ class FestivalEvent {
                         const b = (1 - a * S) / Math.pow(1 - S, 3);
                         progress = 1 - b * Math.pow(1 - t, 3);
                     }
-                    
+
                     const angle = progress * totalRotation;
+                    drawFullFrame(ctx, angle);
 
-                    const rotatedInnerBuf = await sharp(this.wheelInner)
-                        .rotate(-angle, { background: { r: 0, g: 0, b: 0, alpha: 0 } })
-                        .toBuffer();
-                    
-                    const meta = await sharp(rotatedInnerBuf).metadata();
-                    const curLeft = 275 - Math.floor(meta.width / 2);
-                    const curTop = 150 - Math.floor(meta.height / 2);
+                    const webpBuf = await sharp(cvs.toBuffer('image/png')).webp().toBuffer();
 
-                    const frame = await sharp(bgBuf)
-                        .composite([
-                            { input: rotatedInnerBuf, left: curLeft, top: curTop },
-                            { input: pntBuf, left: pointerX, top: pointerY }
-                        ])
-                        .webp({ quality: 60 })
-                        .toBuffer();
-                    
-                    let delay;
+                    let delayTime;
                     if (t < split) {
-                        delay = 100;
+                        delayTime = 100;
                     } else {
-                        delay = 100 + Math.pow((t - split) / (1 - split), 2) * 400;
+                        delayTime = 100 + Math.pow((t - split) / (1 - split), 2) * 400;
                     }
-                    
-                    frameBuffers.push(await WebP.Image.generateFrame({ buffer: frame, delay: Math.round(delay), dispose: true, blend: false }));
+
+                    const frame = await WebP.Image.generateFrame({ buffer: webpBuf, delay: Math.round(delayTime) });
+                    frameObjects.push(frame);
                 }
 
-                // Füge am Ende ein sehr langes Standbild hinzu (20 Sekunden), um Sprung zurück zu verhindern
-                const lastFrame = frameBuffers[frameBuffers.length - 1];
-                frameBuffers.push({ ...lastFrame, delay: 20000 });
+                // Letzter Frame (Sicherstellung, dass er exakt auf dem Ergebnis steht)
+                drawFullFrame(ctx, totalRotation);
+                const lastFrameWebp = await sharp(cvs.toBuffer('image/png')).webp().toBuffer();
+                const lastFrame = await WebP.Image.generateFrame({ buffer: lastFrameWebp, delay: 10000 });
+                frameObjects.push(lastFrame);
 
-                await WebP.Image.save(spinPath, { width: 550, height: 300, loops: 1, frames: frameBuffers });
+                await WebP.Image.save(spinPath, { frames: frameObjects, width, height, loops: 0 });
             }
         }
 
-        // 3. Results (Statisch)
+        // 3. Results (PNGs für andere Zwecke)
         for (let i = 0; i < 16; i++) {
-            const resultPath = path.join(this.imageDir, `wheel_result_${i}.webp`);
+            const resultPath = path.join(this.imageDir, `wheel_result_${i}.png`);
             if (!fs.existsSync(resultPath)) {
-                const angle = i * (360 / 16);
-                const rotatedInnerBuf = await sharp(this.wheelInner)
-                    .rotate(-angle, { background: { r: 0, g: 0, b: 0, alpha: 0 } })
-                    .toBuffer();
-                
-                const meta = await sharp(rotatedInnerBuf).metadata();
-                const curLeft = 275 - Math.floor(meta.width / 2);
-                const curTop = 150 - Math.floor(meta.height / 2);
-
-                await sharp(bgBuf)
-                    .composite([
-                        { input: rotatedInnerBuf, left: curLeft, top: curTop },
-                        { input: pntBuf, left: pointerX, top: pointerY }
-                    ])
-                    .webp()
-                    .toFile(resultPath);
+                const cvs = createCanvas(width, height);
+                drawFullFrame(cvs.getContext('2d'), i * (360 / 16));
+                fs.writeFileSync(resultPath, cvs.toBuffer('image/png'));
             }
         }
     }
 
     async handleSpin(interaction, client, plugin) {
         const discordUserId = interaction.user.id;
-        const userData = await UserData.get(discordUserId);
         const berryId = 'B';
 
         const resultIdx = Math.floor(Math.random() * 16);
         const outcome = this.outcomes[resultIdx];
         const spinPath = path.join(this.imageDir, `wheel_spin_${resultIdx}.webp`);
-        const resultPath = path.join(this.imageDir, `wheel_result_${resultIdx}.webp`);
 
-        const spinAttachment = new AttachmentBuilder(spinPath, { name: 'spinning.webp' });
-        
-        const spinEmbed = {
-            title: "🎡 Das Rad dreht sich...",
-            image: { url: 'attachment://spinning.webp' },
-            color: 0xFFA500
-        };
+        const spinAttachment = new AttachmentBuilder(spinPath, { name: `spinning_${Date.now()}.webp` });
 
-        await interaction.update({
-            embeds: [spinEmbed],
+        // Use regular message as requested
+        await interaction.reply({
+            content: "🎡 **Viel Glück! Das Rad dreht sich...**",
             files: [spinAttachment],
-            components: []
+            ephemeral: true
         });
 
-        // Einziger Timeout nach 12 Sekunden (wenn Rad sicher steht)
         setTimeout(async () => {
+            const userData = await UserData.get(discordUserId);
             if (outcome.value > 0) {
                 const uData = await UserData.get(discordUserId);
                 uData.addCurrency(berryId, outcome.value);
                 await uData.save(plugin);
+
+                this.addWinner(interaction.user.username, outcome.msg, outcome.value);
+                await this.updateMainMessage(interaction.channel);
             }
 
-            const resultAttachment = new AttachmentBuilder(resultPath, { name: 'result.webp' });
-            
-            const resultEmbed = {
-                title: "✨ Ergebnis",
-                description: `${outcome.msg}\nNeuer Kontostand: **${userData.getCurrency(berryId)} Beeren**`,
-                image: { url: 'attachment://result.webp' },
-                color: 0x00FF00
-            };
-
-            const row = new ActionRowBuilder().addComponents(
-                new ButtonBuilder()
-                    .setCustomId('festival_spin')
-                    .setLabel('Nochmal drehen (Gratis!)')
-                    .setStyle(ButtonStyle.Success)
-            );
-
+            // Update only TEXT
             await interaction.editReply({
-                embeds: [resultEmbed],
-                files: [resultAttachment],
-                components: [row]
+                content: `✨ **${outcome.msg}**\n\n💰 Neuer Kontostand: **${userData.getCurrency(berryId)} Beeren**\n\n*(Nachricht schließt sich gleich)*`,
             });
-        }, 12000);
+
+            setTimeout(async () => {
+                try {
+                    await interaction.deleteReply();
+                } catch (e) { }
+            }, 5000);
+
+        }, 11000);
+    }
+
+    async updateMainMessage(channel) {
+        if (!channel) return;
+
+        const dynamicIdlePath = path.join(this.imageDir, 'wheel_main_dynamic.png');
+        await this.generateDynamicMainImage(dynamicIdlePath);
+
+        const attachment = new AttachmentBuilder(dynamicIdlePath, { name: `glücksrad_${Date.now()}.png` });
+
+        const button = new ButtonBuilder()
+            .setCustomId('festival_spin')
+            .setLabel('Am Rad drehen (Gratis!)')
+            .setStyle(ButtonStyle.Primary);
+
+        const row = new ActionRowBuilder().addComponents(button);
+
+        const content = "🎪 **Willkommen auf dem Jahrmarkt am Strand!** 🎡\nVersuche dein Glück am Glücksrad (16 Felder!).";
+
+        if (this.mainMessageId) {
+            try {
+                const msg = await channel.messages.fetch(this.mainMessageId);
+                await msg.edit({
+                    content: content,
+                    files: [attachment],
+                    components: [row]
+                });
+                return;
+            } catch (e) {
+                console.warn("[Festival-Extension] Hauptnachricht nicht gefunden, sende neu.");
+            }
+        }
+
+        // Send new message if ID is missing or message deleted
+        const newMsg = await channel.send({
+            content: content,
+            files: [attachment],
+            components: [row]
+        });
+        this.mainMessageId = newMsg.id;
+    }
+
+    async generateDynamicMainImage(outputPath) {
+        const width = 800;
+        const height = 300;
+        const wheelWidth = 550;
+
+        const bgBuf = await sharp(this.background).resize(width, height, { fit: 'fill' }).toBuffer();
+
+        const innerMeta = await sharp(this.wheelInner).metadata();
+        const wheelSize = innerMeta.width;
+        const pointerSize = 60;
+
+        const centerX = Math.round(wheelWidth / 2 - wheelSize / 2);
+        const centerY = Math.round(height / 2 - wheelSize / 2);
+        const pointerX = Math.round(wheelWidth / 2 - pointerSize / 2);
+        const pointerY = Math.round(height / 2 - wheelSize / 2 - 10);
+
+        const innerBuf = await sharp(this.wheelInner).toBuffer();
+        const pointerBuf = await sharp(this.pointer).resize(pointerSize).toBuffer();
+
+        // Prepare winners section
+        let overlays = [
+            { input: innerBuf, left: centerX, top: centerY },
+            { input: pointerBuf, left: pointerX, top: pointerY }
+        ];
+
+        // Draw sidebar background
+        const sidebarBg = await sharp({
+            create: {
+                width: 250,
+                height: 280,
+                channels: 4,
+                background: { r: 0, g: 0, b: 0, alpha: 0.6 }
+            }
+        }).png().toBuffer();
+
+        overlays.push({ input: sidebarBg, left: 540, top: 10 });
+
+        // Prize Icon
+        const prizeIconPath = path.join(this.imageDir, 'berry_prize.png');
+        let prizeIconBuf = null;
+        if (fs.existsSync(prizeIconPath)) {
+            prizeIconBuf = await sharp(prizeIconPath).resize(30, 30).toBuffer();
+        }
+
+        // Generate SVG for winners text
+        let winnersSvg = `
+        <svg width="250" height="280">
+            <style>
+                .title { fill: #ffcc00; font-size: 20px; font-weight: bold; font-family: Arial; }
+                .winner { fill: #ffffff; font-size: 14px; font-weight: bold; font-family: Arial; }
+                .prize { fill: #eeeeee; font-size: 12px; font-family: Arial; }
+            </style>
+            <text x="10" y="30" class="title">🏆 Letzte Gewinner</text>
+        `;
+
+        if (this.winners.length === 0) {
+            winnersSvg += `<text x="10" y="70" class="winner">Noch keine Gewinner...</text>`;
+        } else {
+            for (let i = 0; i < this.winners.length; i++) {
+                const w = this.winners[i];
+                const y = 80 + (i * 65);
+                const name = w.user.length > 15 ? w.user.substring(0, 13) + ".." : w.user;
+
+                winnersSvg += `
+                    <text x="10" y="${y}" class="winner">${i + 1}. ${name}</text>
+                    <text x="45" y="${y + 20}" class="prize">${w.prize}</text>
+                `;
+
+                if (prizeIconBuf) {
+                    overlays.push({ input: prizeIconBuf, left: 540 + 10, top: 10 + y - 5 });
+                }
+            }
+        }
+
+        winnersSvg += `</svg>`;
+        overlays.push({ input: Buffer.from(winnersSvg), left: 540, top: 10 });
+
+        await sharp(bgBuf)
+            .composite(overlays)
+            .png()
+            .toFile(outputPath);
     }
 
     async getShop(client, plugin, shopChannel) {
-        await this.sendWelcomeMessage(shopChannel);
+        await this.updateMainMessage(shopChannel);
     }
 }
 
