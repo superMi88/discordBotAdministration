@@ -409,6 +409,7 @@ class FestivalEvent {
     }
 
     async getShop(client, plugin, shopChannel) {
+        if (!this.isExtensionActive()) return;
         await this.updateMainMessage(shopChannel);
     }
 }
