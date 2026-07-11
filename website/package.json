@@ -2,8 +2,8 @@
   "private": true,
   "description": "Dependencies moved to root package.json",
   "scripts": {
-    "dev": "next dev",
+    "dev": "node run.js dev",
     "build": "next build",
-    "start": "next start -p 80"
+    "start": "node run.js start"
   }
 }
