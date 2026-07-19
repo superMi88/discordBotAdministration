@@ -47,7 +47,30 @@ function getRanksWithPluginVar(pluginVar) {
 
 class Plugin {
 	async execute(client, plugin) {
-		let db = DatabaseManager.get()
+		let db = DatabaseManager.get();
+
+		plugin.on(client, 'guildMemberUpdate', async (oldMember, newMember) => {
+			try {
+				const requiredRole = plugin['var']?.requiredRole;
+				if (requiredRole) {
+					const hadRole = oldMember.roles.cache.has(requiredRole);
+					const hasRole = newMember.roles.cache.has(requiredRole);
+					if (!hadRole && hasRole) {
+						const discordUserId = newMember.id;
+						const discordUserData = await require('../../lib/UserData.js').get(discordUserId);
+						const currencyData = discordUserData?.currencyData;
+						let voiceActivity = parseInt(currencyData?.[plugin['var'].voiceActivity] || 0);
+						let chatActivity = parseInt(currencyData?.[plugin['var'].chatActivity] || 0);
+						let userXp = voiceActivity + chatActivity;
+
+						const relativeRanks = getRanksWithPluginVar(plugin['var']);
+						await assignCorrectRankRole(newMember, userXp, relativeRanks);
+					}
+				}
+			} catch (err) {
+				console.error("[rolesystem] Fehler bei guildMemberUpdate:", err);
+			}
+		});
 
 		plugin.on(client, 'interactionCreate', async interaction => {
 
@@ -331,11 +354,14 @@ class Plugin {
 		const guild = await client.guilds.fetch(plugin['var'].server);
 		const members = await guild.members.fetch();
 
-		members.forEach(async member => {
-			if (member.user.bot) return; // Optional: Bots überspringen
+		for (const member of members.values()) {
+			if (member.user.bot) continue; // Optional: Bots überspringen
+
+			const userDoc = await db.collection('userCollection').findOne({ discordId: member.id });
+			if (!userDoc || userDoc.verified !== true) continue;
 
 			const discordUserDatabase = (await require('../../lib/UserData.js').get(member.id)).currencyData;
-			if (!discordUserDatabase) return;
+			if (!discordUserDatabase) continue;
 
 			// XP aus Sprach- und Chataktivität berechnen
 			let voiceActivity = parseInt(discordUserDatabase[plugin['var'].voiceActivity] || 0);
@@ -343,9 +369,41 @@ class Plugin {
 			let userXp = voiceActivity + chatActivity;
 
 			await assignCorrectRankRole(member, userXp, relativeRanks);
-		});
+		}
 
 		console.log(`Alle Mitglieder durchgegangen.`);
+	}
+	async onUserVerified(client, plugin, member) {
+		try {
+			const requiredRole = plugin['var']?.requiredRole;
+			if (requiredRole) {
+				if (!member.roles.cache.has(requiredRole)) {
+					try {
+						const refetched = await member.fetch(true);
+						if (refetched && refetched.roles) member = refetched;
+					} catch (e) {}
+				}
+				if (!member.roles.cache.has(requiredRole)) {
+					console.log(`[rolesystem] User ${member.user.tag} besitzt die erforderliche Rolle (${requiredRole}) auf ${member.guild.name} nicht.`);
+					return true;
+				}
+			}
+
+			const discordUserId = member.id;
+			const discordUserData = await require('../../lib/UserData.js').get(discordUserId);
+			const currencyData = discordUserData?.currencyData;
+
+			let voiceActivity = parseInt(currencyData?.[plugin['var'].voiceActivity] || 0);
+			let chatActivity = parseInt(currencyData?.[plugin['var'].chatActivity] || 0);
+			let userXp = voiceActivity + chatActivity;
+
+			const relativeRanks = getRanksWithPluginVar(plugin['var']);
+			await assignCorrectRankRole(member, userXp, relativeRanks);
+			return true;
+		} catch (err) {
+			console.error("[rolesystem] Fehler in onUserVerified:", err);
+			return false;
+		}
 	}
 	async addEvents(plugin, eventsArray) {
 
@@ -420,6 +478,9 @@ async function messageCounterAdd(plugin, client, discordUserId, currencyId, oldA
 
 	try {
 		if (isNaN(newActivityValue)) return;
+
+		const userDoc = await db.collection('userCollection').findOne({ discordId: discordUserId });
+		if (!userDoc || userDoc.verified !== true) return;
 
 		const discordUserDatabase = (await require('../../lib/UserData.js').get(discordUserId)).currencyData;
 		if (!discordUserDatabase) return;
@@ -590,12 +651,14 @@ async function assignCorrectRankRole(member, xp, relativeRanks) {
 		await member.roles.remove(rolesToRemove);
 	}
 
-	// Weise die korrekte Rangrolle zu, wenn nicht bereits vorhanden
-	if (!member.roles.cache.has(newRank.roleId)) {
-		await member.roles.add(newRank.roleId);
-		console.log(`Rolle ${newRank.name} zugewiesen an ${member.user.tag}`);
-	} else {
-		console.log(`${member.user.tag} hat bereits die korrekte Rolle (${newRank.name})`);
+	// Weise die korrekte Rangrolle zu, wenn auf diesem Server vorhanden und noch nicht zugewiesen
+	if (newRank.roleId && member.guild.roles.cache.has(newRank.roleId)) {
+		if (!member.roles.cache.has(newRank.roleId)) {
+			await member.roles.add(newRank.roleId);
+			console.log(`Rolle ${newRank.name} zugewiesen an ${member.user.tag} auf Server ${member.guild.name}`);
+		} else {
+			console.log(`${member.user.tag} hat bereits die korrekte Rolle (${newRank.name})`);
+		}
 	}
 }
 

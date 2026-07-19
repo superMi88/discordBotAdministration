@@ -14,6 +14,17 @@ module.exports = {
 			]
 		},
 		{
+			type: "alone",
+			description: "Erforderliche Rolle für Rangvergabe (optional, z.B. Verifiziert-Rolle)",
+			fields: [
+				{
+					type: "roles",
+					name: "requiredRole",
+					required: false,
+				}
+			]
+		},
+		{
 			type: "alone", //definiert wie die felder heißen text und icon
 			description: "voiceActivity",
 			fields: [

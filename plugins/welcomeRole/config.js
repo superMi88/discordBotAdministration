@@ -13,6 +13,17 @@ module.exports = {
 					required: true,
 				}
 			]
+		},
+		{
+			type: "alone",
+			description: "Rolle die beim Verifizieren entfernt wird (optional)",
+			fields: [
+				{
+					type: "roles",
+					name: "welcomeRoleRemove",
+					required: false,
+				}
+			]
 		}
 	],
 	buttons: [
