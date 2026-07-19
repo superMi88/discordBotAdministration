@@ -7,30 +7,15 @@ const { ActionRowBuilder, ButtonBuilder, ButtonStyle, Events } = require('discor
 
 class Plugin {
 	async execute(client, plugin) {
-
-		let userCache = new Set()
-
-		/*
-		client.on('guildMemberUpdate', (oldMember, newMember) => {
-			if (oldMember.pending && !newMember.pending) {
-				
-				if(userCache.has(newMember.user.id)) return
-					userCache.add(newMember.user.id)
-					createjoinMessage(plugin, client, newMember)
-					setTimeout(() =>{
-						userCache.delete(newMember.user.id)
-					}, /*1000 * 60 * 60 * 24*/ /*30000) //keine neue join message wenn es kürzer her ist als 24 stunden
-			}
-		});*/
-
-		plugin.on(client, 'guildMemberAdd', async member => {
-			
-			createjoinMessage(plugin, client, member)
-		});
-
-		
-
+		// Event triggers are invoked via user verification (onUserVerified)
 	}
+
+	async onUserVerified(client, plugin, member) {
+		if (plugin && plugin['var'] && plugin['var'].welcomeChannel) {
+			await createjoinMessage(plugin, client, member);
+		}
+	}
+
 	async save(plugin, config) {
 
 		let status = await PluginManager.save(plugin, config)
