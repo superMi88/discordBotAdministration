@@ -36,27 +36,36 @@ module.exports = {
             if (!member) {
                 console.warn(`[userVerified] Nutzer ${discordUserId} konnte in den Guilds nicht gefunden werden.`);
                 if (socket) {
-                    ipc.server.emit(socket, 'NodeProcessResponse', { success: false, error: 'Member not found on guild' });
+                    ipc.server.emit(socket, 'NodeProcessResponse', { success: false, error: 'Nutzer wurde auf dem Discord-Server nicht gefunden. Bitte tritt dem Server bei.' });
                 }
                 return false;
             }
 
             console.log(`[userVerified] Führe Verifizierungs-Plugins für ${member.user.tag} (${member.id}) aus...`);
 
+            let pluginsSuccess = true;
             for (const plugin of allPlugins) {
                 if (plugin.logic && typeof plugin.logic.onUserVerified === 'function') {
                     try {
-                        await plugin.logic.onUserVerified(client, plugin, member);
+                        const pluginResult = await plugin.logic.onUserVerified(client, plugin, member);
+                        if (pluginResult === false) {
+                            pluginsSuccess = false;
+                        }
                     } catch (pluginErr) {
                         console.error(`[userVerified] Fehler beim Ausführen von Plugin ${plugin.name || plugin.id}:`, pluginErr);
+                        pluginsSuccess = false;
                     }
                 }
             }
 
             if (socket) {
-                ipc.server.emit(socket, 'NodeProcessResponse', { success: true, verifiedUser: discordUserId });
+                ipc.server.emit(socket, 'NodeProcessResponse', {
+                    success: pluginsSuccess,
+                    verifiedUser: discordUserId,
+                    error: pluginsSuccess ? null : 'Rollenvergabe im Discord fehlgeschlagen.'
+                });
             }
-            return true;
+            return pluginsSuccess;
         } catch (error) {
             console.error("[userVerified] Execution error:", error);
             if (socket) {

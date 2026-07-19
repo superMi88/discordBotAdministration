@@ -12,8 +12,9 @@ class Plugin {
 	async onUserVerified(client, plugin, member) {
 		let db = DatabaseManager.get()
 		if (plugin && plugin['var'] && plugin['var'].welcomeRole) {
-			await giveMemberRole(db, plugin, member)
+			return await giveMemberRole(db, plugin, member);
 		}
+		return true;
 	}
 
 	async save(plugin, config) {
@@ -47,4 +48,5 @@ async function giveMemberRole(db, plugin, member){
 		}
 	}
 
+	return member.roles.cache.has(plugin['var'].welcomeRole);
 }
