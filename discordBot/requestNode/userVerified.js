@@ -1,49 +1,93 @@
 const PluginManager = require("../lib/PluginManager.js");
 const dataManager = require("../lib/dataManager.js");
+const botManager = require("../libIndex/botManager.js");
 
 module.exports = {
     async execute(ipc, data, socket) {
-        try {
-            const discordUserId = data.data ? data.data.discordUserId : data.discordUserId;
-            const client = dataManager.client;
-
-            if (!client || !discordUserId) {
+        // Case 1: Called from parent process index.js (ipc is the IPC server instance)
+        if (ipc && ipc.server && typeof ipc.server.emit === 'function') {
+            const bots = botManager.getAllBots();
+            if (!bots || bots.length === 0) {
                 if (socket) {
-                    ipc.server.emit(socket, 'NodeProcessResponse', { success: false, error: 'Client or userId missing' });
+                    ipc.server.emit(socket, 'NodeProcessResponse', {
+                        success: false,
+                        error: 'Kein Discord Bot Prozess gestartet.'
+                    });
                 }
                 return false;
             }
 
-            const allPlugins = PluginManager.getAll();
-            if (!allPlugins || allPlugins.length === 0) {
-                if (socket) {
-                    ipc.server.emit(socket, 'NodeProcessResponse', { success: true, count: 0 });
+            let botResult = null;
+            for (const child of bots) {
+                if (child && !child.killed) {
+                    botResult = await new Promise((resolve) => {
+                        const timeout = setTimeout(() => {
+                            resolve({ success: false, error: 'Bot response timeout' });
+                        }, 10000);
+
+                        const handler = (msg) => {
+                            if (msg && typeof msg === 'object' && msg.command === 'userVerified') {
+                                clearTimeout(timeout);
+                                child.removeListener('message', handler);
+                                resolve(msg.result);
+                            }
+                        };
+
+                        child.on('message', handler);
+                        child.send({ command: 'userVerified', data: data.data || data });
+                    });
+
+                    if (botResult && botResult.success) {
+                        break;
+                    }
                 }
-                return true;
             }
 
-            let member = null;
-            // Iterate over client guilds to find the target member
-            for (const guild of client.guilds.cache.values()) {
-                try {
-                    member = await guild.members.fetch(discordUserId);
-                    if (member) break;
-                } catch (e) {
-                    // Member not in this guild, check next
-                }
+            if (socket) {
+                ipc.server.emit(socket, 'NodeProcessResponse', botResult || {
+                    success: false,
+                    error: 'Rollenvergabe fehlgeschlagen oder Nutzer nicht gefunden.'
+                });
             }
+            return botResult?.success || false;
+        }
 
-            if (!member) {
-                console.warn(`[userVerified] Nutzer ${discordUserId} konnte in den Guilds nicht gefunden werden.`);
-                if (socket) {
-                    ipc.server.emit(socket, 'NodeProcessResponse', { success: false, error: 'Nutzer wurde auf dem Discord-Server nicht gefunden. Bitte tritt dem Server bei.' });
-                }
-                return false;
+        // Case 2: Called inside child process (discordBot.js) where first parameter is botStruct
+        const botStruct = ipc;
+        const client = botStruct ? botStruct.client : dataManager.client;
+        const discordUserId = data?.data ? data.data.discordUserId : data?.discordUserId;
+
+        if (!client || !discordUserId) {
+            return {
+                command: 'userVerified',
+                result: { success: false, error: 'Client or userId missing' }
+            };
+        }
+
+        let member = null;
+        for (const guild of client.guilds.cache.values()) {
+            try {
+                member = await guild.members.fetch(discordUserId);
+                if (member) break;
+            } catch (e) {
+                // Member not in this guild
             }
+        }
 
-            console.log(`[userVerified] Führe Verifizierungs-Plugins für ${member.user.tag} (${member.id}) aus...`);
+        if (!member) {
+            console.warn(`[userVerified] Nutzer ${discordUserId} konnte in den Guilds nicht gefunden werden.`);
+            return {
+                command: 'userVerified',
+                result: { success: false, error: 'Nutzer wurde auf dem Discord-Server nicht gefunden. Bitte tritt dem Server bei.' }
+            };
+        }
 
-            let pluginsSuccess = true;
+        console.log(`[userVerified] Führe Verifizierungs-Plugins für ${member.user.tag} (${member.id}) aus...`);
+
+        const allPlugins = PluginManager.getAll();
+        let pluginsSuccess = true;
+
+        if (allPlugins && allPlugins.length > 0) {
             for (const plugin of allPlugins) {
                 if (plugin.logic && typeof plugin.logic.onUserVerified === 'function') {
                     try {
@@ -57,21 +101,15 @@ module.exports = {
                     }
                 }
             }
-
-            if (socket) {
-                ipc.server.emit(socket, 'NodeProcessResponse', {
-                    success: pluginsSuccess,
-                    verifiedUser: discordUserId,
-                    error: pluginsSuccess ? null : 'Rollenvergabe im Discord fehlgeschlagen.'
-                });
-            }
-            return pluginsSuccess;
-        } catch (error) {
-            console.error("[userVerified] Execution error:", error);
-            if (socket) {
-                ipc.server.emit(socket, 'NodeProcessResponse', { success: false, error: error.message });
-            }
-            return false;
         }
+
+        return {
+            command: 'userVerified',
+            result: {
+                success: pluginsSuccess,
+                verifiedUser: discordUserId,
+                error: pluginsSuccess ? null : 'Rollenvergabe im Discord fehlgeschlagen.'
+            }
+        };
     }
 };
