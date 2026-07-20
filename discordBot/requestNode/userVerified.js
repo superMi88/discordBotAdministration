@@ -64,17 +64,17 @@ module.exports = {
             };
         }
 
-        let member = null;
+        const members = [];
         for (const guild of client.guilds.cache.values()) {
             try {
-                member = await guild.members.fetch(discordUserId);
-                if (member) break;
+                const m = await guild.members.fetch(discordUserId);
+                if (m) members.push(m);
             } catch (e) {
                 // Member not in this guild
             }
         }
 
-        if (!member) {
+        if (members.length === 0) {
             console.warn(`[userVerified] Nutzer ${discordUserId} konnte in den Guilds nicht gefunden werden.`);
             return {
                 command: 'userVerified',
@@ -82,22 +82,24 @@ module.exports = {
             };
         }
 
-        console.log(`[userVerified] Führe Verifizierungs-Plugins für ${member.user.tag} (${member.id}) aus...`);
-
         const allPlugins = PluginManager.getAll();
         let pluginsSuccess = true;
 
-        if (allPlugins && allPlugins.length > 0) {
-            for (const plugin of allPlugins) {
-                if (plugin.logic && typeof plugin.logic.onUserVerified === 'function') {
-                    try {
-                        const pluginResult = await plugin.logic.onUserVerified(client, plugin, member);
-                        if (pluginResult === false) {
+        for (const member of members) {
+            console.log(`[userVerified] Führe Verifizierungs-Plugins für ${member.user.tag} (${member.id}) auf Server ${member.guild.name} (${member.guild.id}) aus...`);
+
+            if (allPlugins && allPlugins.length > 0) {
+                for (const plugin of allPlugins) {
+                    if (plugin.logic && typeof plugin.logic.onUserVerified === 'function') {
+                        try {
+                            const pluginResult = await plugin.logic.onUserVerified(client, plugin, member);
+                            if (pluginResult === false) {
+                                pluginsSuccess = false;
+                            }
+                        } catch (pluginErr) {
+                            console.error(`[userVerified] Fehler beim Ausführen von Plugin ${plugin.name || plugin.id} auf Server ${member.guild.id}:`, pluginErr);
                             pluginsSuccess = false;
                         }
-                    } catch (pluginErr) {
-                        console.error(`[userVerified] Fehler beim Ausführen von Plugin ${plugin.name || plugin.id}:`, pluginErr);
-                        pluginsSuccess = false;
                     }
                 }
             }
