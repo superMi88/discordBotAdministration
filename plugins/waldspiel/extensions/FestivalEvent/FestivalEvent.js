@@ -1,5 +1,6 @@
 const { ActionRowBuilder, ButtonBuilder, ButtonStyle, Events, AttachmentBuilder, EmbedBuilder } = require('discord.js');
 const UserData = require("../../../../lib/UserData.js");
+const ImageCreator = require('../../imageCreator.js');
 const sharp = require('sharp');
 const GIFEncoder = require('gifencoder');
 const path = require('path');
@@ -12,7 +13,7 @@ class FestivalEvent {
         this.wheelInner = path.join(this.imageDir, 'wheel_inner.png');
         this.pointer = path.join(this.imageDir, 'wheel_pointer.png');
 
-        this.wheelIdle = path.join(this.imageDir, 'wheel_idle.webp');
+        this.wheelIdle = path.join(this.imageDir, 'wheel_idle.png');
 
         this.outcomes = [
             { label: "1", value: 10, msg: "Nr 1! Einsatz zurück!" },
@@ -33,42 +34,15 @@ class FestivalEvent {
             { label: "16", value: 0, msg: "Nr 16... Endstation." }
         ];
 
-        this.winnersPath = path.join(__dirname, 'winners.json');
-        this.winners = this.loadWinners();
         this.mainMessageId = null;
     }
 
-    loadWinners() {
-        if (fs.existsSync(this.winnersPath)) {
-            try {
-                return JSON.parse(fs.readFileSync(this.winnersPath, 'utf8'));
-            } catch (e) {
-                console.warn("[Festival-Extension] Fehler beim Laden der Gewinner:", e.message);
-                return [];
-            }
-        }
-        return [];
-    }
-
-    saveWinners() {
-        try {
-            fs.writeFileSync(this.winnersPath, JSON.stringify(this.winners, null, 2));
-        } catch (e) {
-            console.warn("[Festival-Extension] Fehler beim Speichern der Gewinner:", e.message);
-        }
-    }
-
-    addWinner(username, prizeMsg, prizeValue) {
-        if (prizeValue <= 0) return; // Only track actual wins
-        this.winners.unshift({ user: username, prize: prizeMsg.split('!')[0] || prizeMsg, date: new Date().toISOString() });
-        if (this.winners.length > 3) {
-            this.winners = this.winners.slice(0, 3);
-        }
-        this.saveWinners();
+    getItems() {
+        return require('./items.js');
     }
 
     isExtensionActive() {
-        return false;
+        return true;
     }
 
     async preExecute(client, plugin) {
@@ -135,16 +109,6 @@ class FestivalEvent {
         const width = 550;
         const height = 300;
 
-        const innerMeta = await sharp(this.wheelInner).metadata();
-        const wheelSize = innerMeta.width;
-        const pointerSize = 60;
-
-        const pointerX = Math.round(width / 2 - pointerSize / 2);
-        const pointerY = Math.round(height / 2 - wheelSize / 2 - 10);
-
-        const bgBuf = await sharp(this.background).toBuffer();
-        const pntBuf = await sharp(this.pointer).resize(pointerSize).toBuffer();
-
         // 2. Spinning Animations (als WebP!)
         const WebP = require('node-webpmux');
         const { createCanvas, loadImage } = require('canvas');
@@ -157,26 +121,25 @@ class FestivalEvent {
 
         const wheelW = canvasWheel.width;
         const wheelH = canvasWheel.height;
-        const pntW = 60;
-        const pntH = canvasPointer.height * (60 / canvasPointer.width);
+        const pntW = canvasPointer.width;
+        const pntH = canvasPointer.height;
 
         const drawFullFrame = (ctx, angle) => {
             ctx.clearRect(0, 0, width, height);
             ctx.drawImage(canvasBg, 0, 0, width, height);
             ctx.save();
-            ctx.translate(width / 2, height / 2);
+            ctx.translate(width / 2, height / 2 + 5);
             ctx.rotate(-angle * Math.PI / 180);
             ctx.drawImage(canvasWheel, -wheelW / 2, -wheelH / 2, wheelW, wheelH);
             ctx.restore();
-            ctx.drawImage(canvasPointer, width / 2 - pntW / 2, height / 2 - wheelH / 2 - 10, pntW, pntH);
+            ctx.drawImage(canvasPointer, width / 2 - pntW / 2, height / 2 + 5 - wheelH / 2 - 33, pntW, pntH);
         };
 
         // 1. Idle
         if (!fs.existsSync(this.wheelIdle)) {
             const cvs = createCanvas(width, height);
             drawFullFrame(cvs.getContext('2d'), 0);
-            const webpIdle = await sharp(cvs.toBuffer('image/png')).webp().toBuffer();
-            fs.writeFileSync(this.wheelIdle, webpIdle);
+            fs.writeFileSync(this.wheelIdle, cvs.toBuffer('image/png'));
         }
 
         // 2. Animations
@@ -245,7 +208,7 @@ class FestivalEvent {
 
     async handleSpin(interaction, client, plugin) {
         const discordUserId = interaction.user.id;
-        const berryId = 'B';
+        const berryId = plugin['var'].berry;
 
         const resultIdx = Math.floor(Math.random() * 16);
         const outcome = this.outcomes[resultIdx];
@@ -262,20 +225,53 @@ class FestivalEvent {
 
         setTimeout(async () => {
             const userData = await UserData.get(discordUserId);
-            if (outcome.value > 0) {
-                const uData = await UserData.get(discordUserId);
-                uData.addCurrency(berryId, outcome.value);
-                await uData.save(plugin);
+            let dataChanged = false;
 
-                this.addWinner(interaction.user.username, outcome.msg, outcome.value);
-                await this.updateMainMessage(interaction.channel);
+            if (outcome.value > 0) {
+                userData.addCurrency(berryId, outcome.value);
+                dataChanged = true;
             }
 
-            // Update only TEXT
-            await interaction.editReply({
-                content: `✨ **${outcome.msg}**\n\n💰 Neuer Kontostand: **${userData.getCurrency(berryId)} Beeren**\n\n*(Nachricht schließt sich gleich)*`,
-            });
+            // Ballon Gewinn-Logik (10% Chance, falls noch nicht alle 4 Ballons gesammelt wurden)
+            const balloonMap = {
+                'FESTIVAL_BALLON_BLAU': { name: 'blauen Ballon', file: 'ballon-blau.png' },
+                'FESTIVAL_BALLON_GELB': { name: 'gelben Ballon', file: 'ballon-gelb.png' },
+                'FESTIVAL_BALLON_GRUEN': { name: 'grünen Ballon', file: 'ballon-grün.png' },
+                'FESTIVAL_BALLON_ROT': { name: 'roten Ballon', file: 'ballon-rot.png' }
+            };
 
+            let itemlist = userData.getPluginData(plugin, 'itemlist');
+            if (!itemlist) itemlist = [];
+
+            const missingBalloons = Object.keys(balloonMap).filter(id => !itemlist.includes(id));
+            let wonBalloon = null;
+
+            if (missingBalloons.length > 0 && Math.random() < 0.90) {
+                const randomId = missingBalloons[Math.floor(Math.random() * missingBalloons.length)];
+                itemlist.push(randomId);
+                userData.setPluginData(plugin, 'itemlist', itemlist);
+                wonBalloon = balloonMap[randomId];
+                dataChanged = true;
+            }
+
+            if (dataChanged) {
+                await userData.save(plugin);
+            }
+
+
+
+            // Falls ein Ballon gewonnen wurde, wird dies wie beim Beerenpflücken öffentlich angekündigt (nur Ping + Bild)
+            if (wonBalloon) {
+                const balloonPath = path.join(this.imageDir, wonBalloon.file);
+                const generatedImagePath = await ImageCreator.createCatchBalloonImage(interaction.member, wonBalloon.name, balloonPath);
+                const balloonAttachment = new AttachmentBuilder(generatedImagePath, { name: wonBalloon.file });
+                await interaction.channel.send({
+                    content: `<@${interaction.user.id}>`,
+                    files: [balloonAttachment]
+                });
+            }
+
+            // Löschen der Ephemeral-Nachricht nach 5 Sekunden
             setTimeout(async () => {
                 try {
                     await interaction.deleteReply();
@@ -288,10 +284,7 @@ class FestivalEvent {
     async updateMainMessage(channel) {
         if (!channel) return;
 
-        const dynamicIdlePath = path.join(this.imageDir, 'wheel_main_dynamic.png');
-        await this.generateDynamicMainImage(dynamicIdlePath);
-
-        const attachment = new AttachmentBuilder(dynamicIdlePath, { name: `glücksrad_${Date.now()}.png` });
+        const attachment = new AttachmentBuilder(this.wheelIdle, { name: `glücksrad_${Date.now()}.png` });
 
         const button = new ButtonBuilder()
             .setCustomId('festival_spin')
@@ -325,93 +318,11 @@ class FestivalEvent {
         this.mainMessageId = newMsg.id;
     }
 
-    async generateDynamicMainImage(outputPath) {
-        const width = 800;
-        const height = 300;
-        const wheelWidth = 550;
-
-        const bgBuf = await sharp(this.background).resize(width, height, { fit: 'fill' }).toBuffer();
-
-        const innerMeta = await sharp(this.wheelInner).metadata();
-        const wheelSize = innerMeta.width;
-        const pointerSize = 60;
-
-        const centerX = Math.round(wheelWidth / 2 - wheelSize / 2);
-        const centerY = Math.round(height / 2 - wheelSize / 2);
-        const pointerX = Math.round(wheelWidth / 2 - pointerSize / 2);
-        const pointerY = Math.round(height / 2 - wheelSize / 2 - 10);
-
-        const innerBuf = await sharp(this.wheelInner).toBuffer();
-        const pointerBuf = await sharp(this.pointer).resize(pointerSize).toBuffer();
-
-        // Prepare winners section
-        let overlays = [
-            { input: innerBuf, left: centerX, top: centerY },
-            { input: pointerBuf, left: pointerX, top: pointerY }
-        ];
-
-        // Draw sidebar background
-        const sidebarBg = await sharp({
-            create: {
-                width: 250,
-                height: 280,
-                channels: 4,
-                background: { r: 0, g: 0, b: 0, alpha: 0.6 }
-            }
-        }).png().toBuffer();
-
-        overlays.push({ input: sidebarBg, left: 540, top: 10 });
-
-        // Prize Icon
-        const prizeIconPath = path.join(this.imageDir, 'berry_prize.png');
-        let prizeIconBuf = null;
-        if (fs.existsSync(prizeIconPath)) {
-            prizeIconBuf = await sharp(prizeIconPath).resize(30, 30).toBuffer();
-        }
-
-        // Generate SVG for winners text
-        let winnersSvg = `
-        <svg width="250" height="280">
-            <style>
-                .title { fill: #ffcc00; font-size: 20px; font-weight: bold; font-family: Arial; }
-                .winner { fill: #ffffff; font-size: 14px; font-weight: bold; font-family: Arial; }
-                .prize { fill: #eeeeee; font-size: 12px; font-family: Arial; }
-            </style>
-            <text x="10" y="30" class="title">🏆 Letzte Gewinner</text>
-        `;
-
-        if (this.winners.length === 0) {
-            winnersSvg += `<text x="10" y="70" class="winner">Noch keine Gewinner...</text>`;
-        } else {
-            for (let i = 0; i < this.winners.length; i++) {
-                const w = this.winners[i];
-                const y = 80 + (i * 65);
-                const name = w.user.length > 15 ? w.user.substring(0, 13) + ".." : w.user;
-
-                winnersSvg += `
-                    <text x="10" y="${y}" class="winner">${i + 1}. ${name}</text>
-                    <text x="45" y="${y + 20}" class="prize">${w.prize}</text>
-                `;
-
-                if (prizeIconBuf) {
-                    overlays.push({ input: prizeIconBuf, left: 540 + 10, top: 10 + y - 5 });
-                }
-            }
-        }
-
-        winnersSvg += `</svg>`;
-        overlays.push({ input: Buffer.from(winnersSvg), left: 540, top: 10 });
-
-        await sharp(bgBuf)
-            .composite(overlays)
-            .png()
-            .toFile(outputPath);
-    }
-
     async getShop(client, plugin, shopChannel) {
         if (!this.isExtensionActive()) return;
         await this.updateMainMessage(shopChannel);
     }
+
 }
 
 module.exports = FestivalEvent;
