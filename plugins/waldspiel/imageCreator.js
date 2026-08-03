@@ -58,33 +58,14 @@ module.exports = {
 				let staticOverlays = [];
 				let balloons = [];
 				let itemDetails = await getItemFilepaths(discordUserDatabase, i);
+				const numBalloons = itemDetails.filter(it => it.isBalloon).length;
 				for (const item of itemDetails) {
 					if (item.isBalloon) {
-						const stringPath = path.join(__dirname, 'images/items/string.png');
-						const stringLine = await sharp(stringPath)
-							.extract({ left: 69, top: 28, width: 3, height: 84 })
-							.resize(3, 125, { fit: 'fill' })
-							.png()
-							.toBuffer();
-
-						const combinedBuffer = await sharp({
-							create: {
-								width: 300,
-								height: 300,
-								channels: 4,
-								background: { r: 0, g: 0, b: 0, alpha: 0 }
-							}
-						})
-							.composite([
-								{ input: item.path, left: 80, top: 60 },
-								{ input: stringLine, left: 148, top: 175 }
-							])
-							.png()
-							.toBuffer();
-
+						const { buffer, yRot } = await getCombinedBalloonBuffer(item, numBalloons);
 						balloons.push({
-							combinedBuffer,
-							slot: item.slot
+							combinedBuffer: buffer,
+							slot: item.slot,
+							yRot: yRot
 						});
 					} else {
 						const decorationBuf = await sharp(item.path).resize(150).toBuffer();
@@ -148,57 +129,6 @@ module.exports = {
 					}
 				}
 
-				// --- RENDER BALLOONS FIRST (BEHIND THE ANIMAL) ---
-				if (animal.balloons && animal.balloons.length > 0) {
-					const numBalloons = animal.balloons.length;
-
-					// Sort balloons to render Slot 2 first (background), then Slot 1, then Slot 3 (foreground)
-					const slotOrder = { 2: 1, 1: 2, 3: 3 };
-					animal.balloons.sort((a, b) => (slotOrder[a.slot] || 0) - (slotOrder[b.slot] || 0));
-
-					for (let bIdx = 0; bIdx < numBalloons; bIdx++) {
-						const item = animal.balloons[bIdx];
-
-						// Offset configurations based on count and slot index
-						let bOffsetX = 0;
-						let bOffsetY = 0;
-						if (numBalloons > 1) {
-							if (item.slot === 1) {
-								bOffsetX = -30;
-								bOffsetY = 0;
-							} else if (item.slot === 2) {
-								bOffsetX = 0;
-								bOffsetY = -15;
-							} else if (item.slot === 3) {
-								bOffsetX = 30;
-								bOffsetY = 15;
-							}
-						}
-
-						// Individual rocking animation for the balloon
-						const phaseOffset = bIdx * (Math.PI / 3);
-						const balloonOffX = 1 * Math.sin(progress * Math.PI * 2 + phaseOffset);
-						const balloonRot = 0.005 * Math.sin(progress * Math.PI * 2 + phaseOffset);
-						const balloonRotDeg = balloonRot * (180 / Math.PI);
-
-						// Rotate the pre-combined balloon and string image
-						const rotatedBalloon = await sharp(item.combinedBuffer)
-							.rotate(balloonRotDeg, { background: { r: 0, g: 0, b: 0, alpha: 0 } })
-							.png()
-							.toBuffer();
-
-						// Base balloon placement (shifted by +45 to the right to be held on the side)
-						const bLeft = Math.round(animal.left + 75 - 150 + offX + bOffsetX + balloonOffX + 45);
-						const bTop = Math.round(y - animal.top + bOffsetY - 30);
-
-						frameComposites.push({
-							input: rotatedBalloon,
-							left: bLeft + 150,
-							top: bTop + 150
-						});
-					}
-				}
-
 				const newH = Math.round(150 * sqH);
 				const newW = Math.round(150 * sqW);
 				const rotDeg = rot * (180 / Math.PI);
@@ -220,6 +150,46 @@ module.exports = {
 
 				for (const sOverlay of animal.staticOverlays) {
 					frameComposites.push({ input: sOverlay.input, left: animal.left + 150, top: animal.top + 150 });
+				}
+
+				// --- RENDER BALLOONS FIRST (BEHIND THE ANIMAL) ---
+				if (animal.balloons && animal.balloons.length > 0) {
+					const numBalloons = animal.balloons.length;
+
+					// Sort balloons to render Slot 1 first (background), then Slot 3, then Slot 2 (foreground)
+					const slotOrder = { 1: 1, 3: 2, 2: 3 };
+					animal.balloons.sort((a, b) => (slotOrder[a.slot] || 0) - (slotOrder[b.slot] || 0));
+
+					for (let bIdx = 0; bIdx < numBalloons; bIdx++) {
+						const item = animal.balloons[bIdx];
+
+						// Offset configurations based on count and slot index
+						let bOffsetX = 0;
+						let bOffsetY = 0;
+
+						// Individual rocking animation for the balloon
+						const phaseOffset = bIdx * (Math.PI / 3);
+						const balloonRot = 0.04 * Math.sin(progress * Math.PI * 2 + phaseOffset);
+						const balloonRotDeg = balloonRot * (180 / Math.PI);
+
+						// Rotate the pre-combined balloon and string image
+						const rotatedBalloon = await sharp(item.combinedBuffer)
+							.rotate(balloonRotDeg, { background: { r: 0, g: 0, b: 0, alpha: 0 } })
+							.png()
+							.toBuffer();
+
+						const meta = await sharp(rotatedBalloon).metadata();
+
+						// Base hand coordinate on paddedBackgroundBuffer
+						const leftHand = Math.round(animal.left + 75 + 150 + 45 + offX);
+						const topHand = Math.round(y - animal.top + 120 + item.yRot);
+
+						frameComposites.push({
+							input: rotatedBalloon,
+							left: Math.round(leftHand - meta.width / 2),
+							top: Math.round(topHand - meta.height / 2)
+						});
+					}
 				}
 			}
 
@@ -274,7 +244,17 @@ module.exports = {
 		for (const fb of frameBuffers) {
 			framesForSave.push(await WebP.Image.generateFrame({ buffer: fb.buffer, delay: fb.delay, dispose: true, blend: false }));
 		}
-		const outPath = 'temp/finalpicture.webp';
+		
+		try {
+			const files = fs.readdirSync('temp');
+			for (const file of files) {
+				if (file.startsWith('finalpicture_') && !file.includes('animal')) {
+					fs.unlinkSync(path.join('temp', file));
+				}
+			}
+		} catch (e) {}
+
+		const outPath = `temp/finalpicture_${Date.now()}.webp`;
 		await WebP.Image.save(outPath, { width, height, loops: 0, frames: framesForSave });
 		return outPath;
 	},
@@ -380,33 +360,14 @@ module.exports = {
 			let animalOverlays = [];
 			let staticOverlays = [];
 			let itemDetails = await getItemFilepaths(discordUserDatabase, animalId);
+			const numBalloons = itemDetails.filter(it => it.isBalloon).length;
 			for (const item of itemDetails) {
 				if (item.isBalloon) {
-					const stringPath = path.join(__dirname, 'images/items/string.png');
-					const stringLine = await sharp(stringPath)
-						.extract({ left: 69, top: 28, width: 3, height: 84 })
-						.resize(3, 125, { fit: 'fill' })
-						.png()
-						.toBuffer();
-
-					const combinedBuffer = await sharp({
-						create: {
-							width: 300,
-							height: 300,
-							channels: 4,
-							background: { r: 0, g: 0, b: 0, alpha: 0 }
-						}
-					})
-						.composite([
-							{ input: item.path, left: 80, top: 60 },
-							{ input: stringLine, left: 148, top: 175 }
-						])
-						.png()
-						.toBuffer();
-
+					const { buffer, yRot } = await getCombinedBalloonBuffer(item, numBalloons);
 					balloons.push({
-						combinedBuffer,
-						slot: item.slot
+						combinedBuffer: buffer,
+						slot: item.slot,
+						yRot: yRot
 					});
 				} else {
 					const decorationBuf = await sharp(item.path).resize(150).toBuffer();
@@ -494,12 +455,17 @@ module.exports = {
 
 			let composites = [];
 
+			composites.push({ input: frameAnimalBuf, left: finalLeft + 150, top: finalTop + 150 });
+			for (const sOverlay of animalStaticOverlays) {
+				composites.push({ input: sOverlay.input, left: 195 + 150, top: 130 + 150 });
+			}
+
 			// --- RENDER BALLOONS FIRST (BEHIND THE ANIMAL) ---
 			if (balloons && balloons.length > 0) {
 				const numBalloons = balloons.length;
 
-				// Sort balloons to render Slot 2 first (background), then Slot 1, then Slot 3 (foreground)
-				const slotOrder = { 2: 1, 1: 2, 3: 3 };
+				// Sort balloons to render Slot 1 first (background), then Slot 3, then Slot 2 (foreground)
+				const slotOrder = { 1: 1, 3: 2, 2: 3 };
 				balloons.sort((a, b) => (slotOrder[a.slot] || 0) - (slotOrder[b.slot] || 0));
 
 				for (let bIdx = 0; bIdx < numBalloons; bIdx++) {
@@ -508,23 +474,10 @@ module.exports = {
 					// Offset configurations based on count and slot index
 					let bOffsetX = 0;
 					let bOffsetY = 0;
-					if (numBalloons > 1) {
-						if (item.slot === 1) {
-							bOffsetX = -30;
-							bOffsetY = 0;
-						} else if (item.slot === 2) {
-							bOffsetX = 0;
-							bOffsetY = -15;
-						} else if (item.slot === 3) {
-							bOffsetX = 30;
-							bOffsetY = 15;
-						}
-					}
 
 					// Individual rocking animation for the balloon
 					const phaseOffset = bIdx * (Math.PI / 3);
-					const balloonOffX = 1 * Math.sin(progress * Math.PI * 2 + phaseOffset);
-					const balloonRot = 0.005 * Math.sin(progress * Math.PI * 2 + phaseOffset);
+					const balloonRot = 0.04 * Math.sin(progress * Math.PI * 2 + phaseOffset);
 					const balloonRotDeg = balloonRot * (180 / Math.PI);
 
 					// Rotate the pre-combined balloon and string image
@@ -533,21 +486,18 @@ module.exports = {
 						.png()
 						.toBuffer();
 
-					// Base balloon placement: 195 is animal.left, 130 is initial top (shifted +45 to the right)
-					const bLeft = Math.round(195 + 75 - 150 + offX + bOffsetX + balloonOffX + 45);
-					const bTop = Math.round(y - 130 + bOffsetY - 30);
+					const meta = await sharp(rotatedBalloon).metadata();
+
+					// Base hand coordinate on paddedBackgroundBuffer
+					const leftHand = Math.round(195 + 75 + 150 + 45 + offX);
+					const topHand = Math.round(y - 10 + item.yRot);
 
 					composites.push({
 						input: rotatedBalloon,
-						left: bLeft + 150,
-						top: bTop + 150
+						left: Math.round(leftHand - meta.width / 2),
+						top: Math.round(topHand - meta.height / 2)
 					});
 				}
-			}
-
-			composites.push({ input: frameAnimalBuf, left: finalLeft + 150, top: finalTop + 150 });
-			for (const sOverlay of animalStaticOverlays) {
-				composites.push({ input: sOverlay.input, left: 195 + 150, top: 130 + 150 });
 			}
 
 			let paddedBackgroundBuffer = await sharp(backgroundBuffer)
@@ -600,7 +550,17 @@ module.exports = {
 		for (const fb of frameBuffers) {
 			framesForSave.push(await WebP.Image.generateFrame({ buffer: fb.buffer, delay: fb.delay, dispose: true, blend: false }));
 		}
-		const outPath = 'temp/finalpicture_animal.webp';
+
+		try {
+			const files = fs.readdirSync('temp');
+			for (const file of files) {
+				if (file.startsWith('finalpicture_animal_')) {
+					fs.unlinkSync(path.join('temp', file));
+				}
+			}
+		} catch (e) {}
+
+		const outPath = `temp/finalpicture_animal_${Date.now()}.webp`;
 		await WebP.Image.save(outPath, { width, height, loops: 0, frames: framesForSave });
 		return outPath;
 	},
@@ -1331,33 +1291,14 @@ module.exports = {
 		let staticOverlays = [];
 		let balloons = [];
 		let itemDetails = await getItemFilepaths(discordUserDatabase, position);
+		const numBalloons = itemDetails.filter(it => it.isBalloon).length;
 		for (const item of itemDetails) {
 			if (item.isBalloon) {
-				const stringPath = path.join(__dirname, 'images/items/string.png');
-				const stringLine = await sharp(stringPath)
-					.extract({ left: 69, top: 28, width: 3, height: 84 })
-					.resize(3, 125, { fit: 'fill' })
-					.png()
-					.toBuffer();
-
-				const combinedBuffer = await sharp({
-					create: {
-						width: 300,
-						height: 300,
-						channels: 4,
-						background: { r: 0, g: 0, b: 0, alpha: 0 }
-					}
-				})
-					.composite([
-						{ input: item.path, left: 80, top: 60 },
-						{ input: stringLine, left: 148, top: 175 }
-					])
-					.png()
-					.toBuffer();
-
+				const { buffer, yRot } = await getCombinedBalloonBuffer(item, numBalloons);
 				balloons.push({
-					combinedBuffer,
-					slot: item.slot
+					combinedBuffer: buffer,
+					slot: item.slot,
+					yRot: yRot
 				});
 			} else {
 				const decorationBuf = await sharp(item.path).resize(150).toBuffer();
@@ -1424,12 +1365,17 @@ module.exports = {
 
 			let composites = [];
 
+			composites.push({ input: frameAnimalBuf, left: finalLeft + 150, top: finalTop + 150 });
+			for (const sOverlay of staticOverlays) {
+				composites.push({ input: sOverlay.input, left: Math.round(100 - 75) + 150, top: Math.round(y) + 150 });
+			}
+
 			// --- RENDER BALLOONS FIRST (BEHIND THE ANIMAL) ---
 			if (balloons && balloons.length > 0) {
 				const numBalloons = balloons.length;
 
-				// Sort balloons to render Slot 2 first (background), then Slot 1, then Slot 3 (foreground)
-				const slotOrder = { 2: 1, 1: 2, 3: 3 };
+				// Sort balloons to render Slot 1 first (background), then Slot 3, then Slot 2 (foreground)
+				const slotOrder = { 1: 1, 3: 2, 2: 3 };
 				balloons.sort((a, b) => (slotOrder[a.slot] || 0) - (slotOrder[b.slot] || 0));
 
 				for (let bIdx = 0; bIdx < numBalloons; bIdx++) {
@@ -1438,23 +1384,10 @@ module.exports = {
 					// Offset configurations based on count and slot index
 					let bOffsetX = 0;
 					let bOffsetY = 0;
-					if (numBalloons > 1) {
-						if (item.slot === 1) {
-							bOffsetX = -30;
-							bOffsetY = 0;
-						} else if (item.slot === 2) {
-							bOffsetX = 0;
-							bOffsetY = -15;
-						} else if (item.slot === 3) {
-							bOffsetX = 30;
-							bOffsetY = 15;
-						}
-					}
 
 					// Individual rocking animation for the balloon
 					const phaseOffset = bIdx * (Math.PI / 3);
-					const balloonOffX = 1 * Math.sin(progress * Math.PI * 2 + phaseOffset);
-					const balloonRot = 0.005 * Math.sin(progress * Math.PI * 2 + phaseOffset);
+					const balloonRot = 0.04 * Math.sin(progress * Math.PI * 2 + phaseOffset);
 					const balloonRotDeg = balloonRot * (180 / Math.PI);
 
 					// Rotate the pre-combined balloon and string image
@@ -1463,21 +1396,18 @@ module.exports = {
 						.png()
 						.toBuffer();
 
-					// Base balloon placement: animal is at left: 100 - 75, top: y (shifted +45 to the right)
-					const bLeft = Math.round(100 - 150 + offX + bOffsetX + balloonOffX + 45);
-					const bTop = Math.round(y - 135 + bOffsetY - 30); // Align with animal's y offset!
+					const meta = await sharp(rotatedBalloon).metadata();
+
+					// Base hand coordinate on paddedBackgroundBuffer
+					const leftHand = Math.round(100 + 45 + 150 + offX);
+					const topHand = Math.round(y - 15 + item.yRot);
 
 					composites.push({
 						input: rotatedBalloon,
-						left: bLeft + 150,
-						top: bTop + 150
+						left: Math.round(leftHand - meta.width / 2),
+						top: Math.round(topHand - meta.height / 2)
 					});
 				}
-			}
-
-			composites.push({ input: frameAnimalBuf, left: finalLeft + 150, top: finalTop + 150 });
-			for (const sOverlay of staticOverlays) {
-				composites.push({ input: sOverlay.input, left: Math.round(100 - 75) + 150, top: Math.round(y) + 150 });
 			}
 
 			const compositeBuffer = await sharp({
@@ -1796,5 +1726,79 @@ function getBackgroundByTag(tag) {
 
 	return retunObj
 
+}
+
+async function getCombinedBalloonBuffer(item, numBalloons) {
+	const sharp = require('sharp');
+	const path = require('path');
+
+	// Determine active slot configuration
+	let activeSlot = item.slot;
+	if (numBalloons === 1) {
+		activeSlot = 2; // Always center if only one balloon
+	}
+
+	let balloonLeft = 80;
+	let balloonTop = 60;
+
+	if (activeSlot === 1) {
+		balloonLeft = 56;
+		balloonTop = 60; // Y = 60
+	} else if (activeSlot === 2) {
+		balloonLeft = 80;
+		balloonTop = 45; // Staggered -15px
+	} else if (activeSlot === 3) {
+		balloonLeft = 104;
+		balloonTop = 75; // Staggered +15px
+	}
+
+	const X_conn = balloonLeft + 70;
+	const Y_conn = balloonTop + 107;
+	const yRot = 270;
+
+	// Dynamically read the color and width of string.png
+	const stringPath = path.join(__dirname, 'images/items/string.png');
+	let hexColor = '#5f493d';
+	let strokeWidth = 4;
+	try {
+		const metaString = await sharp(stringPath).metadata();
+		strokeWidth = metaString.width || 4;
+		const pixelBuf = await sharp(stringPath).raw().toBuffer();
+		if (pixelBuf && pixelBuf.length >= 3) {
+			const r = pixelBuf[0], g = pixelBuf[1], b = pixelBuf[2];
+			hexColor = '#' + [r, g, b].map(x => x.toString(16).padStart(2, '0')).join('');
+		}
+	} catch (err) {
+		console.error("Failed to read string.png properties:", err.message);
+	}
+
+	const svgString = Buffer.from(`
+		<svg width="300" height="300" xmlns="http://www.w3.org/2000/svg">
+			<line x1="${X_conn}" y1="${Y_conn}" x2="150" y2="${yRot}" stroke="${hexColor}" stroke-width="${strokeWidth}" stroke-linecap="round" />
+		</svg>
+	`);
+
+	const bottomPadding = 2 * yRot - 300; // 240px bottom padding to center Y=270 vertically
+
+	const buffer = await sharp({
+		create: {
+			width: 300,
+			height: 300,
+			channels: 4,
+			background: { r: 0, g: 0, b: 0, alpha: 0 }
+		}
+	})
+		.composite([
+			{ input: item.path, left: balloonLeft, top: balloonTop },
+			{ input: svgString, left: 0, top: 0 }
+		])
+		.extend({
+			bottom: bottomPadding,
+			background: { r: 0, g: 0, b: 0, alpha: 0 }
+		})
+		.png()
+		.toBuffer();
+
+	return { buffer, yRot };
 }
 
