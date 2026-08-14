@@ -13,6 +13,15 @@ var CronJob = require('cron').CronJob;
 var ObjectId = require('mongodb').ObjectId;
 
 class Plugin {
+	async getBirthdayForUser(client, plugin, discordUserId) {
+		if (!discordUserId) {
+			return { success: false, error: 'Nutzer-ID fehlt.' };
+		}
+		let userData = await UserData.get(discordUserId);
+		let birthdayData = userData.getPluginData("birthday", plugin.id);
+		return { success: true, birthday: birthdayData || null };
+	}
+
 	async setBirthdayForUser(client, plugin, discordUserId, birthdayData) {
 		let day = parseInt(birthdayData.day);
 		let month = parseInt(birthdayData.month);

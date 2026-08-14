@@ -5,14 +5,14 @@ const botManager = require("../libIndex/botManager.js");
 module.exports = {
     async execute(ipc, data, socket) {
         const payload = data?.data || data || {};
-        const { discordUserId, pluginId, day, month, year } = payload;
+        const { discordUserId, pluginId } = payload;
 
         // Case 1: Called from parent process index.js (ipc is the IPC server instance)
         if (ipc && ipc.server && typeof ipc.server.emit === 'function') {
             const bots = botManager.getAllBots();
 
             if (!bots || bots.length === 0) {
-                const res = { success: false, botOnline: false, error: 'Der Discord Bot ist aktuell nicht erreichbar. Geburtstag konnte nicht gespeichert werden.' };
+                const res = { success: false, botOnline: false, error: 'Discord Bot ist aktuell nicht erreichbar.' };
                 if (socket) {
                     ipc.server.emit(socket, 'NodeProcessResponse', res);
                 }
@@ -28,7 +28,7 @@ module.exports = {
                         }, 10000);
 
                         const handler = (msg) => {
-                            if (msg && typeof msg === 'object' && msg.command === 'updateBirthday') {
+                            if (msg && typeof msg === 'object' && msg.command === 'getBirthday') {
                                 clearTimeout(timeout);
                                 child.removeListener('message', handler);
                                 resolve(msg.result);
@@ -36,7 +36,7 @@ module.exports = {
                         };
 
                         child.on('message', handler);
-                        child.send({ command: 'updateBirthday', data: payload });
+                        child.send({ command: 'getBirthday', data: payload });
                     });
 
                     if (botResult && botResult.success) {
@@ -45,7 +45,7 @@ module.exports = {
                 }
             }
 
-            const finalRes = botResult || { success: false, botOnline: false, error: 'Der Discord Bot ist aktuell nicht erreichbar. Geburtstag konnte nicht gespeichert werden.' };
+            const finalRes = botResult || { success: false, botOnline: false, error: 'Discord Bot ist aktuell nicht erreichbar.' };
             if (socket) {
                 ipc.server.emit(socket, 'NodeProcessResponse', finalRes);
             }
@@ -58,7 +58,7 @@ module.exports = {
 
         if (!discordUserId) {
             return {
-                command: 'updateBirthday',
+                command: 'getBirthday',
                 result: { success: false, botOnline: true, error: 'Nutzer-ID fehlt.' }
             };
         }
@@ -75,27 +75,27 @@ module.exports = {
             }
         }
 
-        if (targetPlugin && targetPlugin.logic && typeof targetPlugin.logic.setBirthdayForUser === 'function') {
+        if (targetPlugin && targetPlugin.logic && typeof targetPlugin.logic.getBirthdayForUser === 'function') {
             try {
-                const res = await targetPlugin.logic.setBirthdayForUser(client, targetPlugin, discordUserId, { day, month, year });
+                const res = await targetPlugin.logic.getBirthdayForUser(client, targetPlugin, discordUserId);
                 return {
-                    command: 'updateBirthday',
+                    command: 'getBirthday',
                     result: {
                         ...res,
                         botOnline: true
                     }
                 };
             } catch (pErr) {
-                console.error("[updateBirthday] Fehler im Birthday-Plugin:", pErr);
+                console.error("[getBirthday] Fehler im Birthday-Plugin:", pErr);
                 return {
-                    command: 'updateBirthday',
-                    result: { success: false, botOnline: true, error: pErr.message || 'Fehler beim Ausführen des Birthday-Plugins.' }
+                    command: 'getBirthday',
+                    result: { success: false, botOnline: true, error: pErr.message || 'Fehler beim Abrufen aus dem Birthday-Plugin.' }
                 };
             }
         }
 
         return {
-            command: 'updateBirthday',
+            command: 'getBirthday',
             result: { success: false, botOnline: true, error: 'Birthday-Plugin auf dem Bot nicht aktiv.' }
         };
     }
