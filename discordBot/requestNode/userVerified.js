@@ -64,6 +64,35 @@ module.exports = {
             };
         }
 
+        const allPlugins = PluginManager.getAll();
+        let verifyLinkPlugin = null;
+        if (allPlugins && allPlugins.length > 0) {
+            const pluginId = data?.data?.pluginId || data?.pluginId;
+            if (pluginId) {
+                verifyLinkPlugin = allPlugins.find(p => p.id === pluginId || p._id?.toString() === pluginId.toString());
+            }
+            if (!verifyLinkPlugin) {
+                verifyLinkPlugin = allPlugins.find(p => p.pluginTag === 'verifyLink' || (p.name && p.name.toLowerCase() === 'verifylink'));
+            }
+        }
+
+        if (verifyLinkPlugin && verifyLinkPlugin.logic && typeof verifyLinkPlugin.logic.verifyUser === 'function') {
+            try {
+                const res = await verifyLinkPlugin.logic.verifyUser(client, verifyLinkPlugin, discordUserId);
+                return {
+                    command: 'userVerified',
+                    result: res
+                };
+            } catch (err) {
+                console.error("[userVerified] Fehler im verifyLink-Plugin:", err);
+                return {
+                    command: 'userVerified',
+                    result: { success: false, error: err.message || 'Fehler im verifyLink-Plugin.' }
+                };
+            }
+        }
+
+        // Fallback if verifyLink plugin logic not registered directly
         const members = [];
         for (const guild of client.guilds.cache.values()) {
             try {
@@ -75,19 +104,14 @@ module.exports = {
         }
 
         if (members.length === 0) {
-            console.warn(`[userVerified] Nutzer ${discordUserId} konnte in den Guilds nicht gefunden werden.`);
             return {
                 command: 'userVerified',
                 result: { success: false, error: 'Nutzer wurde auf dem Discord-Server nicht gefunden. Bitte tritt dem Server bei.' }
             };
         }
 
-        const allPlugins = PluginManager.getAll();
         let pluginsSuccess = true;
-
         for (const member of members) {
-            console.log(`[userVerified] Führe Verifizierungs-Plugins für ${member.user.tag} (${member.id}) auf Server ${member.guild.name} (${member.guild.id}) aus...`);
-
             if (allPlugins && allPlugins.length > 0) {
                 for (const plugin of allPlugins) {
                     if (plugin.logic && typeof plugin.logic.onUserVerified === 'function') {
@@ -97,7 +121,7 @@ module.exports = {
                                 pluginsSuccess = false;
                             }
                         } catch (pluginErr) {
-                            console.error(`[userVerified] Fehler beim Ausführen von Plugin ${plugin.name || plugin.id} auf Server ${member.guild.id}:`, pluginErr);
+                            console.error(`[userVerified] Fehler beim Ausführen von Plugin ${plugin.name || plugin.id}:`, pluginErr);
                             pluginsSuccess = false;
                         }
                     }

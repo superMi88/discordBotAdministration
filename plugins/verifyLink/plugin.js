@@ -1,10 +1,84 @@
 const DatabaseManager = require("../../lib/DatabaseManager.js");
 const dataManager = require("../../discordBot/lib/dataManager.js");
 const PluginManager = require("../../discordBot/lib/PluginManager.js");
+const UserData = require("../../lib/UserData.js");
 const { EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle } = require('discord.js');
 var ObjectId = require('mongodb').ObjectId;
 
 class Plugin {
+	async verifyUser(client, plugin, discordUserId) {
+		if (!client || !discordUserId) {
+			return { success: false, error: 'Client oder Nutzer-ID fehlt.' };
+		}
+
+		const members = [];
+		for (const guild of client.guilds.cache.values()) {
+			try {
+				const m = await guild.members.fetch(discordUserId);
+				if (m) members.push(m);
+			} catch (e) {
+				// Member not in this guild
+			}
+		}
+
+		if (members.length === 0) {
+			return {
+				success: false,
+				error: 'Nutzer wurde auf dem Discord-Server nicht gefunden. Bitte tritt dem Server bei.'
+			};
+		}
+
+		// Save verification status nested in pluginData.verifyLink-<pluginId>
+		const userData = await UserData.get(discordUserId);
+		const verifyObj = {
+			verified: true,
+			verifiedAt: new Date()
+		};
+		userData.setPluginData("verifyLink", plugin.id, verifyObj);
+		await userData.save();
+
+		// Trigger onUserVerified on all active plugins
+		let pluginsSuccess = true;
+		const allPlugins = PluginManager.getAll();
+		for (const member of members) {
+			if (allPlugins && allPlugins.length > 0) {
+				for (const p of allPlugins) {
+					if (p.logic && typeof p.logic.onUserVerified === 'function') {
+						try {
+							const pluginResult = await p.logic.onUserVerified(client, p, member);
+							if (pluginResult === false) {
+								pluginsSuccess = false;
+							}
+						} catch (pluginErr) {
+							console.error(`[verifyLink] Fehler bei onUserVerified in Plugin ${p.name || p.id}:`, pluginErr);
+							pluginsSuccess = false;
+						}
+					}
+				}
+			}
+		}
+
+		return {
+			success: pluginsSuccess,
+			verifiedUser: discordUserId,
+			verificationData: verifyObj,
+			error: pluginsSuccess ? null : 'Rollenvergabe im Discord fehlgeschlagen.'
+		};
+	}
+
+	async getVerificationStatus(client, plugin, discordUserId) {
+		if (!discordUserId) {
+			return { success: false, error: 'Nutzer-ID fehlt.' };
+		}
+		const userData = await UserData.get(discordUserId);
+		const verifyData = userData.getPluginData("verifyLink", plugin.id);
+		return {
+			success: true,
+			verified: Boolean(verifyData && verifyData.verified),
+			verifiedAt: verifyData ? verifyData.verifiedAt : null
+		};
+	}
+
 	async execute(client, plugin) {
 		// Executed on startup
 	}
