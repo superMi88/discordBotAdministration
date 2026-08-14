@@ -433,20 +433,20 @@ module.exports = {
                 if (user.id == interaction.user.id) {
                     let components = [row1];
                     if (row2) components.push(row2);
-                    return await interaction.reply({
+                    return await interaction.editReply({
                         files: [filename],
                         components: components,
                         ephemeral: true
                     });
                 } else {
-                    return await interaction.reply({
+                    return await interaction.editReply({
                         files: [filename],
                         ephemeral: true
                     });
                 }
             }
         } else {
-            return await interaction.reply({
+            return await interaction.editReply({
                 content: 'Ein Fehler ist aufgetreten bitte melde das Lowa',
                 ephemeral: true
             });

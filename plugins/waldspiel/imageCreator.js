@@ -31,6 +31,14 @@ module.exports = {
 	async createMeinWald(discordUserDatabase) {
 		const sharp = require('sharp');
 		const WebP = require('node-webpmux');
+		const path = require('path');
+		const fs = require('fs');
+
+		const handlePath = path.join(__dirname, 'extensions/FestivalEvent/images/string_handle.png');
+		let handleBuf = null;
+		if (fs.existsSync(handlePath)) {
+			handleBuf = await sharp(handlePath).toBuffer();
+		}
 
 		let staticOverlays = [];
 		const imageCreator = new WaldCreator(discordUserDatabase["background"]);
@@ -169,7 +177,7 @@ module.exports = {
 
 						// Individual rocking animation for the balloon
 						const phaseOffset = bIdx * (Math.PI / 3);
-						const balloonRot = 0.04 * Math.sin(progress * Math.PI * 2 + phaseOffset);
+						const balloonRot = 0.002 * Math.sin(progress * Math.PI * 2 + phaseOffset);
 						const balloonRotDeg = balloonRot * (180 / Math.PI);
 
 						// Rotate the pre-combined balloon and string image
@@ -188,6 +196,16 @@ module.exports = {
 							input: rotatedBalloon,
 							left: Math.round(leftHand - meta.width / 2),
 							top: Math.round(topHand - meta.height / 2)
+						});
+					}
+
+					if (handleBuf) {
+						const leftHand = Math.round(animal.left + 75 + 150 + 45 + offX);
+						const topHand = Math.round(y - animal.top + 120 + 270);
+						frameComposites.push({
+							input: handleBuf,
+							left: leftHand - 3,
+							top: topHand - 6
 						});
 					}
 				}
@@ -348,6 +366,14 @@ module.exports = {
 
 		const sharp = require('sharp')
 		const WebP = require('node-webpmux');
+		const path = require('path');
+		const fs = require('fs');
+
+		const handlePath = path.join(__dirname, 'extensions/FestivalEvent/images/string_handle.png');
+		let handleBuf = null;
+		if (fs.existsSync(handlePath)) {
+			handleBuf = await sharp(handlePath).toBuffer();
+		}
 
 		let mergeArray = []
 
@@ -477,7 +503,7 @@ module.exports = {
 
 					// Individual rocking animation for the balloon
 					const phaseOffset = bIdx * (Math.PI / 3);
-					const balloonRot = 0.04 * Math.sin(progress * Math.PI * 2 + phaseOffset);
+					const balloonRot = 0.002 * Math.sin(progress * Math.PI * 2 + phaseOffset);
 					const balloonRotDeg = balloonRot * (180 / Math.PI);
 
 					// Rotate the pre-combined balloon and string image
@@ -496,6 +522,16 @@ module.exports = {
 						input: rotatedBalloon,
 						left: Math.round(leftHand - meta.width / 2),
 						top: Math.round(topHand - meta.height / 2)
+					});
+				}
+
+				if (handleBuf) {
+					const leftHand = Math.round(195 + 75 + 150 + 45 + offX);
+					const topHand = Math.round(y - 10 + 270);
+					composites.push({
+						input: handleBuf,
+						left: leftHand - 3,
+						top: topHand - 6
 					});
 				}
 			}
@@ -1266,6 +1302,14 @@ module.exports = {
 	async renderSingleAnimal(discordUserDatabase, position = 2, userId = 'temp') {
 		const sharp = require('sharp');
 		const WebP = require('node-webpmux');
+		const path = require('path');
+		const fs = require('fs');
+
+		const handlePath = path.join(__dirname, 'extensions/FestivalEvent/images/string_handle.png');
+		let handleBuf = null;
+		if (fs.existsSync(handlePath)) {
+			handleBuf = await sharp(handlePath).toBuffer();
+		}
 
 		console.log("renderSingleAnimal")
 		console.log(discordUserDatabase)
@@ -1387,7 +1431,7 @@ module.exports = {
 
 					// Individual rocking animation for the balloon
 					const phaseOffset = bIdx * (Math.PI / 3);
-					const balloonRot = 0.04 * Math.sin(progress * Math.PI * 2 + phaseOffset);
+					const balloonRot = 0.002 * Math.sin(progress * Math.PI * 2 + phaseOffset);
 					const balloonRotDeg = balloonRot * (180 / Math.PI);
 
 					// Rotate the pre-combined balloon and string image
@@ -1406,6 +1450,16 @@ module.exports = {
 						input: rotatedBalloon,
 						left: Math.round(leftHand - meta.width / 2),
 						top: Math.round(topHand - meta.height / 2)
+					});
+				}
+
+				if (handleBuf) {
+					const leftHand = Math.round(100 + 45 + 150 + offX);
+					const topHand = Math.round(y - 15 + 270);
+					composites.push({
+						input: handleBuf,
+						left: leftHand - 3,
+						top: topHand - 6
 					});
 				}
 			}

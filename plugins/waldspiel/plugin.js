@@ -267,6 +267,7 @@ class Plugin {
 					});
 				}
 
+				await interaction.deferReply({ ephemeral: true });
 				await waldspiel.showMeinWald(client, plugin, db, user, interaction, false)
 			}
 
