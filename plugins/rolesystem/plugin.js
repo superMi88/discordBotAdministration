@@ -46,6 +46,89 @@ function getRanksWithPluginVar(pluginVar) {
 }
 
 class Plugin {
+	async getUserRankInfo(client, plugin, discordUserId) {
+		if (!discordUserId) {
+			return { success: false, error: 'Nutzer-ID fehlt.' };
+		}
+
+		const discordUserData = await require('../../lib/UserData.js').get(discordUserId);
+		const currencyData = discordUserData ? discordUserData.currencyData : {};
+
+		let voiceActivity = parseInt(currencyData?.[plugin['var']?.voiceActivity] || 0);
+		let chatActivity = parseInt(currencyData?.[plugin['var']?.chatActivity] || 0);
+		let userXp = voiceActivity + chatActivity;
+
+		const rankData = getRanksWithPluginVar(plugin['var']);
+
+		let currentRank = null;
+		let nextRank = null;
+		let currentRankIndex = -1;
+
+		for (let i = 0; i < rankData.length; i++) {
+			if (userXp >= rankData[i].cumulativeXp) {
+				currentRank = rankData[i];
+				currentRankIndex = i;
+			} else {
+				nextRank = rankData[i];
+				break;
+			}
+		}
+
+		if (!currentRank && rankData.length > 0) {
+			currentRank = rankData[0];
+			currentRankIndex = 0;
+		}
+
+		let progressToNext = 1.0;
+		let xpInCurrentLevel = 0;
+		let xpRequiredForNextLevel = 0;
+
+		if (nextRank && currentRank) {
+			xpInCurrentLevel = userXp - currentRank.cumulativeXp;
+			xpRequiredForNextLevel = nextRank.cumulativeXp - currentRank.cumulativeXp;
+			progressToNext = Math.max(0, Math.min(1, xpInCurrentLevel / xpRequiredForNextLevel));
+		}
+
+		const formattedRanks = rankData.map((rank, index) => {
+			const isReached = userXp >= rank.cumulativeXp;
+			const isCurrent = currentRankIndex === index;
+			return {
+				name: rank.name,
+				label: rank.label,
+				cumulativeXp: rank.cumulativeXp,
+				description: rank.description || '',
+				roleId: rank.roleId || null,
+				isReached: isReached,
+				isCurrent: isCurrent,
+				index: index
+			};
+		});
+
+		return {
+			success: true,
+			userXp: userXp,
+			voiceActivity: voiceActivity,
+			chatActivity: chatActivity,
+			currentRank: currentRank ? {
+				name: currentRank.name,
+				label: currentRank.label,
+				cumulativeXp: currentRank.cumulativeXp,
+				description: currentRank.description || '',
+				index: currentRankIndex
+			} : null,
+			nextRank: nextRank ? {
+				name: nextRank.name,
+				label: nextRank.label,
+				cumulativeXp: nextRank.cumulativeXp,
+				description: nextRank.description || ''
+			} : null,
+			progressToNext: progressToNext,
+			xpInCurrentLevel: xpInCurrentLevel,
+			xpRequiredForNextLevel: xpRequiredForNextLevel,
+			ranks: formattedRanks
+		};
+	}
+
 	async execute(client, plugin) {
 		let db = DatabaseManager.get();
 
