@@ -80,7 +80,13 @@ class Plugin {
 
 			if (db) {
 				const animalCollection = db.collection('animals');
-				const docs = await animalCollection.find({ ownerDiscordId: String(discordUserId) }).toArray();
+				const docs = await animalCollection.find({
+					$or: [
+						{ ownerDiscordId: String(discordUserId) },
+						{ ownerDiscordId: Number(discordUserId) },
+						{ ownerDiscordId: discordUserId }
+					]
+				}).toArray();
 				animalCount = docs.length;
 
 				const grouped = {};
