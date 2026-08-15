@@ -43,6 +43,44 @@ class Plugin {
 		console.log("created Plugin Waldspiel")
 	}
 
+	async getUserStats(client, plugin, discordUserId) {
+		if (!discordUserId) {
+			return { success: false, error: 'Nutzer-ID fehlt.' };
+		}
+
+		try {
+			const UserData = require('../../lib/UserData.js');
+			const DatabaseManager = require('../../lib/DatabaseManager.js');
+			const db = DatabaseManager.get();
+
+			const userData = await UserData.get(discordUserId);
+			const currencyKey = plugin['var']?.berry;
+			
+			let berryCount = 0;
+			if (currencyKey) {
+				berryCount = userData.getCurrency(currencyKey);
+			} else {
+				berryCount = userData.currencyData?.B || 0;
+			}
+			berryCount = parseInt(berryCount || 0);
+
+			let animalCount = 0;
+			if (db) {
+				const animalCollection = db.collection('animals');
+				animalCount = await animalCollection.countDocuments({ ownerDiscordId: discordUserId });
+			}
+
+			return {
+				success: true,
+				berries: berryCount,
+				animals: animalCount
+			};
+		} catch (err) {
+			console.error("[waldspiel] Fehler in getUserStats:", err);
+			return { success: false, error: err.message };
+		}
+	}
+
 	async execute(client, plugin) {
 		let db = DatabaseManager.get()
 
