@@ -107,14 +107,13 @@ class Plugin {
 				animalList = Object.values(grouped).sort((a, b) => b.count - a.count);
 			}
 
-			if (animalCount === 0 && userData.pluginData) {
+			let itemList = [];
+			if (userData && userData.pluginData) {
 				for (const key in userData.pluginData) {
 					if (key.startsWith('waldspiel')) {
 						const wData = userData.pluginData[key];
-						if (wData) {
-							if (wData.animalId1 && wData.animalId1 !== '') animalCount++;
-							if (wData.animalId2 && wData.animalId2 !== '') animalCount++;
-							if (wData.animalId3 && wData.animalId3 !== '') animalCount++;
+						if (wData && Array.isArray(wData.itemlist)) {
+							itemList = wData.itemlist;
 						}
 					}
 				}
@@ -124,7 +123,8 @@ class Plugin {
 				success: true,
 				berries: berryCount,
 				animals: animalCount,
-				animalList: animalList
+				animalList: animalList,
+				itemList: itemList
 			};
 		} catch (err) {
 			console.error("[waldspiel] Fehler in getUserStats:", err);
