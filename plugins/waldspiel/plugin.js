@@ -108,12 +108,16 @@ class Plugin {
 			}
 
 			let itemList = [];
+			let backgroundList = ['SPRING', 'DEFAULT'];
 			if (userData && userData.pluginData) {
 				for (const key in userData.pluginData) {
 					if (key.startsWith('waldspiel')) {
 						const wData = userData.pluginData[key];
 						if (wData && Array.isArray(wData.itemlist)) {
 							itemList = wData.itemlist;
+						}
+						if (wData && Array.isArray(wData.backgroundlist)) {
+							backgroundList = wData.backgroundlist;
 						}
 					}
 				}
@@ -124,7 +128,8 @@ class Plugin {
 				berries: berryCount,
 				animals: animalCount,
 				animalList: animalList,
-				itemList: itemList
+				itemList: itemList,
+				backgroundList: backgroundList
 			};
 		} catch (err) {
 			console.error("[waldspiel] Fehler in getUserStats:", err);
