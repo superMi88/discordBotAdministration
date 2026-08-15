@@ -54,20 +54,44 @@ class Plugin {
 			const db = DatabaseManager.get();
 
 			const userData = await UserData.get(discordUserId);
-			const currencyKey = plugin['var']?.berry;
-			
+			const pluginVar = plugin?.var || plugin?.['var'] || {};
+			const currencyKey = pluginVar.berry || '69bf9a6e5c04f9423b7eaaaa';
+
 			let berryCount = 0;
-			if (currencyKey) {
-				berryCount = userData.getCurrency(currencyKey);
+			const cData = userData.currencyData || userData.currency || {};
+
+			if (cData[currencyKey] !== undefined && cData[currencyKey] !== null) {
+				berryCount = cData[currencyKey];
+			} else if (cData['69bf9a6e5c04f9423b7eaaaa'] !== undefined) {
+				berryCount = cData['69bf9a6e5c04f9423b7eaaaa'];
 			} else {
-				berryCount = userData.currencyData?.B || 0;
+				// Fallback: check all currency keys in cData for highest or matching key
+				for (const k in cData) {
+					if (k === currencyKey || k === 'B' || k === 'berry') {
+						berryCount = cData[k];
+						break;
+					}
+				}
 			}
-			berryCount = parseInt(berryCount || 0);
+			berryCount = Math.floor(parseFloat(berryCount || 0));
 
 			let animalCount = 0;
 			if (db) {
 				const animalCollection = db.collection('animals');
-				animalCount = await animalCollection.countDocuments({ ownerDiscordId: discordUserId });
+				animalCount = await animalCollection.countDocuments({ ownerDiscordId: String(discordUserId) });
+			}
+
+			if (animalCount === 0 && userData.pluginData) {
+				for (const key in userData.pluginData) {
+					if (key.startsWith('waldspiel')) {
+						const wData = userData.pluginData[key];
+						if (wData) {
+							if (wData.animalId1 && wData.animalId1 !== '') animalCount++;
+							if (wData.animalId2 && wData.animalId2 !== '') animalCount++;
+							if (wData.animalId3 && wData.animalId3 !== '') animalCount++;
+						}
+					}
+				}
 			}
 
 			return {
