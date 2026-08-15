@@ -76,9 +76,29 @@ class Plugin {
 			berryCount = Math.floor(parseFloat(berryCount || 0));
 
 			let animalCount = 0;
+			let animalList = [];
+
 			if (db) {
 				const animalCollection = db.collection('animals');
-				animalCount = await animalCollection.countDocuments({ ownerDiscordId: String(discordUserId) });
+				const docs = await animalCollection.find({ ownerDiscordId: String(discordUserId) }).toArray();
+				animalCount = docs.length;
+
+				const grouped = {};
+				for (const doc of docs) {
+					const typeKey = (doc.type || 'UNBEKANNT').toUpperCase();
+					if (!grouped[typeKey]) {
+						grouped[typeKey] = {
+							type: typeKey,
+							count: 0,
+							names: []
+						};
+					}
+					grouped[typeKey].count += 1;
+					if (doc.name && doc.name.trim() !== '') {
+						grouped[typeKey].names.push(doc.name.trim());
+					}
+				}
+				animalList = Object.values(grouped).sort((a, b) => b.count - a.count);
 			}
 
 			if (animalCount === 0 && userData.pluginData) {
@@ -97,7 +117,8 @@ class Plugin {
 			return {
 				success: true,
 				berries: berryCount,
-				animals: animalCount
+				animals: animalCount,
+				animalList: animalList
 			};
 		} catch (err) {
 			console.error("[waldspiel] Fehler in getUserStats:", err);
