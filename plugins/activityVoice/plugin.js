@@ -14,26 +14,78 @@ function getStorageFolderName(pluginId) {
 
 class Plugin {
 	/**
-	 * Liefert den aggregierten Voice-Verlauf für einen bestimmten Nutzer über die letzten N Tage.
+	 * Liefert den aggregierten Voice-Verlauf für einen bestimmten Nutzer über die letzten N Tage inkl. All-Time-Werten.
 	 */
 	async getActivityForUser(client, plugin, discordUserId, days = 14) {
-		return this.getVoiceHistory(plugin.id, days, discordUserId);
+		return await this.getVoiceHistory(plugin, days, discordUserId);
 	}
 
 	/**
-	 * Liefert den aggregierten Voice-Verlauf für alle Nutzer über die letzten N Tage.
+	 * Liefert den aggregierten Voice-Verlauf für alle Nutzer über die letzten N Tage inkl. All-Time-Werten.
 	 */
 	async getAllActivity(client, plugin, days = 14) {
-		return this.getVoiceHistory(plugin.id, days, null);
+		return await this.getVoiceHistory(plugin, days, null);
 	}
 
 	/**
-	 * Aggregiert die Daten aus TimeStorage für Voice-Aktivität und Partner.
+	 * Aggregiert die Daten aus TimeStorage und der Datenbank für Voice-Aktivität, All-Time-Werte, Partner und Top 10.
 	 */
-	getVoiceHistory(pluginId, days = 14, targetUserId = null) {
+	async getVoiceHistory(plugin, days = 14, targetUserId = null) {
+		const pluginId = plugin?.id || plugin;
 		const folderName = getStorageFolderName(pluginId);
 		const historyData = TimeStorage.loadHistory(folderName, days);
 		const dateStrings = TimeStorage.getLastNDaysDateStrings(days);
+
+		const db = DatabaseManager.get();
+		const currencyId = plugin?.['var']?.voiceActivity || plugin?.var?.voiceActivity;
+
+		let top10 = [];
+		let allTimeMinutes = 0;
+		let allTimeRank = null;
+
+		if (db && currencyId) {
+			try {
+				const usersCollection = db.collection('userCollection');
+				const currencyKey = `currencyData.${currencyId}`;
+
+				const topDocs = await usersCollection
+					.find({ [currencyKey]: { $gt: 0 } })
+					.sort({ [currencyKey]: -1 })
+					.limit(10)
+					.toArray();
+
+				top10 = topDocs.map((u, idx) => {
+					const avatarUrl = u.avatar
+						? `https://cdn.discordapp.com/avatars/${u.discordId}/${u.avatar}.webp`
+						: 'https://cdn.discordapp.com/embed/avatars/0.png';
+
+					return {
+						rank: idx + 1,
+						discordId: u.discordId,
+						username: u.username || 'Nutzer',
+						globalName: u.globalName || u.username || 'Nutzer',
+						avatarUrl: avatarUrl,
+						value: Math.floor(parseFloat(u.currencyData?.[currencyId] || 0))
+					};
+				});
+
+				if (targetUserId) {
+					const userDoc = await usersCollection.findOne({ discordId: targetUserId });
+					allTimeMinutes = Math.floor(parseFloat(userDoc?.currencyData?.[currencyId] || 0));
+
+					if (allTimeMinutes > 0) {
+						allTimeRank = (await usersCollection.countDocuments({
+							[currencyKey]: { $gt: allTimeMinutes }
+						})) + 1;
+					} else {
+						const posCount = await usersCollection.countDocuments({ [currencyKey]: { $gt: 0 } });
+						allTimeRank = posCount + 1;
+					}
+				}
+			} catch (dbErr) {
+				console.error("[ActivityVoice] Fehler beim Abrufen der DB All-Time Daten:", dbErr);
+			}
+		}
 
 		if (targetUserId) {
 			let totalMinutes = 0;
@@ -58,19 +110,49 @@ class Plugin {
 				}
 			}
 
-			const withUsers = Object.entries(companionsMap)
+			let withUsers = Object.entries(companionsMap)
 				.map(([userId, minutes]) => ({ userId, minutes }))
 				.sort((a, b) => b.minutes - a.minutes);
+
+			if (db && withUsers.length > 0) {
+				try {
+					const companionIds = withUsers.map(u => u.userId);
+					const compDocs = await db.collection('userCollection').find({ discordId: { $in: companionIds } }).toArray();
+					const compMap = new Map(compDocs.map(d => [d.discordId, d]));
+
+					withUsers = withUsers.map((comp, idx) => {
+						const doc = compMap.get(comp.userId);
+						const avatarUrl = doc?.avatar
+							? `https://cdn.discordapp.com/avatars/${comp.userId}/${doc.avatar}.webp`
+							: 'https://cdn.discordapp.com/embed/avatars/0.png';
+
+						return {
+							rank: idx + 1,
+							userId: comp.userId,
+							username: doc?.username || 'Discord-Nutzer',
+							globalName: doc?.globalName || doc?.username || 'Discord-Nutzer',
+							avatarUrl: avatarUrl,
+							minutes: comp.minutes
+						};
+					});
+				} catch (enrichErr) {
+					console.error("[ActivityVoice] Fehler beim Anreichern der Partner-Profile:", enrichErr);
+				}
+			}
 
 			return {
 				success: true,
 				pluginId,
+				currencyId: currencyId || null,
 				days,
 				discordUserId: targetUserId,
+				allTimeMinutes,
+				allTimeRank,
 				totalMinutes,
 				daily,
 				withUsers,
-				companions: companionsMap
+				companions: companionsMap,
+				top10
 			};
 		}
 
@@ -118,9 +200,11 @@ class Plugin {
 		return {
 			success: true,
 			pluginId,
+			currencyId: currencyId || null,
 			days,
 			grandTotalMinutes,
 			ranking,
+			top10,
 			users: usersAggregated
 		};
 	}

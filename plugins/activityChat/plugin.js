@@ -14,26 +14,78 @@ function getStorageFolderName(pluginId) {
 
 class Plugin {
 	/**
-	 * Liefert den aggregierten Chat-Verlauf für einen bestimmten Nutzer über die letzten N Tage.
+	 * Liefert den aggregierten Chat-Verlauf für einen bestimmten Nutzer über die letzten N Tage inkl. All-Time-Werten.
 	 */
 	async getActivityForUser(client, plugin, discordUserId, days = 14) {
-		return this.getChatHistory(plugin.id, days, discordUserId);
+		return await this.getChatHistory(plugin, days, discordUserId);
 	}
 
 	/**
-	 * Liefert den aggregierten Chat-Verlauf für alle Nutzer über die letzten N Tage.
+	 * Liefert den aggregierten Chat-Verlauf für alle Nutzer über die letzten N Tage inkl. All-Time-Werten.
 	 */
 	async getAllActivity(client, plugin, days = 14) {
-		return this.getChatHistory(plugin.id, days, null);
+		return await this.getChatHistory(plugin, days, null);
 	}
 
 	/**
-	 * Aggregiert die Daten aus TimeStorage für Chat-Nachrichten.
+	 * Aggregiert die Daten aus TimeStorage und der Datenbank für Chat-Nachrichten, All-Time-Werte und Top 10.
 	 */
-	getChatHistory(pluginId, days = 14, targetUserId = null) {
+	async getChatHistory(plugin, days = 14, targetUserId = null) {
+		const pluginId = plugin?.id || plugin;
 		const folderName = getStorageFolderName(pluginId);
 		const historyData = TimeStorage.loadHistory(folderName, days);
 		const dateStrings = TimeStorage.getLastNDaysDateStrings(days);
+
+		const db = DatabaseManager.get();
+		const currencyId = plugin?.['var']?.chatActivity || plugin?.var?.chatActivity;
+
+		let top10 = [];
+		let allTimeMessages = 0;
+		let allTimeRank = null;
+
+		if (db && currencyId) {
+			try {
+				const usersCollection = db.collection('userCollection');
+				const currencyKey = `currencyData.${currencyId}`;
+
+				const topDocs = await usersCollection
+					.find({ [currencyKey]: { $gt: 0 } })
+					.sort({ [currencyKey]: -1 })
+					.limit(10)
+					.toArray();
+
+				top10 = topDocs.map((u, idx) => {
+					const avatarUrl = u.avatar
+						? `https://cdn.discordapp.com/avatars/${u.discordId}/${u.avatar}.webp`
+						: 'https://cdn.discordapp.com/embed/avatars/0.png';
+
+					return {
+						rank: idx + 1,
+						discordId: u.discordId,
+						username: u.username || 'Nutzer',
+						globalName: u.globalName || u.username || 'Nutzer',
+						avatarUrl: avatarUrl,
+						value: Math.floor(parseFloat(u.currencyData?.[currencyId] || 0))
+					};
+				});
+
+				if (targetUserId) {
+					const userDoc = await usersCollection.findOne({ discordId: targetUserId });
+					allTimeMessages = Math.floor(parseFloat(userDoc?.currencyData?.[currencyId] || 0));
+
+					if (allTimeMessages > 0) {
+						allTimeRank = (await usersCollection.countDocuments({
+							[currencyKey]: { $gt: allTimeMessages }
+						})) + 1;
+					} else {
+						const posCount = await usersCollection.countDocuments({ [currencyKey]: { $gt: 0 } });
+						allTimeRank = posCount + 1;
+					}
+				}
+			} catch (dbErr) {
+				console.error("[ActivityChat] Fehler beim Abrufen der DB All-Time Daten:", dbErr);
+			}
+		}
 
 		if (targetUserId) {
 			let totalMessages = 0;
@@ -54,10 +106,14 @@ class Plugin {
 			return {
 				success: true,
 				pluginId,
+				currencyId: currencyId || null,
 				days,
 				discordUserId: targetUserId,
+				allTimeMessages,
+				allTimeRank,
 				totalMessages,
-				daily
+				daily,
+				top10
 			};
 		}
 
@@ -94,9 +150,11 @@ class Plugin {
 		return {
 			success: true,
 			pluginId,
+			currencyId: currencyId || null,
 			days,
 			grandTotalMessages,
 			ranking,
+			top10,
 			users: usersAggregated
 		};
 	}
