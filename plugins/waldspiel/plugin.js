@@ -43,6 +43,173 @@ class Plugin {
 		console.log("created Plugin Waldspiel")
 	}
 
+	
+	async getBerryLeaderboard(client, plugin, discordUserId) {
+		try {
+			const DatabaseManager = require('../../lib/DatabaseManager.js');
+			const db = DatabaseManager.get();
+			const pluginVar = plugin?.var || plugin?.['var'] || {};
+			const currencyKey = pluginVar.berry || '69bf9a6e5c04f9423b7eaaaa';
+
+			let userBerryCount = 0;
+			let userRank = null;
+			let top10 = [];
+
+			if (db && currencyKey) {
+				const usersCollection = db.collection('userCollection');
+				const cKey = `currencyData.${currencyKey}`;
+
+				const topDocs = await usersCollection
+					.find({ [cKey]: { $gt: 0 } })
+					.sort({ [cKey]: -1 })
+					.limit(10)
+					.toArray();
+
+				top10 = topDocs.map((u, idx) => {
+					const avatarUrl = u.avatar
+						? `https://cdn.discordapp.com/avatars/${u.discordId}/${u.avatar}.webp`
+						: 'https://cdn.discordapp.com/embed/avatars/0.png';
+
+					return {
+						rank: idx + 1,
+						discordId: u.discordId,
+						username: u.username || 'Nutzer',
+						globalName: u.globalName || u.username || 'Nutzer',
+						avatarUrl: avatarUrl,
+						value: Math.floor(parseFloat(u.currencyData?.[currencyKey] || 0))
+					};
+				});
+
+				if (discordUserId) {
+					const userDoc = await usersCollection.findOne({ discordId: discordUserId });
+					userBerryCount = Math.floor(parseFloat(userDoc?.currencyData?.[currencyKey] || 0));
+
+					if (userBerryCount > 0) {
+						userRank = (await usersCollection.countDocuments({
+							[cKey]: { $gt: userBerryCount }
+						})) + 1;
+					} else {
+						const posCount = await usersCollection.countDocuments({ [cKey]: { $gt: 0 } });
+						userRank = posCount + 1;
+					}
+				}
+			}
+
+			return {
+				success: true,
+				pluginId: plugin?.id,
+				currencyId: currencyKey,
+				discordUserId,
+				berries: userBerryCount,
+				rank: userRank,
+				top10
+			};
+		} catch (err) {
+			console.error("[waldspiel] Fehler in getBerryLeaderboard:", err);
+			return { success: false, error: err.message };
+		}
+	}
+
+	async getAnimalLeaderboard(client, plugin, discordUserId) {
+		try {
+			const DatabaseManager = require('../../lib/DatabaseManager.js');
+			const db = DatabaseManager.get();
+
+			let userAnimalCount = 0;
+			let userRank = null;
+			let top10 = [];
+
+			if (db) {
+				const animalCollection = db.collection('animals');
+				const usersCollection = db.collection('userCollection');
+
+				const topAgg = await animalCollection.aggregate([
+					{
+						$group: {
+							_id: "$ownerDiscordId",
+							count: { $sum: 1 }
+						}
+					},
+					{
+						$match: {
+							_id: { $ne: null }
+						}
+					},
+					{
+						$sort: { count: -1 }
+					},
+					{
+						$limit: 10
+					}
+				]).toArray();
+
+				const userIds = topAgg.map(t => String(t._id));
+				const userDocs = await usersCollection.find({ discordId: { $in: userIds } }).toArray();
+				const userMap = new Map(userDocs.map(u => [String(u.discordId), u]));
+
+				top10 = topAgg.map((item, idx) => {
+					const strId = String(item._id);
+					const u = userMap.get(strId);
+					const avatarUrl = u?.avatar
+						? `https://cdn.discordapp.com/avatars/${strId}/${u.avatar}.webp`
+						: 'https://cdn.discordapp.com/embed/avatars/0.png';
+
+					return {
+						rank: idx + 1,
+						discordId: strId,
+						username: u?.username || 'Nutzer',
+						globalName: u?.globalName || u?.username || 'Nutzer',
+						avatarUrl: avatarUrl,
+						value: item.count
+					};
+				});
+
+				if (discordUserId) {
+					userAnimalCount = await animalCollection.countDocuments({
+						$or: [
+							{ ownerDiscordId: String(discordUserId) },
+							{ ownerDiscordId: Number(discordUserId) },
+							{ ownerDiscordId: discordUserId }
+						]
+					});
+
+					if (userAnimalCount > 0) {
+						const higherCountAgg = await animalCollection.aggregate([
+							{
+								$group: {
+									_id: "$ownerDiscordId",
+									count: { $sum: 1 }
+								}
+							},
+							{
+								$match: {
+									count: { $gt: userAnimalCount }
+								}
+							},
+							{
+								$count: "rankOffset"
+							}
+						]).toArray();
+
+						userRank = (higherCountAgg[0]?.rankOffset || 0) + 1;
+					}
+				}
+			}
+
+			return {
+				success: true,
+				pluginId: plugin?.id,
+				discordUserId,
+				animals: userAnimalCount,
+				rank: userRank,
+				top10
+			};
+		} catch (err) {
+			console.error("[waldspiel] Fehler in getAnimalLeaderboard:", err);
+			return { success: false, error: err.message };
+		}
+	}
+
 	async getUserStats(client, plugin, discordUserId) {
 		if (!discordUserId) {
 			return { success: false, error: 'Nutzer-ID fehlt.' };

@@ -46,12 +46,31 @@ function getRanksWithPluginVar(pluginVar) {
 }
 
 class Plugin {
+
+	async setNotificationSettings(client, plugin, discordUserId, notifyLevelUp) {
+		const isEnabled = notifyLevelUp === true || notifyLevelUp === 'true' || notifyLevelUp === 1;
+		const pluginDataKey = `pluginData.rolesystem-${plugin._id}.notifyLevelUp`;
+
+		const db = DatabaseManager.get();
+		await db.collection('userCollection').updateOne(
+			{ discordId: String(discordUserId) },
+			{ $set: { [pluginDataKey]: isEnabled } }
+		);
+
+		return {
+			success: true,
+			notifyLevelUp: isEnabled
+		};
+	}
+
 	async getUserRankInfo(client, plugin, discordUserId) {
 		if (!discordUserId) {
 			return { success: false, error: 'Nutzer-ID fehlt.' };
 		}
 
 		const discordUserData = await require('../../lib/UserData.js').get(discordUserId);
+		const pluginDataKey = `rolesystem-${plugin._id}`;
+		const notifyLevelUp = discordUserData?.pluginData?.[pluginDataKey]?.notifyLevelUp !== false;
 		const currencyData = discordUserData ? discordUserData.currencyData : {};
 
 		let voiceActivity = parseInt(currencyData?.[plugin['var']?.voiceActivity] || 0);
