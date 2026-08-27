@@ -38,6 +38,7 @@ class FestivalEvent {
      * Ende: Letzter Sonntag 23:59:59.999 Uhr
      */
     isExtensionActive(plugin) {
+        return true //TODO remove later only testing
         if (plugin && plugin['var'] && plugin['var'].eventFestival === false) {
             return false;
         }
@@ -174,7 +175,7 @@ class FestivalEvent {
         if (fs.existsSync(gluckWheelPath)) {
             try {
                 fs.copyFileSync(gluckWheelPath, this.wheelInner);
-            } catch (e) {}
+            } catch (e) { }
         }
 
         const WebP = require('node-webpmux');
