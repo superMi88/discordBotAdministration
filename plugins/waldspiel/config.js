@@ -409,6 +409,18 @@ module.exports = {
 				}
 			]
 		},
+		{
+			type: "alone", //definiert wie die felder heißen text und icon
+			description: "Festival / Jahrmarkt Event an oder aus",
+			style: "column",
+			fields: [
+				{  //name abhängig von type
+					type: "toggle", //definiert wie die felder heißen text und icon
+					name: "eventFestival", //datenbank name
+					//optionen für das text feld
+				}
+			]
+		},
 	],
 	buttons: [
 		{
