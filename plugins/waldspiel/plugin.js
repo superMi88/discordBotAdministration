@@ -290,13 +290,78 @@ class Plugin {
 				}
 			}
 
+			let decorationsCatalog = [];
+			let backgroundsCatalog = [];
+			let animalsCatalog = [];
+			try {
+				const ItemList = require('./obj/ItemList');
+				const BackgroundList = require('./obj/BackgroundList');
+				const animallist = require('./animals');
+				ExtensionManager.loadExtensions();
+				const itemListObj = new ItemList();
+				const rawItems = itemListObj.getListAll() || {};
+				const backgroundListObj = new BackgroundList();
+				const rawBackgrounds = backgroundListObj.getBackgroundListAll() || {};
+
+				decorationsCatalog = Object.entries(rawItems)
+					.filter(([k]) => k !== 'ABBRECHEN')
+					.map(([k, item]) => {
+						let category = 'Standard';
+						if (k.startsWith('FESTIVAL_')) category = 'Festival';
+						else if (k.startsWith('CHRISTMAS_') || k.includes('WINTER_')) category = 'Weihnachten';
+						else if (k.startsWith('OSTERN_')) category = 'Ostern';
+						else if (k.startsWith('VALENTINE_')) category = 'Valentinstag';
+						else if (k.startsWith('FRIENDSHIP_')) category = 'Freundschaft';
+						else if (k.startsWith('CARROT_')) category = 'Karotte';
+						else if (['BOO', 'GHOST', 'KESSEL', 'KNIFE', 'PUMPKIN', 'SWEETS', 'WITCHHUT'].includes(k)) category = 'Halloween';
+
+						return {
+							id: k,
+							name: item.name || k,
+							category,
+							icon: '/api/waldspiel/asset?type=item&id=' + encodeURIComponent(k),
+							price: item.price || 0,
+							currency: item.currency || 'BERRY',
+							animation: Boolean(item.animation),
+							isBalloon: Boolean(item.isBalloon)
+						};
+					});
+
+				backgroundsCatalog = Object.entries(rawBackgrounds)
+					.filter(([k]) => k !== 'ABBRECHEN' && k !== 'DEFAULT')
+					.map(([k, bg]) => {
+						let category = 'Standard';
+						if (k.startsWith('CHRISTMAS_')) category = 'Weihnachten';
+						else if (k.startsWith('OSTERN_')) category = 'Ostern';
+						else if (k.startsWith('VALENTINE_')) category = 'Valentinstag';
+
+						return {
+							id: k,
+							name: bg.name || k,
+							category,
+							icon: '/api/waldspiel/asset?type=background&id=' + encodeURIComponent(k)
+						};
+					});
+
+				animalsCatalog = Object.entries(animallist).map(([k, a]) => ({
+					type: k,
+					name: a.name || k,
+					image: '/api/waldspiel/asset?type=animal&id=' + encodeURIComponent(k)
+				}));
+			} catch (catErr) {
+				console.error('[waldspiel] Error generating catalogs in getUserStats:', catErr);
+			}
+
 			return {
 				success: true,
 				berries: berryCount,
 				animals: animalCount,
 				animalList: animalList,
 				itemList: itemList,
-				backgroundList: backgroundList
+				backgroundList: backgroundList,
+				decorationsCatalog: decorationsCatalog,
+				backgroundsCatalog: backgroundsCatalog,
+				animalsCatalog: animalsCatalog
 			};
 		} catch (err) {
 			console.error("[waldspiel] Fehler in getUserStats:", err);
