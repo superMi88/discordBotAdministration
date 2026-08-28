@@ -88,6 +88,10 @@ module.exports = {
 			onClick: "create"
 		},
 		{
+			name: "Verifizierung alt übernehmen",
+			onClick: "migrateOldVerifications"
+		},
+		{
 			name: "Löschen",
 			onClick: "delete"
 		}

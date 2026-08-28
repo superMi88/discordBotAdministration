@@ -47,19 +47,28 @@ function getRanksWithPluginVar(pluginVar) {
 
 class Plugin {
 
-	async setNotificationSettings(client, plugin, discordUserId, notifyLevelUp) {
-		const isEnabled = notifyLevelUp === true || notifyLevelUp === 'true' || notifyLevelUp === 1;
-		const pluginDataKey = `pluginData.rolesystem-${plugin._id}.notifyLevelUp`;
+	async setNotificationSettings(client, plugin, discordUserId, notifyLevelUp, notifyTicketUpdates) {
+		const pluginId = plugin.id || plugin._id;
+		const UserData = require('../../lib/UserData.js');
+		const userData = await UserData.get(discordUserId);
 
-		const db = DatabaseManager.get();
-		await db.collection('userCollection').updateOne(
-			{ discordId: String(discordUserId) },
-			{ $set: { [pluginDataKey]: isEnabled } }
-		);
+		if (notifyLevelUp !== undefined) {
+			const isLevelEnabled = notifyLevelUp === true || notifyLevelUp === 'true' || notifyLevelUp === 1;
+			userData.setPluginData("rolesystem", pluginId, "notifyLevelUp", isLevelEnabled);
+		}
+		if (notifyTicketUpdates !== undefined) {
+			const isTicketEnabled = notifyTicketUpdates === true || notifyTicketUpdates === 'true' || notifyTicketUpdates === 1;
+			userData.setPluginData("rolesystem", pluginId, "notifyTicketUpdates", isTicketEnabled);
+		}
+
+		await userData.save();
+
+		const roleData = userData.getPluginData("rolesystem", pluginId) || {};
 
 		return {
 			success: true,
-			notifyLevelUp: isEnabled
+			notifyLevelUp: roleData.notifyLevelUp !== false,
+			notifyTicketUpdates: roleData.notifyTicketUpdates !== false
 		};
 	}
 
@@ -69,8 +78,10 @@ class Plugin {
 		}
 
 		const discordUserData = await require('../../lib/UserData.js').get(discordUserId);
-		const pluginDataKey = `rolesystem-${plugin._id}`;
+		const pluginId = plugin.id || plugin._id;
+		const pluginDataKey = `rolesystem-${pluginId}`;
 		const notifyLevelUp = discordUserData?.pluginData?.[pluginDataKey]?.notifyLevelUp !== false;
+		const notifyTicketUpdates = discordUserData?.pluginData?.[pluginDataKey]?.notifyTicketUpdates !== false;
 		const currencyData = discordUserData ? discordUserData.currencyData : {};
 
 		let voiceActivity = parseInt(currencyData?.[plugin['var']?.voiceActivity] || 0);
@@ -460,7 +471,7 @@ class Plugin {
 			if (member.user.bot) continue; // Optional: Bots überspringen
 
 			const userDoc = await db.collection('userCollection').findOne({ discordId: member.id });
-			if (!userDoc || userDoc.verified !== true) continue;
+			if (!userDoc || !isUserVerified(userDoc)) continue;
 
 			const discordUserDatabase = (await require('../../lib/UserData.js').get(member.id)).currencyData;
 			if (!discordUserDatabase) continue;
@@ -582,7 +593,7 @@ async function messageCounterAdd(plugin, client, discordUserId, currencyId, oldA
 		if (isNaN(newActivityValue)) return;
 
 		const userDoc = await db.collection('userCollection').findOne({ discordId: discordUserId });
-		if (!userDoc || userDoc.verified !== true) return;
+		if (!userDoc || !isUserVerified(userDoc)) return;
 
 		const discordUserDatabase = (await require('../../lib/UserData.js').get(discordUserId)).currencyData;
 		if (!discordUserDatabase) return;
@@ -848,3 +859,17 @@ function getTextBufferLinks(text, x, y, fontsizeInPixel = 16) {
 		<path d="${svgPath}" fill="white" transform="translate(${translateX},${translateY})" />
 	</svg>`);
 }
+
+function isUserVerified(userDoc) {
+	if (!userDoc) return false;
+	if (userDoc.verified === true) return true;
+	if (userDoc.pluginData && typeof userDoc.pluginData === 'object') {
+		for (const key of Object.keys(userDoc.pluginData)) {
+			if (key.startsWith('verifyLink') && userDoc.pluginData[key]?.verified === true) {
+				return true;
+			}
+		}
+	}
+	return false;
+}
+

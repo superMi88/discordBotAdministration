@@ -143,6 +143,73 @@ class Plugin {
 		}
 	}
 
+	async migrateOldVerifications(plugin, config, projectAlias) {
+		const db = DatabaseManager.get();
+		if (!db) {
+			return ({ saved: false, infoMessage: "Datenbankverbindung nicht verfügbar.", infoStatus: "Error" });
+		}
+
+		const pluginId = plugin.id || plugin._id;
+		if (!pluginId) {
+			return ({ saved: false, infoMessage: "Plugin-ID nicht gefunden.", infoStatus: "Error" });
+		}
+
+		const collection = db.collection('userCollection');
+
+		// Alle User suchen, die noch alte 'verified'-Felder haben
+		const usersToMigrate = await collection.find({
+			$or: [
+				{ verified: true },
+				{ verified: false },
+				{ verified: { $exists: true } },
+				{ verifiedAt: { $exists: true } }
+			]
+		}).toArray();
+
+		if (!usersToMigrate || usersToMigrate.length === 0) {
+			return ({
+				saved: true,
+				infoMessage: "Keine alten übergeordneten Verifizierungen gefunden. Alles bereits aktuell.",
+				infoStatus: "Info"
+			});
+		}
+
+		let migratedCount = 0;
+		const pluginDataKey = `pluginData.verifyLink-${pluginId}`;
+
+		for (const user of usersToMigrate) {
+			const isVerified = user.verified === true;
+			const verifiedAt = user.verifiedAt || new Date();
+
+			const verifyObj = {
+				verified: isVerified,
+				verifiedAt: verifiedAt
+			};
+
+			await collection.updateOne(
+				{ _id: user._id },
+				{
+					$set: {
+						[pluginDataKey]: verifyObj
+					},
+					$unset: {
+						verified: "",
+						verifiedAt: ""
+					}
+				}
+			);
+			migratedCount++;
+		}
+
+		console.log(`[verifyLink] ${migratedCount} alte Verifizierungen erfolgreich in ${pluginDataKey} übertragen.`);
+
+		return ({
+			saved: true,
+			infoMessage: `${migratedCount} Verifizierung(en) erfolgreich in pluginData.verifyLink-${pluginId} übernommen und alte Felder gelöscht!`,
+			infoStatus: "Info"
+		});
+	}
+
 	async delete(plugin, config) {
 		let db = DatabaseManager.get();
 		let client = dataManager.client;
