@@ -83,7 +83,7 @@ class TicketManager {
         return results;
     }
 
-    createTicket({ discordUserId, username, globalName, avatar, title, category, message }) {
+    async createTicket({ discordUserId, username, globalName, avatar, title, category, message, client = null, plugin = null }) {
         this.cleanupExpiredTickets();
 
         if (!discordUserId) {
@@ -95,15 +95,18 @@ class TicketManager {
 
         const ticketId = 't_' + Date.now() + '_' + Math.random().toString(36).substring(2, 7);
         const now = new Date().toISOString();
+        const displayTitle = (title && title.trim()) ? title.trim().substring(0, 100) : 'Feedback / Support';
+        const displayCategory = category || 'Feedback';
+        const senderDisplayName = globalName || username || 'Nutzer';
 
         const newTicket = {
             id: ticketId,
             userId: discordUserId,
             username: username || 'Unbekannt',
-            globalName: globalName || username || 'Nutzer',
+            globalName: senderDisplayName,
             userAvatar: avatar || null,
-            category: category || 'Feedback',
-            title: (title && title.trim()) ? title.trim().substring(0, 100) : 'Feedback / Support',
+            category: displayCategory,
+            title: displayTitle,
             status: 'open',
             createdAt: now,
             updatedAt: now,
@@ -113,7 +116,7 @@ class TicketManager {
                 {
                     id: 'msg_' + Date.now() + '_1',
                     senderId: discordUserId,
-                    senderName: globalName || username || 'Nutzer',
+                    senderName: senderDisplayName,
                     senderAvatar: avatar || null,
                     isAdmin: false,
                     content: message.trim(),
@@ -125,10 +128,45 @@ class TicketManager {
         const filePath = this.getTicketFilePath(ticketId);
         fs.writeFileSync(filePath, JSON.stringify(newTicket, null, 2), 'utf8');
 
+        // Discord Log-Channel Benachrichtigung
+        try {
+            const { EmbedBuilder } = require('discord.js');
+            const embed = new EmbedBuilder()
+                .setColor(0x12ba69)
+                .setTitle('🎫 Neues Ticket erstellt: ' + displayTitle)
+                .setDescription(message.trim().length > 1000 ? message.trim().substring(0, 997) + '...' : message.trim())
+                .addFields(
+                    { name: 'Ersteller', value: `${senderDisplayName} (<@${discordUserId}>)`, inline: true },
+                    { name: 'Kategorie', value: displayCategory, inline: true },
+                    { name: 'Ticket-ID', value: '`' + ticketId + '`', inline: true }
+                )
+                .setFooter({ text: 'Kleiner Wald Tickets • Website' })
+                .setTimestamp();
+
+            const avatarUrl = getUserAvatarUrl(discordUserId, avatar);
+            if (avatarUrl) {
+                embed.setThumbnail(avatarUrl);
+            }
+
+            // Moderator-Rolle pingen falls konfiguriert
+            let mentionContent = '';
+            const modRoles = plugin?.['var']?.moderatorRole;
+            if (Array.isArray(modRoles) && modRoles.length > 0) {
+                const mentions = modRoles.filter(r => r && r.roleId).map(r => `<@&${r.roleId}>`);
+                if (mentions.length > 0) {
+                    mentionContent = mentions.join(' ');
+                }
+            }
+
+            await sendToLogChannel(client, plugin, embed, mentionContent);
+        } catch (logErr) {
+            console.error('[TicketManager] Fehler beim Log-Channel Senden für neues Ticket:', logErr);
+        }
+
         return { success: true, ticket: newTicket };
     }
 
-    async addMessage({ discordUserId, username, globalName, avatar, ticketId, message, isAdmin = false, client = null }) {
+    async addMessage({ discordUserId, username, globalName, avatar, ticketId, message, isAdmin = false, client = null, plugin = null }) {
         this.cleanupExpiredTickets();
 
         if (!ticketId) {
@@ -178,7 +216,7 @@ class TicketManager {
 
         fs.writeFileSync(filePath, JSON.stringify(ticket, null, 2), 'utf8');
 
-        // Discord DM Benachrichtigung an den Ticket-Ersteller senden (sofern nicht von ihm selbst verfasst)
+        // Discord DM Benachrichtigung an den Ticket-Ersteller senden (sofern vom Admin verfasst)
         if (client && ticket.userId && ticket.userId !== discordUserId) {
             try {
                 let shouldNotify = true;
@@ -221,10 +259,47 @@ class TicketManager {
             }
         }
 
+        // Discord Log-Channel Benachrichtigung über neue Antwort
+        try {
+            const { EmbedBuilder } = require('discord.js');
+            const embed = new EmbedBuilder()
+                .setColor(isAdmin ? 0x9b59b6 : 0x3498db)
+                .setTitle((isAdmin ? '🛡️ Team-Antwort' : '💬 Neue Antwort') + ' im Ticket: ' + ticket.title)
+                .setDescription(message.trim().length > 1000 ? message.trim().substring(0, 997) + '...' : message.trim())
+                .addFields(
+                    { name: 'Absender', value: isAdmin ? `${senderDisplayName} *(Team)*` : `${senderDisplayName} (<@${discordUserId}>)`, inline: true },
+                    { name: 'Kategorie', value: ticket.category || 'Feedback', inline: true },
+                    { name: 'Ticket-ID', value: '`' + ticket.id + '`', inline: true }
+                )
+                .setFooter({ text: 'Kleiner Wald Tickets • Website' })
+                .setTimestamp();
+
+            const avatarUrl = getUserAvatarUrl(discordUserId, avatar);
+            if (avatarUrl) {
+                embed.setThumbnail(avatarUrl);
+            }
+
+            // Wenn ein User (nicht Admin) geantwortet hat, optional Mod-Rollen pingen
+            let mentionContent = '';
+            if (!isAdmin) {
+                const modRoles = plugin?.['var']?.moderatorRole;
+                if (Array.isArray(modRoles) && modRoles.length > 0) {
+                    const mentions = modRoles.filter(r => r && r.roleId).map(r => `<@&${r.roleId}>`);
+                    if (mentions.length > 0) {
+                        mentionContent = mentions.join(' ');
+                    }
+                }
+            }
+
+            await sendToLogChannel(client, plugin, embed, mentionContent);
+        } catch (logErr) {
+            console.error('[TicketManager] Fehler beim Log-Channel Senden für Ticket-Nachricht:', logErr);
+        }
+
         return { success: true, ticket };
     }
 
-    async closeTicket({ discordUserId, ticketId, isAdmin = false, client = null }) {
+    async closeTicket({ discordUserId, ticketId, isAdmin = false, client = null, plugin = null, globalName = '', username = '' }) {
         this.cleanupExpiredTickets();
 
         if (!ticketId) {
@@ -302,8 +377,86 @@ class TicketManager {
             }
         }
 
+        // Discord Log-Channel Benachrichtigung über Schließung
+        try {
+            const { EmbedBuilder } = require('discord.js');
+            const closedByName = isAdmin ? (globalName || username || 'Team / Admin') : (globalName || username || `<@${discordUserId}>`);
+            const embed = new EmbedBuilder()
+                .setColor(0xef5350)
+                .setTitle('🔒 Ticket geschlossen: ' + ticket.title)
+                .setDescription('Das Ticket `' + ticket.id + '` wurde geschlossen und wird in 14 Tagen archiviert.')
+                .addFields(
+                    { name: 'Geschlossen von', value: closedByName, inline: true },
+                    { name: 'Ticket-Ersteller', value: `${ticket.globalName || ticket.username || 'Unbekannt'} (<@${ticket.userId}>)`, inline: true },
+                    { name: 'Kategorie', value: ticket.category || 'Feedback', inline: true }
+                )
+                .setFooter({ text: 'Kleiner Wald Tickets • Website' })
+                .setTimestamp();
+
+            await sendToLogChannel(client, plugin, embed);
+        } catch (logErr) {
+            console.error('[TicketManager] Fehler beim Log-Channel Senden für geschlossenes Ticket:', logErr);
+        }
+
         return { success: true, ticket };
     }
 }
 
+function getUserAvatarUrl(userId, avatarHash) {
+    if (!avatarHash) return null;
+    if (typeof avatarHash === 'string' && (avatarHash.startsWith('http://') || avatarHash.startsWith('https://'))) {
+        return avatarHash;
+    }
+    return `https://cdn.discordapp.com/avatars/${userId}/${avatarHash}.png`;
+}
+
+async function sendToLogChannel(client, plugin, embed, content = '') {
+    try {
+        let channelId = plugin?.['var']?.logChannel;
+
+        // Fallback: search PluginManager if plugin instance is not passed directly
+        if (!channelId) {
+            try {
+                const PluginManager = require('../../../discordBot/lib/PluginManager.js');
+                const allPlugins = PluginManager.getAll();
+                if (allPlugins && allPlugins.length > 0) {
+                    const ticketPlugin = allPlugins.find(p => p.name === 'tickets' || p.pluginTag === 'tickets');
+                    if (ticketPlugin && ticketPlugin['var']?.logChannel) {
+                        channelId = ticketPlugin['var'].logChannel;
+                    }
+                }
+            } catch (e) {}
+        }
+
+        if (!channelId) return;
+
+        let activeClient = client;
+        if (!activeClient) {
+            try {
+                const dataManager = require('../../../discordBot/lib/dataManager.js');
+                activeClient = dataManager.client;
+            } catch (e) {}
+        }
+
+        if (!activeClient || !activeClient.channels) return;
+
+        let channel = activeClient.channels.cache?.get(channelId);
+        if (!channel && activeClient.channels.fetch) {
+            channel = await activeClient.channels.fetch(channelId).catch(() => null);
+        }
+
+        if (channel && typeof channel.send === 'function') {
+            const messagePayload = { embeds: [embed] };
+            if (content && typeof content === 'string' && content.trim()) {
+                messagePayload.content = content.trim();
+            }
+            await channel.send(messagePayload);
+            console.log('[TicketManager] Benachrichtigung an Log-Channel ' + channelId + ' gesendet.');
+        }
+    } catch (err) {
+        console.error('[TicketManager] Fehler beim Senden an Log-Channel:', err);
+    }
+}
+
 module.exports = new TicketManager();
+

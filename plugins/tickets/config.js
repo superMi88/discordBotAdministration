@@ -20,6 +20,22 @@ module.exports = {
 			]
 		},
 		{
+			type: "alone",
+			description: "Channel für Ticket-Benachrichtigungen (neue Tickets & Nachrichten)",
+			fields: [
+				{
+					type: "channel",
+					name: "logChannel",
+					options: {
+						voice: false,
+						text: true,
+						category: false
+					},
+					required: false
+				}
+			]
+		},
+		{
 			type: "iconAndText", //definiert wie die felder heißen text und icon
 			name: "moderatorRole", //datenbank name
 			description: "Moderator Rolle",

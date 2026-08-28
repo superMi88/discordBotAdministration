@@ -34,56 +34,67 @@ export async function getWebsiteUser(databaseName, discordId) {
 
   if (!databaseName) {
     console.error("[getWebsiteUser] databaseName is missing!");
+    return null;
   }
 
-  await client.connect();
-  const db = client.db(databaseName);
-  // collection websiteUser war alt, userWebsite neu
-  const userCollection = db.collection('userWebsite');
+  const client = new MongoClient(url);
+  try {
+    await client.connect();
+    const db = client.db(databaseName);
+    // collection websiteUser war alt, userWebsite neu
+    const userCollection = db.collection('userWebsite');
 
-  const filteredDocs = await userCollection.findOne({ discordId: discordId });
+    const filteredDocs = await userCollection.findOne({ discordId: discordId });
 
-  if (!filteredDocs) {
-    console.warn(`[getWebsiteUser] No user found in ${databaseName}.userWebsite for ${discordId}`);
-  } else {
-    console.log(`[getWebsiteUser] User found: ${filteredDocs.username || filteredDocs.discordId}`);
+    if (!filteredDocs) {
+      console.warn(`[getWebsiteUser] No user found in ${databaseName}.userWebsite for ${discordId}`);
+    } else {
+      console.log(`[getWebsiteUser] User found: ${filteredDocs.username || filteredDocs.discordId}`);
+    }
+    return filteredDocs;
+  } catch (err) {
+    console.error(`[getWebsiteUser] Error:`, err);
+    return null;
+  } finally {
+    await client.close().catch(() => {});
   }
-
-  await client.close();
-  return filteredDocs;
 }
 
 
 export async function createNewWebsiteUser(databaseName, discordId) {
+  const client = new MongoClient(url);
+  try {
+    await client.connect();
+    const db = client.db(databaseName);
+    const userCollection = db.collection('userWebsite');
 
-  await client.connect();
-  const db = client.db(databaseName);
-  const userCollection = db.collection('userWebsite');
+    //Sicherheitsabfrage collection sollte empty sein
+    const isCollectionEmpty = !Boolean(await userCollection.find({}).limit(1).count());
 
-  //Sicherheitsabfrage collection sollte empty sein
-  const isCollectionEmpty = !Boolean(await userCollection.find({}).limit(1).count())
-
-  //Wenn Collection nicht Empty ist exestiert schon ein admin und das setup wird abgebrochen
-  if (!isCollectionEmpty) {
-    await client.close();
-    return { login: false }
-  }
-
-  const filteredDocs = await userCollection.insertOne(
-    {
-      discordId: discordId,
-      admin: true
+    //Wenn Collection nicht Empty ist exestiert schon ein admin und das setup wird abgebrochen
+    if (!isCollectionEmpty) {
+      return { login: false };
     }
-  );
 
-  if (filteredDocs.acknowledged === true) {
-    await client.close();
-    return {
-      login: true,
+    const filteredDocs = await userCollection.insertOne(
+      {
+        discordId: discordId,
+        admin: true
+      }
+    );
+
+    if (filteredDocs.acknowledged === true) {
+      return {
+        login: true,
+      };
     }
+    return { login: false };
+  } catch (err) {
+    console.error(`[createNewWebsiteUser] Error:`, err);
+    return { login: false };
+  } finally {
+    await client.close().catch(() => {});
   }
-  await client.close();
-  return { login: false }
 }
 
 
