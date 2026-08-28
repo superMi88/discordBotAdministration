@@ -43,6 +43,332 @@ class Plugin {
 		console.log("created Plugin Waldspiel")
 	}
 
+	
+	async getBerryLeaderboard(client, plugin, discordUserId) {
+		try {
+			const DatabaseManager = require('../../lib/DatabaseManager.js');
+			const db = DatabaseManager.get();
+			const pluginVar = plugin?.var || plugin?.['var'] || {};
+			const currencyKey = pluginVar.berry || '69bf9a6e5c04f9423b7eaaaa';
+
+			let userBerryCount = 0;
+			let userRank = null;
+			let top10 = [];
+
+			if (db && currencyKey) {
+				const usersCollection = db.collection('userCollection');
+				const cKey = `currencyData.${currencyKey}`;
+
+				const topDocs = await usersCollection
+					.find({ [cKey]: { $gt: 0 } })
+					.sort({ [cKey]: -1 })
+					.limit(10)
+					.toArray();
+
+				top10 = topDocs.map((u, idx) => {
+					const avatarUrl = u.avatar
+						? `https://cdn.discordapp.com/avatars/${u.discordId}/${u.avatar}.webp`
+						: 'https://cdn.discordapp.com/embed/avatars/0.png';
+
+					return {
+						rank: idx + 1,
+						discordId: u.discordId,
+						username: u.username || 'Nutzer',
+						globalName: u.globalName || u.username || 'Nutzer',
+						avatarUrl: avatarUrl,
+						value: Math.floor(parseFloat(u.currencyData?.[currencyKey] || 0))
+					};
+				});
+
+				if (discordUserId) {
+					const userDoc = await usersCollection.findOne({ discordId: discordUserId });
+					userBerryCount = Math.floor(parseFloat(userDoc?.currencyData?.[currencyKey] || 0));
+
+					if (userBerryCount > 0) {
+						userRank = (await usersCollection.countDocuments({
+							[cKey]: { $gt: userBerryCount }
+						})) + 1;
+					} else {
+						const posCount = await usersCollection.countDocuments({ [cKey]: { $gt: 0 } });
+						userRank = posCount + 1;
+					}
+				}
+			}
+
+			return {
+				success: true,
+				pluginId: plugin?.id,
+				currencyId: currencyKey,
+				discordUserId,
+				berries: userBerryCount,
+				rank: userRank,
+				top10
+			};
+		} catch (err) {
+			console.error("[waldspiel] Fehler in getBerryLeaderboard:", err);
+			return { success: false, error: err.message };
+		}
+	}
+
+	async getAnimalLeaderboard(client, plugin, discordUserId) {
+		try {
+			const DatabaseManager = require('../../lib/DatabaseManager.js');
+			const db = DatabaseManager.get();
+
+			let userAnimalCount = 0;
+			let userRank = null;
+			let top10 = [];
+
+			if (db) {
+				const animalCollection = db.collection('animals');
+				const usersCollection = db.collection('userCollection');
+
+				const topAgg = await animalCollection.aggregate([
+					{
+						$group: {
+							_id: "$ownerDiscordId",
+							count: { $sum: 1 }
+						}
+					},
+					{
+						$match: {
+							_id: { $ne: null }
+						}
+					},
+					{
+						$sort: { count: -1 }
+					},
+					{
+						$limit: 10
+					}
+				]).toArray();
+
+				const userIds = topAgg.map(t => String(t._id));
+				const userDocs = await usersCollection.find({ discordId: { $in: userIds } }).toArray();
+				const userMap = new Map(userDocs.map(u => [String(u.discordId), u]));
+
+				top10 = topAgg.map((item, idx) => {
+					const strId = String(item._id);
+					const u = userMap.get(strId);
+					const avatarUrl = u?.avatar
+						? `https://cdn.discordapp.com/avatars/${strId}/${u.avatar}.webp`
+						: 'https://cdn.discordapp.com/embed/avatars/0.png';
+
+					return {
+						rank: idx + 1,
+						discordId: strId,
+						username: u?.username || 'Nutzer',
+						globalName: u?.globalName || u?.username || 'Nutzer',
+						avatarUrl: avatarUrl,
+						value: item.count
+					};
+				});
+
+				if (discordUserId) {
+					userAnimalCount = await animalCollection.countDocuments({
+						$or: [
+							{ ownerDiscordId: String(discordUserId) },
+							{ ownerDiscordId: Number(discordUserId) },
+							{ ownerDiscordId: discordUserId }
+						]
+					});
+
+					if (userAnimalCount > 0) {
+						const higherCountAgg = await animalCollection.aggregate([
+							{
+								$group: {
+									_id: "$ownerDiscordId",
+									count: { $sum: 1 }
+								}
+							},
+							{
+								$match: {
+									count: { $gt: userAnimalCount }
+								}
+							},
+							{
+								$count: "rankOffset"
+							}
+						]).toArray();
+
+						userRank = (higherCountAgg[0]?.rankOffset || 0) + 1;
+					}
+				}
+			}
+
+			return {
+				success: true,
+				pluginId: plugin?.id,
+				discordUserId,
+				animals: userAnimalCount,
+				rank: userRank,
+				top10
+			};
+		} catch (err) {
+			console.error("[waldspiel] Fehler in getAnimalLeaderboard:", err);
+			return { success: false, error: err.message };
+		}
+	}
+
+	async getUserStats(client, plugin, discordUserId) {
+		if (!discordUserId) {
+			return { success: false, error: 'Nutzer-ID fehlt.' };
+		}
+
+		try {
+			const UserData = require('../../lib/UserData.js');
+			const DatabaseManager = require('../../lib/DatabaseManager.js');
+			const db = DatabaseManager.get();
+
+			const userData = await UserData.get(discordUserId);
+			const pluginVar = plugin?.var || plugin?.['var'] || {};
+			const currencyKey = pluginVar.berry || '69bf9a6e5c04f9423b7eaaaa';
+
+			let berryCount = 0;
+			const cData = userData.currencyData || userData.currency || {};
+
+			if (cData[currencyKey] !== undefined && cData[currencyKey] !== null) {
+				berryCount = cData[currencyKey];
+			} else if (cData['69bf9a6e5c04f9423b7eaaaa'] !== undefined) {
+				berryCount = cData['69bf9a6e5c04f9423b7eaaaa'];
+			} else {
+				// Fallback: check all currency keys in cData for highest or matching key
+				for (const k in cData) {
+					if (k === currencyKey || k === 'B' || k === 'berry') {
+						berryCount = cData[k];
+						break;
+					}
+				}
+			}
+			berryCount = Math.floor(parseFloat(berryCount || 0));
+
+			let animalCount = 0;
+			let animalList = [];
+
+			if (db) {
+				const animalCollection = db.collection('animals');
+				const docs = await animalCollection.find({
+					$or: [
+						{ ownerDiscordId: String(discordUserId) },
+						{ ownerDiscordId: Number(discordUserId) },
+						{ ownerDiscordId: discordUserId }
+					]
+				}).toArray();
+				animalCount = docs.length;
+
+				const grouped = {};
+				for (const doc of docs) {
+					const typeKey = (doc.type || 'UNBEKANNT').toUpperCase();
+					if (!grouped[typeKey]) {
+						grouped[typeKey] = {
+							type: typeKey,
+							count: 0,
+							names: []
+						};
+					}
+					grouped[typeKey].count += 1;
+					if (doc.name && doc.name.trim() !== '') {
+						grouped[typeKey].names.push(doc.name.trim());
+					}
+				}
+				animalList = Object.values(grouped).sort((a, b) => b.count - a.count);
+			}
+
+			let itemList = [];
+			let backgroundList = ['SPRING', 'DEFAULT'];
+			if (userData && userData.pluginData) {
+				for (const key in userData.pluginData) {
+					if (key.startsWith('waldspiel')) {
+						const wData = userData.pluginData[key];
+						if (wData && Array.isArray(wData.itemlist)) {
+							itemList = wData.itemlist;
+						}
+						if (wData && Array.isArray(wData.backgroundlist)) {
+							backgroundList = wData.backgroundlist;
+						}
+					}
+				}
+			}
+
+			let decorationsCatalog = [];
+			let backgroundsCatalog = [];
+			let animalsCatalog = [];
+			try {
+				const ItemList = require('./obj/ItemList');
+				const BackgroundList = require('./obj/BackgroundList');
+				const animallist = require('./animals');
+				ExtensionManager.loadExtensions();
+				const itemListObj = new ItemList();
+				const rawItems = itemListObj.getListAll() || {};
+				const backgroundListObj = new BackgroundList();
+				const rawBackgrounds = backgroundListObj.getBackgroundListAll() || {};
+
+				decorationsCatalog = Object.entries(rawItems)
+					.filter(([k]) => k !== 'ABBRECHEN')
+					.map(([k, item]) => {
+						let category = 'Standard';
+						if (k.startsWith('FESTIVAL_')) category = 'Festival';
+						else if (k.startsWith('CHRISTMAS_') || k.includes('WINTER_')) category = 'Weihnachten';
+						else if (k.startsWith('OSTERN_')) category = 'Ostern';
+						else if (k.startsWith('VALENTINE_')) category = 'Valentinstag';
+						else if (k.startsWith('FRIENDSHIP_')) category = 'Freundschaft';
+						else if (k.startsWith('CARROT_')) category = 'Karotte';
+						else if (['BOO', 'GHOST', 'KESSEL', 'KNIFE', 'PUMPKIN', 'SWEETS', 'WITCHHUT'].includes(k)) category = 'Halloween';
+
+						return {
+							id: k,
+							name: item.name || k,
+							category,
+							icon: '/api/waldspiel/asset?type=item&id=' + encodeURIComponent(k),
+							price: item.price || 0,
+							currency: item.currency || 'BERRY',
+							animation: Boolean(item.animation),
+							isBalloon: Boolean(item.isBalloon)
+						};
+					});
+
+				backgroundsCatalog = Object.entries(rawBackgrounds)
+					.filter(([k]) => k !== 'ABBRECHEN' && k !== 'DEFAULT')
+					.map(([k, bg]) => {
+						let category = 'Standard';
+						if (k.startsWith('CHRISTMAS_')) category = 'Weihnachten';
+						else if (k.startsWith('OSTERN_')) category = 'Ostern';
+						else if (k.startsWith('VALENTINE_')) category = 'Valentinstag';
+
+						return {
+							id: k,
+							name: bg.name || k,
+							category,
+							icon: '/api/waldspiel/asset?type=background&id=' + encodeURIComponent(k)
+						};
+					});
+
+				animalsCatalog = Object.entries(animallist).map(([k, a]) => ({
+					type: k,
+					name: a.name || k,
+					image: '/api/waldspiel/asset?type=animal&id=' + encodeURIComponent(k)
+				}));
+			} catch (catErr) {
+				console.error('[waldspiel] Error generating catalogs in getUserStats:', catErr);
+			}
+
+			return {
+				success: true,
+				berries: berryCount,
+				animals: animalCount,
+				animalList: animalList,
+				itemList: itemList,
+				backgroundList: backgroundList,
+				decorationsCatalog: decorationsCatalog,
+				backgroundsCatalog: backgroundsCatalog,
+				animalsCatalog: animalsCatalog
+			};
+		} catch (err) {
+			console.error("[waldspiel] Fehler in getUserStats:", err);
+			return { success: false, error: err.message };
+		}
+	}
+
 	async execute(client, plugin) {
 		let db = DatabaseManager.get()
 
@@ -267,6 +593,7 @@ class Plugin {
 					});
 				}
 
+				await interaction.deferReply({ ephemeral: true });
 				await waldspiel.showMeinWald(client, plugin, db, user, interaction, false)
 			}
 

@@ -31,6 +31,14 @@ module.exports = {
 	async createMeinWald(discordUserDatabase) {
 		const sharp = require('sharp');
 		const WebP = require('node-webpmux');
+		const path = require('path');
+		const fs = require('fs');
+
+		const handlePath = path.join(__dirname, 'extensions/FestivalEvent/images/string_handle.png');
+		let handleBuf = null;
+		if (fs.existsSync(handlePath)) {
+			handleBuf = await sharp(handlePath).toBuffer();
+		}
 
 		let staticOverlays = [];
 		const imageCreator = new WaldCreator(discordUserDatabase["background"]);
@@ -56,13 +64,24 @@ module.exports = {
 			if (animalExist(discordUserDatabase, i)) {
 				let animalOverlays = [];
 				let staticOverlays = [];
+				let balloons = [];
 				let itemDetails = await getItemFilepaths(discordUserDatabase, i);
+				const numBalloons = itemDetails.filter(it => it.isBalloon).length;
 				for (const item of itemDetails) {
-					const decorationBuf = await sharp(item.path).resize(150).toBuffer();
-					if (item.animation) {
-						animalOverlays.push({ input: decorationBuf });
+					if (item.isBalloon) {
+						const { buffer, yRot } = await getCombinedBalloonBuffer(item, numBalloons);
+						balloons.push({
+							combinedBuffer: buffer,
+							slot: item.slot,
+							yRot: yRot
+						});
 					} else {
-						staticOverlays.push({ input: decorationBuf, left: 0, top: 0 });
+						const decorationBuf = await sharp(item.path).resize(150).toBuffer();
+						if (item.animation) {
+							animalOverlays.push({ input: decorationBuf });
+						} else {
+							staticOverlays.push({ input: decorationBuf, left: 0, top: 0 });
+						}
 					}
 				}
 				const baseImgPath = await getAnimalFilepath(discordUserDatabase, i);
@@ -71,7 +90,7 @@ module.exports = {
 				const left = i === 1 ? 30 : i === 2 ? 195 : 360;
 				const top = i === 1 ? 135 : i === 2 ? 130 : 135;
 				const animType = await getAnimalAnimation(discordUserDatabase, i);
-				animals.push({ buf: animalBuf, left, top, animType, staticOverlays });
+				animals.push({ buf: animalBuf, left, top, animType, staticOverlays, balloons });
 			}
 		}
 
@@ -135,18 +154,106 @@ module.exports = {
 				const finalLeft = Math.round(animal.left + 75 + offX - meta.width / 2);
 				const finalTop = Math.round(y + 75 - meta.height / 2);
 
-				frameComposites.push({ input: frameAnimalBuf, left: finalLeft, top: finalTop });
+				frameComposites.push({ input: frameAnimalBuf, left: finalLeft + 150, top: finalTop + 150 });
 
 				for (const sOverlay of animal.staticOverlays) {
-					frameComposites.push({ input: sOverlay.input, left: animal.left, top: animal.top });
+					frameComposites.push({ input: sOverlay.input, left: animal.left + 150, top: animal.top + 150 });
+				}
+
+				// --- RENDER BALLOONS FIRST (BEHIND THE ANIMAL) ---
+				if (animal.balloons && animal.balloons.length > 0) {
+					const numBalloons = animal.balloons.length;
+
+					// Sort balloons to render Slot 1 first (background), then Slot 3, then Slot 2 (foreground)
+					const slotOrder = { 1: 1, 3: 2, 2: 3 };
+					animal.balloons.sort((a, b) => (slotOrder[a.slot] || 0) - (slotOrder[b.slot] || 0));
+
+					for (let bIdx = 0; bIdx < numBalloons; bIdx++) {
+						const item = animal.balloons[bIdx];
+
+						// Offset configurations based on count and slot index
+						let bOffsetX = 0;
+						let bOffsetY = 0;
+
+						// Individual rocking animation for the balloon
+						const phaseOffset = bIdx * (Math.PI / 3);
+						const balloonRot = 0.002 * Math.sin(progress * Math.PI * 2 + phaseOffset);
+						const balloonRotDeg = balloonRot * (180 / Math.PI);
+
+						// Rotate the pre-combined balloon and string image
+						const rotatedBalloon = await sharp(item.combinedBuffer)
+							.rotate(balloonRotDeg, { background: { r: 0, g: 0, b: 0, alpha: 0 } })
+							.png()
+							.toBuffer();
+
+						const meta = await sharp(rotatedBalloon).metadata();
+
+						// Base hand coordinate on paddedBackgroundBuffer
+						const leftHand = Math.round(animal.left + 75 + 150 + 45 + offX);
+						const topHand = Math.round(y - animal.top + 120 + item.yRot);
+
+						frameComposites.push({
+							input: rotatedBalloon,
+							left: Math.round(leftHand - meta.width / 2),
+							top: Math.round(topHand - meta.height / 2)
+						});
+					}
+
+					if (handleBuf) {
+						const leftHand = Math.round(animal.left + 75 + 150 + 45 + offX);
+						const topHand = Math.round(y - animal.top + 120 + 270);
+						frameComposites.push({
+							input: handleBuf,
+							left: leftHand - 3,
+							top: topHand - 6
+						});
+					}
 				}
 			}
 
 			// Composite animals over background for this frame
-			let frameBuffer = await sharp(backgroundBuffer)
-				.composite(frameComposites)
-				.webp({ quality: 90 })
-				.toBuffer();
+			let paddedBackgroundBuffer = await sharp(backgroundBuffer)
+				.extend({
+					top: 150,
+					bottom: 150,
+					left: 150,
+					right: 150,
+					background: { r: 0, g: 0, b: 0, alpha: 0 }
+				})
+				.png().toBuffer();
+
+			let frameBuffer;
+			try {
+				let compositeBuffer = await sharp(paddedBackgroundBuffer)
+					.composite(frameComposites)
+					.raw()
+					.toBuffer();
+
+				frameBuffer = await sharp(compositeBuffer, {
+					raw: {
+						width: 850,
+						height: 600,
+						channels: 4
+					}
+				})
+					.extract({ left: 150, top: 150, width: 550, height: 300 })
+					.webp({ quality: 80, effort: 2 })
+					.toBuffer();
+			} catch (err) {
+				console.error("[Festival-Crash-Debug] createMeinWald composites count:", frameComposites.length);
+				try {
+					const bgMeta = await sharp(paddedBackgroundBuffer).metadata();
+					console.error("[Festival-Crash-Debug] createMeinWald paddedBackgroundBuffer dimensions:", bgMeta.width, "x", bgMeta.height);
+					for (let idx = 0; idx < frameComposites.length; idx++) {
+						const comp = frameComposites[idx];
+						const compMeta = await sharp(comp.input).metadata();
+						console.error(`[Festival-Crash-Debug] createMeinWald composite ${idx}:`, compMeta.width, "x", compMeta.height, "at left:", comp.left, ", top:", comp.top);
+					}
+				} catch (debugErr) {
+					console.error("[Festival-Crash-Debug] Failed to extract metadata:", debugErr.message);
+				}
+				throw err;
+			}
 
 			frameBuffers.push({ buffer: frameBuffer, delay: 80 });
 		}
@@ -155,7 +262,17 @@ module.exports = {
 		for (const fb of frameBuffers) {
 			framesForSave.push(await WebP.Image.generateFrame({ buffer: fb.buffer, delay: fb.delay, dispose: true, blend: false }));
 		}
-		const outPath = 'temp/finalpicture.webp';
+		
+		try {
+			const files = fs.readdirSync('temp');
+			for (const file of files) {
+				if (file.startsWith('finalpicture_') && !file.includes('animal')) {
+					fs.unlinkSync(path.join('temp', file));
+				}
+			}
+		} catch (e) {}
+
+		const outPath = `temp/finalpicture_${Date.now()}.webp`;
 		await WebP.Image.save(outPath, { width, height, loops: 0, frames: framesForSave });
 		return outPath;
 	},
@@ -249,23 +366,42 @@ module.exports = {
 
 		const sharp = require('sharp')
 		const WebP = require('node-webpmux');
+		const path = require('path');
+		const fs = require('fs');
+
+		const handlePath = path.join(__dirname, 'extensions/FestivalEvent/images/string_handle.png');
+		let handleBuf = null;
+		if (fs.existsSync(handlePath)) {
+			handleBuf = await sharp(handlePath).toBuffer();
+		}
 
 		let mergeArray = []
 
 		let animalBuf = null;
 		let animType = 'WACKELN';
 		let animalStaticOverlays = [];
+		let balloons = [];
 
 		if (animalExist(discordUserDatabase, animalId)) {
 			let animalOverlays = [];
 			let staticOverlays = [];
 			let itemDetails = await getItemFilepaths(discordUserDatabase, animalId);
+			const numBalloons = itemDetails.filter(it => it.isBalloon).length;
 			for (const item of itemDetails) {
-				const decorationBuf = await sharp(item.path).resize(150).toBuffer();
-				if (item.animation) {
-					animalOverlays.push({ input: decorationBuf });
+				if (item.isBalloon) {
+					const { buffer, yRot } = await getCombinedBalloonBuffer(item, numBalloons);
+					balloons.push({
+						combinedBuffer: buffer,
+						slot: item.slot,
+						yRot: yRot
+					});
 				} else {
-					staticOverlays.push({ input: decorationBuf });
+					const decorationBuf = await sharp(item.path).resize(150).toBuffer();
+					if (item.animation) {
+						animalOverlays.push({ input: decorationBuf });
+					} else {
+						staticOverlays.push({ input: decorationBuf });
+					}
 				}
 			}
 			const baseImgPath = await getAnimalFilepath(discordUserDatabase, animalId);
@@ -343,15 +479,105 @@ module.exports = {
 			const finalLeft = Math.round(195 + 75 + offX - meta.width / 2);
 			const finalTop = Math.round(y + 75 - meta.height / 2);
 
-			let composites = [{ input: frameAnimalBuf, left: finalLeft, top: finalTop }];
+			let composites = [];
+
+			composites.push({ input: frameAnimalBuf, left: finalLeft + 150, top: finalTop + 150 });
 			for (const sOverlay of animalStaticOverlays) {
-				composites.push({ input: sOverlay.input, left: 195, top: 130 });
+				composites.push({ input: sOverlay.input, left: 195 + 150, top: 130 + 150 });
 			}
 
-			let frameBuffer = await sharp(backgroundBuffer)
-				.composite(composites)
-				.webp({ quality: 90 })
-				.toBuffer();
+			// --- RENDER BALLOONS FIRST (BEHIND THE ANIMAL) ---
+			if (balloons && balloons.length > 0) {
+				const numBalloons = balloons.length;
+
+				// Sort balloons to render Slot 1 first (background), then Slot 3, then Slot 2 (foreground)
+				const slotOrder = { 1: 1, 3: 2, 2: 3 };
+				balloons.sort((a, b) => (slotOrder[a.slot] || 0) - (slotOrder[b.slot] || 0));
+
+				for (let bIdx = 0; bIdx < numBalloons; bIdx++) {
+					const item = balloons[bIdx];
+
+					// Offset configurations based on count and slot index
+					let bOffsetX = 0;
+					let bOffsetY = 0;
+
+					// Individual rocking animation for the balloon
+					const phaseOffset = bIdx * (Math.PI / 3);
+					const balloonRot = 0.002 * Math.sin(progress * Math.PI * 2 + phaseOffset);
+					const balloonRotDeg = balloonRot * (180 / Math.PI);
+
+					// Rotate the pre-combined balloon and string image
+					const rotatedBalloon = await sharp(item.combinedBuffer)
+						.rotate(balloonRotDeg, { background: { r: 0, g: 0, b: 0, alpha: 0 } })
+						.png()
+						.toBuffer();
+
+					const meta = await sharp(rotatedBalloon).metadata();
+
+					// Base hand coordinate on paddedBackgroundBuffer
+					const leftHand = Math.round(195 + 75 + 150 + 45 + offX);
+					const topHand = Math.round(y - 10 + item.yRot);
+
+					composites.push({
+						input: rotatedBalloon,
+						left: Math.round(leftHand - meta.width / 2),
+						top: Math.round(topHand - meta.height / 2)
+					});
+				}
+
+				if (handleBuf) {
+					const leftHand = Math.round(195 + 75 + 150 + 45 + offX);
+					const topHand = Math.round(y - 10 + 270);
+					composites.push({
+						input: handleBuf,
+						left: leftHand - 3,
+						top: topHand - 6
+					});
+				}
+			}
+
+			let paddedBackgroundBuffer = await sharp(backgroundBuffer)
+				.extend({
+					top: 150,
+					bottom: 150,
+					left: 150,
+					right: 150,
+					background: { r: 0, g: 0, b: 0, alpha: 0 }
+				})
+				.png().toBuffer();
+
+			let frameBuffer;
+			try {
+				let compositeBuffer = await sharp(paddedBackgroundBuffer)
+					.composite(composites)
+					.raw()
+					.toBuffer();
+
+				frameBuffer = await sharp(compositeBuffer, {
+					raw: {
+						width: 850,
+						height: 600,
+						channels: 4
+					}
+				})
+					.extract({ left: 150, top: 150, width: 550, height: 300 })
+					.webp({ quality: 80, effort: 2 })
+					.toBuffer();
+			} catch (err) {
+				console.error("[Festival-Crash-Debug] composites count:", composites.length);
+				try {
+					const bgMeta = await sharp(paddedBackgroundBuffer).metadata();
+					console.error("[Festival-Crash-Debug] paddedBackgroundBuffer dimensions:", bgMeta.width, "x", bgMeta.height);
+					for (let idx = 0; idx < composites.length; idx++) {
+						const comp = composites[idx];
+						const compMeta = await sharp(comp.input).metadata();
+						console.error(`[Festival-Crash-Debug] composite ${idx}:`, compMeta.width, "x", compMeta.height, "at left:", comp.left, ", top:", comp.top);
+					}
+				} catch (debugErr) {
+					console.error("[Festival-Crash-Debug] Failed to extract metadata:", debugErr.message);
+				}
+				throw err;
+			}
 
 			frameBuffers.push({ buffer: frameBuffer, delay: 80 });
 		}
@@ -360,7 +586,17 @@ module.exports = {
 		for (const fb of frameBuffers) {
 			framesForSave.push(await WebP.Image.generateFrame({ buffer: fb.buffer, delay: fb.delay, dispose: true, blend: false }));
 		}
-		const outPath = 'temp/finalpicture_animal.webp';
+
+		try {
+			const files = fs.readdirSync('temp');
+			for (const file of files) {
+				if (file.startsWith('finalpicture_animal_')) {
+					fs.unlinkSync(path.join('temp', file));
+				}
+			}
+		} catch (e) {}
+
+		const outPath = `temp/finalpicture_animal_${Date.now()}.webp`;
 		await WebP.Image.save(outPath, { width, height, loops: 0, frames: framesForSave });
 		return outPath;
 	},
@@ -1028,9 +1264,52 @@ module.exports = {
 		return outPath;
 	},
 
+	async createCatchBalloonImage(member, balloonName, balloonFileName) {
+		const sharp = require('sharp');
+
+		const width = 550;
+		const height = 80;
+
+		let mergeArray = [];
+
+		const displayName = member.displayName || (member.user ? member.user.username : 'Spieler');
+		const nameText = displayName.length > 14 ? displayName.substring(0, 12) + "..." : displayName;
+
+		mergeArray.push({
+			input: Buffer.from(`<svg width="${width}" height="${height}" xmlns="http://www.w3.org/2000/svg">
+				${getQuicksandPath(nameText + " hat einen Ballon erhalten!", 30, 16, 20, "white")}
+				${getQuicksandPath(balloonName, 30, 46, 32, "#74cc5e")}
+			</svg>`),
+			left: 0, top: -1
+		});
+
+		const balloonImg = await sharp(balloonFileName)
+			.resize(116, 80, { fit: 'contain', background: { r: 0, g: 0, b: 0, alpha: 0 } })
+			.toBuffer();
+
+		mergeArray.push({ input: balloonImg, left: width - 116, top: 0 });
+
+		const outPath = `temp/balloon_catch_${Date.now()}.png`;
+		await sharp('plugins/waldspiel/images/backgrounds/collect_animal.png')
+			.resize(width, height)
+			.composite(mergeArray)
+			.png()
+			.toFile(outPath);
+
+		return outPath;
+	},
+
 	async renderSingleAnimal(discordUserDatabase, position = 2, userId = 'temp') {
 		const sharp = require('sharp');
 		const WebP = require('node-webpmux');
+		const path = require('path');
+		const fs = require('fs');
+
+		const handlePath = path.join(__dirname, 'extensions/FestivalEvent/images/string_handle.png');
+		let handleBuf = null;
+		if (fs.existsSync(handlePath)) {
+			handleBuf = await sharp(handlePath).toBuffer();
+		}
 
 		console.log("renderSingleAnimal")
 		console.log(discordUserDatabase)
@@ -1054,13 +1333,24 @@ module.exports = {
 
 		let animalOverlays = [];
 		let staticOverlays = [];
+		let balloons = [];
 		let itemDetails = await getItemFilepaths(discordUserDatabase, position);
+		const numBalloons = itemDetails.filter(it => it.isBalloon).length;
 		for (const item of itemDetails) {
-			const decorationBuf = await sharp(item.path).resize(150).toBuffer();
-			if (item.animation) {
-				animalOverlays.push({ input: decorationBuf });
+			if (item.isBalloon) {
+				const { buffer, yRot } = await getCombinedBalloonBuffer(item, numBalloons);
+				balloons.push({
+					combinedBuffer: buffer,
+					slot: item.slot,
+					yRot: yRot
+				});
 			} else {
-				staticOverlays.push({ input: decorationBuf, left: 0, top: 0 });
+				const decorationBuf = await sharp(item.path).resize(150).toBuffer();
+				if (item.animation) {
+					animalOverlays.push({ input: decorationBuf });
+				} else {
+					staticOverlays.push({ input: decorationBuf, left: 0, top: 0 });
+				}
 			}
 		}
 
@@ -1117,21 +1407,84 @@ module.exports = {
 			const finalLeft = Math.round(100 + offX - meta.width / 2);
 			const finalTop = Math.round(y + 75 - meta.height / 2);
 
-			let composites = [{ input: frameAnimalBuf, left: finalLeft, top: finalTop }];
+			let composites = [];
+
+			composites.push({ input: frameAnimalBuf, left: finalLeft + 150, top: finalTop + 150 });
 			for (const sOverlay of staticOverlays) {
-				composites.push({ input: sOverlay.input, left: Math.round(100 - 75), top: Math.round(y) });
+				composites.push({ input: sOverlay.input, left: Math.round(100 - 75) + 150, top: Math.round(y) + 150 });
 			}
 
-			const framePath = `temp/animal_middle_${userId}_frame_${i}.png`;
-			await sharp({
+			// --- RENDER BALLOONS FIRST (BEHIND THE ANIMAL) ---
+			if (balloons && balloons.length > 0) {
+				const numBalloons = balloons.length;
+
+				// Sort balloons to render Slot 1 first (background), then Slot 3, then Slot 2 (foreground)
+				const slotOrder = { 1: 1, 3: 2, 2: 3 };
+				balloons.sort((a, b) => (slotOrder[a.slot] || 0) - (slotOrder[b.slot] || 0));
+
+				for (let bIdx = 0; bIdx < numBalloons; bIdx++) {
+					const item = balloons[bIdx];
+
+					// Offset configurations based on count and slot index
+					let bOffsetX = 0;
+					let bOffsetY = 0;
+
+					// Individual rocking animation for the balloon
+					const phaseOffset = bIdx * (Math.PI / 3);
+					const balloonRot = 0.002 * Math.sin(progress * Math.PI * 2 + phaseOffset);
+					const balloonRotDeg = balloonRot * (180 / Math.PI);
+
+					// Rotate the pre-combined balloon and string image
+					const rotatedBalloon = await sharp(item.combinedBuffer)
+						.rotate(balloonRotDeg, { background: { r: 0, g: 0, b: 0, alpha: 0 } })
+						.png()
+						.toBuffer();
+
+					const meta = await sharp(rotatedBalloon).metadata();
+
+					// Base hand coordinate on paddedBackgroundBuffer
+					const leftHand = Math.round(100 + 45 + 150 + offX);
+					const topHand = Math.round(y - 15 + item.yRot);
+
+					composites.push({
+						input: rotatedBalloon,
+						left: Math.round(leftHand - meta.width / 2),
+						top: Math.round(topHand - meta.height / 2)
+					});
+				}
+
+				if (handleBuf) {
+					const leftHand = Math.round(100 + 45 + 150 + offX);
+					const topHand = Math.round(y - 15 + 270);
+					composites.push({
+						input: handleBuf,
+						left: leftHand - 3,
+						top: topHand - 6
+					});
+				}
+			}
+
+			const compositeBuffer = await sharp({
 				create: {
-					width,
-					height,
+					width: width + 300,
+					height: height + 300,
 					channels: 4,
 					background: { r: 0, g: 0, b: 0, alpha: 0 }
 				}
 			})
 				.composite(composites)
+				.raw()
+				.toBuffer();
+
+			const framePath = `temp/animal_middle_${userId}_frame_${i}.png`;
+			await sharp(compositeBuffer, {
+				raw: {
+					width: width + 300,
+					height: height + 300,
+					channels: 4
+				}
+			})
+				.extract({ left: 150, top: 150, width, height })
 				.png()
 				.toFile(framePath);
 
@@ -1202,18 +1555,20 @@ async function getItemFilepaths(discordUserDatabase, id) {
 	let ItemlistObj = new ItemList()
 	let Itemlist = ItemlistObj.getListAll()
 	let items = [];
-	let activeItems = new Set();
+	let activeItems = [];
 
 	// Support slot 1 (with legacy fallback), 2, and 3
 	let s1 = animal.customization1 || animal.customization;
-	if (s1 && Itemlist[s1]) activeItems.add(s1);
-	if (animal.customization2 && Itemlist[animal.customization2]) activeItems.add(animal.customization2);
-	if (animal.customization3 && Itemlist[animal.customization3]) activeItems.add(animal.customization3);
+	if (s1 && Itemlist[s1]) activeItems.push({ itemId: s1, slot: 1 });
+	if (animal.customization2 && Itemlist[animal.customization2]) activeItems.push({ itemId: animal.customization2, slot: 2 });
+	if (animal.customization3 && Itemlist[animal.customization3]) activeItems.push({ itemId: animal.customization3, slot: 3 });
 
-	for (const itemId of activeItems) {
+	for (const entry of activeItems) {
 		items.push({
-			path: path.join(__dirname, 'images/items/' + Itemlist[itemId].filename + '.png'),
-			animation: Itemlist[itemId].animation !== false
+			path: path.join(__dirname, 'images/items/' + Itemlist[entry.itemId].filename + '.png'),
+			animation: Itemlist[entry.itemId].animation !== false,
+			isBalloon: Itemlist[entry.itemId].isBalloon === true,
+			slot: entry.slot
 		});
 	}
 
@@ -1425,5 +1780,79 @@ function getBackgroundByTag(tag) {
 
 	return retunObj
 
+}
+
+async function getCombinedBalloonBuffer(item, numBalloons) {
+	const sharp = require('sharp');
+	const path = require('path');
+
+	// Determine active slot configuration
+	let activeSlot = item.slot;
+	if (numBalloons === 1) {
+		activeSlot = 2; // Always center if only one balloon
+	}
+
+	let balloonLeft = 80;
+	let balloonTop = 60;
+
+	if (activeSlot === 1) {
+		balloonLeft = 56;
+		balloonTop = 60; // Y = 60
+	} else if (activeSlot === 2) {
+		balloonLeft = 80;
+		balloonTop = 45; // Staggered -15px
+	} else if (activeSlot === 3) {
+		balloonLeft = 104;
+		balloonTop = 75; // Staggered +15px
+	}
+
+	const X_conn = balloonLeft + 70;
+	const Y_conn = balloonTop + 107;
+	const yRot = 270;
+
+	// Dynamically read the color and width of string.png
+	const stringPath = path.join(__dirname, 'images/items/string.png');
+	let hexColor = '#5f493d';
+	let strokeWidth = 4;
+	try {
+		const metaString = await sharp(stringPath).metadata();
+		strokeWidth = metaString.width || 4;
+		const pixelBuf = await sharp(stringPath).raw().toBuffer();
+		if (pixelBuf && pixelBuf.length >= 3) {
+			const r = pixelBuf[0], g = pixelBuf[1], b = pixelBuf[2];
+			hexColor = '#' + [r, g, b].map(x => x.toString(16).padStart(2, '0')).join('');
+		}
+	} catch (err) {
+		console.error("Failed to read string.png properties:", err.message);
+	}
+
+	const svgString = Buffer.from(`
+		<svg width="300" height="300" xmlns="http://www.w3.org/2000/svg">
+			<line x1="${X_conn}" y1="${Y_conn}" x2="150" y2="${yRot}" stroke="${hexColor}" stroke-width="${strokeWidth}" stroke-linecap="round" />
+		</svg>
+	`);
+
+	const bottomPadding = 2 * yRot - 300; // 240px bottom padding to center Y=270 vertically
+
+	const buffer = await sharp({
+		create: {
+			width: 300,
+			height: 300,
+			channels: 4,
+			background: { r: 0, g: 0, b: 0, alpha: 0 }
+		}
+	})
+		.composite([
+			{ input: item.path, left: balloonLeft, top: balloonTop },
+			{ input: svgString, left: 0, top: 0 }
+		])
+		.extend({
+			bottom: bottomPadding,
+			background: { r: 0, g: 0, b: 0, alpha: 0 }
+		})
+		.png()
+		.toBuffer();
+
+	return { buffer, yRot };
 }
 

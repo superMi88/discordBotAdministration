@@ -68,7 +68,7 @@ export default function bot(props) {
                 )
             })}
 
-            <a href="bot/new" className={utilStyles.abox}>
+            <Link href={`/${projectAlias}/bot/new`} className={utilStyles.abox}>
                 <div className={utilStyles.botListeBlock}>
                     <div className={utilStyles.botbild}>
                         <Image
@@ -82,7 +82,7 @@ export default function bot(props) {
                         new Bot
                     </div>
                 </div>
-            </a>
+            </Link>
         </div>
     )
 

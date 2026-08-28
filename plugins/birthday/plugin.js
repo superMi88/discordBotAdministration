@@ -13,6 +13,47 @@ var CronJob = require('cron').CronJob;
 var ObjectId = require('mongodb').ObjectId;
 
 class Plugin {
+	async getBirthdayForUser(client, plugin, discordUserId) {
+		if (!discordUserId) {
+			return { success: false, error: 'Nutzer-ID fehlt.' };
+		}
+		let userData = await UserData.get(discordUserId);
+		let birthdayData = userData.getPluginData("birthday", plugin.id);
+		return { success: true, birthday: birthdayData || null };
+	}
+
+	async setBirthdayForUser(client, plugin, discordUserId, birthdayData) {
+		let day = parseInt(birthdayData.day);
+		let month = parseInt(birthdayData.month);
+		let year = birthdayData.year ? parseInt(birthdayData.year) : false;
+
+		if (isNaN(day) || day < 1 || day > 31 || isNaN(month) || month < 1 || month > 12) {
+			return { success: false, error: 'Ungültiger Tag oder Monat. Tag muss 1-31 und Monat 1-12 sein.' };
+		}
+
+		let birthdayObj = { day, month };
+		if (year) {
+			if (isNaN(year) || year <= 1900 || year >= new Date().getFullYear()) {
+				return { success: false, error: 'Ungültiges Geburtsjahr.' };
+			}
+			birthdayObj.year = year;
+		}
+
+		let userData = await UserData.get(discordUserId);
+		userData.setPluginData("birthday", plugin.id, birthdayObj);
+		await userData.save();
+
+		if (client && plugin) {
+			try {
+				await setBirthdayRole(client, plugin);
+			} catch (err) {
+				console.error("[birthday] Fehler beim Aktualisieren der Geburtstag-Rollen:", err);
+			}
+		}
+
+		return { success: true, birthday: birthdayObj };
+	}
+
 	async execute(client, plugin) {
 
 		let channel = await client.channels.cache.get(plugin['var'].channelRules)
@@ -39,71 +80,24 @@ class Plugin {
 
 			if (interaction.customId === 'addBirthday-' + plugin.id) {
 
-				let db = DatabaseManager.get()
-
 				const dateString = interaction.fields.getTextInputValue('date');
-
 				let arr = dateString.split("-")
 
-				let birthdayObj = {}
-				//wenn eine ungültige eingabe getätigt wird error=true
-				let error = false
-
-				//wenn Jahr angegeben ist prüfe es grob und füge es hinzu
-				if (arr.length == 2 || arr.length == 3) {
-
-					let day = parseInt(arr[0])
-					let month = parseInt(arr[1])
-					let year = false
-
-					console.log("abfrage")
-					console.log(!isNaN(day) && day > 0 && day < 31 && !isNaN(month) && month > 0 && month < 12)
-
-					if (
-						!isNaN(day) && day > 0 && day <= 31 &&
-						!isNaN(month) && month > 0 && month <= 12
-					) {
-						birthdayObj = {
-							day: day,
-							month: month
-						}
-
-					} else {
-						error = true
-					}
-
-					//wenn Jahr angegeben ist prüfe es grob und füge es hinzu
-					if (arr.length == 3) {
-
-						let year = parseInt(arr[2])
-
-						if (!isNaN(year) && year > 1900 && year < (new Date().getFullYear())) {
-
-							birthdayObj = {
-								day: day,
-								month: month,
-								year: year
-							}
-						} else {
-							error = true
-						}
-					}
-
-				} else {
-					error = true
-				}
-
-				if (error) {
+				if (arr.length !== 2 && arr.length !== 3) {
 					await interaction.reply({ content: 'Ungültiges Format, das Format muss TT-MM-JJJJ oder TT-MM entsprechen um gültig zu sein zB. 30-07-1997, 14-03', ephemeral: true });
-					return
+					return;
 				}
 
-				let userData = await UserData.get(interaction.user.id);
-				userData.setPluginData("birthday", plugin.id, birthdayObj);
-				await userData.save();
+				let day = arr[0];
+				let month = arr[1];
+				let year = arr.length === 3 ? arr[2] : undefined;
 
-				//update birthday role for everyone, this should normaly only update this player who sets his birthday today
-				await setBirthdayRole(client, plugin)
+				let result = await this.setBirthdayForUser(client, plugin, interaction.user.id, { day, month, year });
+
+				if (!result.success) {
+					await interaction.reply({ content: result.error || 'Ungültiges Datum', ephemeral: true });
+					return;
+				}
 
 				await interaction.reply({ content: 'Dein Geburtstag wurde erfolgreich eingetragen', ephemeral: true });
 

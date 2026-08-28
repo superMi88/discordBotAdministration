@@ -40,8 +40,11 @@ yarn-error.log*
 /temp/
 /cache/
 /uploads/
+/Storage/
+/Tickets/
 /plugins/waldspiel/images/cache/
 
 /MinecraftCurseForge/
 /minecraft/
 /logs/
+

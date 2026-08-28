@@ -18,7 +18,7 @@ export async function proxy(req) {
   if (
     pathname.startsWith("/api/login") ||
     pathname.startsWith("/api/projects") ||
-    pathname === "/callback" ||
+    pathname.startsWith("/callback") ||
     pathname.match(/^\/[^/]+\/login$/) // Matches /[project]/login
   ) {
     return NextResponse.next();
