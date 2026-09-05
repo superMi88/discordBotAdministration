@@ -275,7 +275,8 @@ class Plugin {
 			}
 
 			let itemList = [];
-			let backgroundList = ['SPRING', 'DEFAULT'];
+			let backgroundList = ['DEFAULT', 'SUMMER'];
+			let currentBackground = 'DEFAULT';
 			if (userData && userData.pluginData) {
 				for (const key in userData.pluginData) {
 					if (key.startsWith('waldspiel')) {
@@ -284,10 +285,20 @@ class Plugin {
 							itemList = wData.itemlist;
 						}
 						if (wData && Array.isArray(wData.backgroundlist)) {
-							backgroundList = wData.backgroundlist;
+							backgroundList = [...wData.backgroundlist];
+						}
+						if (wData && (wData.background || wData.background === 0)) {
+							currentBackground = wData.background === 0 ? 'DEFAULT' : wData.background;
 						}
 					}
 				}
+			}
+
+			// Ensure defaults are present in owned list (DEFAULT and SUMMER are always owned)
+			if (!backgroundList.includes("DEFAULT")) backgroundList.unshift("DEFAULT");
+			if (!backgroundList.includes("SUMMER")) {
+				let idx = backgroundList.indexOf("DEFAULT") + 1;
+				backgroundList.splice(idx, 0, "SUMMER");
 			}
 
 			let decorationsCatalog = [];
@@ -328,18 +339,23 @@ class Plugin {
 					});
 
 				backgroundsCatalog = Object.entries(rawBackgrounds)
-					.filter(([k]) => k !== 'ABBRECHEN' && k !== 'DEFAULT')
+					.filter(([k]) => k !== 'ABBRECHEN')
 					.map(([k, bg]) => {
 						let category = 'Standard';
 						if (k.startsWith('CHRISTMAS_')) category = 'Weihnachten';
 						else if (k.startsWith('OSTERN_')) category = 'Ostern';
 						else if (k.startsWith('VALENTINE_')) category = 'Valentinstag';
 
+						const isDefault = k === 'DEFAULT' || k === 'SUMMER';
+
 						return {
 							id: k,
 							name: bg.name || k,
 							category,
-							icon: '/api/waldspiel/asset?type=background&id=' + encodeURIComponent(k)
+							icon: '/api/waldspiel/asset?type=background&id=' + encodeURIComponent(k),
+							price: isDefault ? 0 : (bg.price || 0),
+							currency: bg.currency || 'BERRY',
+							isDefault: isDefault
 						};
 					});
 
@@ -359,6 +375,8 @@ class Plugin {
 				animalList: animalList,
 				itemList: itemList,
 				backgroundList: backgroundList,
+				currentBackground: currentBackground,
+				defaultBackgrounds: ['DEFAULT', 'SUMMER'],
 				decorationsCatalog: decorationsCatalog,
 				backgroundsCatalog: backgroundsCatalog,
 				animalsCatalog: animalsCatalog

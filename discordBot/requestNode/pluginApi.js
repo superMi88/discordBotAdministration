@@ -7,6 +7,7 @@ const botManager = require("../libIndex/botManager.js");
 module.exports = {
     async execute(ipc, data, socket) {
         const payload = data?.data || data || {};
+        const requestId = data?.requestId || payload?.requestId || (Math.random().toString(36).substring(2) + Date.now().toString(36));
         const pluginTag = payload.pluginTag || data.pluginTag;
         const apiEndpoint = payload.apiEndpoint || data.apiEndpoint;
         const pluginId = payload.pluginId || data.pluginId;
@@ -32,7 +33,7 @@ module.exports = {
                         }, 10000);
 
                         const handler = (msg) => {
-                            if (msg && typeof msg === 'object' && msg.command === 'pluginApi') {
+                            if (msg && typeof msg === 'object' && msg.command === 'pluginApi' && (!msg.requestId || msg.requestId === requestId)) {
                                 clearTimeout(timeout);
                                 child.removeListener('message', handler);
                                 resolve(msg.result);
@@ -40,7 +41,7 @@ module.exports = {
                         };
 
                         child.on('message', handler);
-                        child.send({ command: 'pluginApi', data: payload });
+                        child.send({ command: 'pluginApi', requestId, data: payload });
                     });
 
                     if (botResult && (botResult.success || botResult.status === 'ok')) {
@@ -58,6 +59,7 @@ module.exports = {
 
         // Case 2: Called inside child process (discordBot.js) where first parameter is botStruct
         const botStruct = ipc;
+        const reqId = data?.requestId || payload?.requestId || null;
         const client = botStruct ? botStruct.client : dataManager.client;
         const projectAlias = botStruct ? botStruct.projectAlias : '';
 
@@ -76,6 +78,7 @@ module.exports = {
         if (!pluginInstance) {
             return {
                 command: 'pluginApi',
+                    requestId: reqId,
                 result: { success: false, botOnline: true, error: `Plugin '${pluginTag || pluginId}' im Bot nicht gefunden oder inaktiv.` }
             };
         }
@@ -109,6 +112,7 @@ module.exports = {
 
                 return {
                     command: 'pluginApi',
+                    requestId: reqId,
                     result: {
                         botOnline: true,
                         ...response
@@ -118,6 +122,7 @@ module.exports = {
                 console.error(`[pluginApi] Fehler bei Ausführung von Endpoint ${apiEndpoint} in Plugin ${tag}:`, err);
                 return {
                     command: 'pluginApi',
+                    requestId: reqId,
                     result: { success: false, botOnline: true, error: err.message || 'Fehler im Plugin-API-Endpoint.' }
                 };
             }
@@ -129,6 +134,7 @@ module.exports = {
                 const response = await pluginInstance.logic[apiEndpoint](client, pluginInstance, reqData);
                 return {
                     command: 'pluginApi',
+                    requestId: reqId,
                     result: {
                         botOnline: true,
                         ...response
@@ -138,6 +144,7 @@ module.exports = {
                 console.error(`[pluginApi] Fehler bei Ausführung von logic.${apiEndpoint} in Plugin ${tag}:`, err);
                 return {
                     command: 'pluginApi',
+                    requestId: reqId,
                     result: { success: false, botOnline: true, error: err.message }
                 };
             }
@@ -145,6 +152,7 @@ module.exports = {
 
         return {
             command: 'pluginApi',
+                    requestId: reqId,
             result: { success: false, botOnline: true, error: `API-Endpoint '${apiEndpoint}' für Plugin '${tag}' nicht gefunden.` }
         };
     }
