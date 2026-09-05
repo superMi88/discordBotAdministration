@@ -1,4 +1,4 @@
-﻿const path = require('path');
+const path = require('path');
 const ExtensionManager = require('../ExtensionManager');
 const ItemList = require('../obj/ItemList');
 const BackgroundList = require('../obj/BackgroundList');
@@ -38,18 +38,23 @@ module.exports = async function (client, plugin, config, projectAlias, data) {
             });
 
         const backgrounds = Object.entries(rawBackgrounds)
-            .filter(([key]) => key !== 'ABBRECHEN' && key !== 'DEFAULT')
+            .filter(([key]) => key !== 'ABBRECHEN')
             .map(([key, bg]) => {
                 let category = 'Standard';
                 if (key.startsWith('CHRISTMAS_')) category = 'Weihnachten';
                 else if (key.startsWith('OSTERN_')) category = 'Ostern';
                 else if (key.startsWith('VALENTINE_')) category = 'Valentinstag';
 
+                const isDefault = key === 'DEFAULT' || key === 'SUMMER';
+
                 return {
                     id: key,
                     name: bg.name || key,
                     category,
-                    icon: '/api/waldspiel/asset?type=background&id=' + encodeURIComponent(key)
+                    icon: '/api/waldspiel/asset?type=background&id=' + encodeURIComponent(key),
+                    price: isDefault ? 0 : (bg.price || 0),
+                    currency: bg.currency || 'BERRY',
+                    isDefault: isDefault
                 };
             });
 
@@ -61,6 +66,7 @@ module.exports = async function (client, plugin, config, projectAlias, data) {
 
         return {
             success: true,
+            defaultBackgrounds: ['DEFAULT', 'SUMMER'],
             decorations,
             backgrounds,
             animals: animalsList
