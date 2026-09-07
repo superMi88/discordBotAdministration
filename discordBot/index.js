@@ -8,7 +8,12 @@ const log = require('./lib/log');
 const EventManager = require("./libIndex/eventManager.js");
 const botManager = require('./libIndex/botManager'); // Singleton Instanz
 
-const MONGO_URL = 'mongodb://localhost:27017';
+try {
+    require('dotenv').config({ path: path.join(__dirname, '.env') });
+    require('dotenv').config();
+} catch (e) {}
+
+const MONGO_URL = process.env.DATABASE_URL || 'mongodb://localhost:27017';
 const client = new MongoClient(MONGO_URL);
 
 /**

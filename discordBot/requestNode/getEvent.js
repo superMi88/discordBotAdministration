@@ -9,7 +9,7 @@ var ObjectId = require('mongodb').ObjectId;
 const { MongoClient } = require('mongodb');
 const log = require('../lib/log');
 
-const url = 'mongodb://localhost:27017';
+const url = process.env.DATABASE_URL || 'mongodb://localhost:27017';
 const client = new MongoClient(url);
 
 module.exports = {
