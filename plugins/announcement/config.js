@@ -33,24 +33,22 @@ module.exports = {
 		},
 		{
 			type: "alone",
-			description: "Titel für das Announcement",
+			description: "Titel für das Announcement (optional)",
 			fields: [
 				{
 					type: "text", 
 					name: "title", 
-					required: true,
 					maxZeichen: 50
 				}
 			]
 		},
 		{
 			type: "alone",
-			description: "Beschreibung für das Embed",
+			description: "Beschreibung für das Embed (optional)",
 			fields: [
 				{
 					type: "textarea", 
 					name: "description", 
-					required: true,
 					maxZeichen: 1500
 				}
 			]
