@@ -10,10 +10,22 @@
       "requirements": [
         {
           "key": "DATABASE_URL",
-          "label": "MongoDB Datenbank",
+          "label": "LiasDatabase MongoDB",
           "type": "database",
           "dbType": "mongodb",
-          "description": "Verbindung zur MongoDB Datenbank"
+          "description": "Verbindung zur MongoDB Datenbank (LiasDatabase)"
+        },
+        {
+          "key": "DISCORD_CLIENT_ID",
+          "label": "Discord Client ID",
+          "type": "textinput",
+          "description": "Discord Bot Application Client ID"
+        },
+        {
+          "key": "DISCORD_CLIENT_SECRET",
+          "label": "Discord Client Secret",
+          "type": "textinput",
+          "description": "Discord Bot Application Client Secret"
         }
       ]
     },
@@ -38,15 +50,27 @@
         {
           "key": "JWT_SECRET",
           "label": "JWT Secret",
-          "type": "secret",
+          "type": "textinput",
           "description": "Geheimer Schlüssel zur Signierung der Authentifizierungs-Tokens"
         },
         {
+          "key": "DISCORD_CLIENT_ID",
+          "label": "Discord Client ID",
+          "type": "textinput",
+          "description": "Discord OAuth Client ID"
+        },
+        {
+          "key": "DISCORD_CLIENT_SECRET",
+          "label": "Discord Client Secret",
+          "type": "textinput",
+          "description": "Discord OAuth Client Secret"
+        },
+        {
           "key": "DATABASE_URL",
-          "label": "MongoDB Datenbank",
+          "label": "LiasDatabase MongoDB",
           "type": "database",
           "dbType": "mongodb",
-          "description": "Verbindung zur MongoDB Datenbank"
+          "description": "Verbindung zur MongoDB Datenbank (LiasDatabase)"
         }
       ]
     }

@@ -91,7 +91,16 @@ export default async function handler(req, res) {
 //https://www.youtube.com/watch?v=gg40nfS0pTU
 async function getToken(req, projectAlias, code) {
 
-    const { clientId, clientSecret } = require('../../../discordBot.config.json');
+    let clientId = process.env.DISCORD_CLIENT_ID || process.env.NEXT_PUBLIC_DISCORD_CLIENT_ID;
+    let clientSecret = process.env.DISCORD_CLIENT_SECRET;
+
+    if (!clientId || !clientSecret) {
+        try {
+            const conf = require('../../../discordBot.config.json');
+            clientId = clientId || conf.clientId;
+            clientSecret = clientSecret || conf.clientSecret;
+        } catch (e) {}
+    }
 
     const protocol = req.headers['x-forwarded-proto'] || 'http';
     const host = req.headers.host;

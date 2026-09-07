@@ -10,6 +10,8 @@ const botManager = require('./libIndex/botManager'); // Singleton Instanz
 
 try {
     require('dotenv').config({ path: path.join(__dirname, '.env') });
+    require('dotenv').config({ path: path.join(__dirname, '../website/.env') });
+    require('dotenv').config({ path: path.join(__dirname, '../.env') });
     require('dotenv').config();
 } catch (e) {}
 
@@ -106,8 +108,29 @@ async function main() {
         setupIPC();
 
         await client.connect();
+
+        let dbName = 'LiasDatabase';
+        if (process.env.DATABASE_URL) {
+            try {
+                const parsed = new URL(process.env.DATABASE_URL);
+                const pathDb = parsed.pathname.replace(/^\//, '');
+                if (pathDb) dbName = pathDb;
+            } catch (e) {}
+        }
+        if (process.env.DATABASE_NAME) {
+            dbName = process.env.DATABASE_NAME;
+        }
+
+        let allProjects = [{ name: dbName, alias: dbName, description: 'Hauptdatenbank Lias Bot' }];
         const projectsPath = path.join(__dirname, '../projects.json');
-        const allProjects = JSON.parse(fs.readFileSync(projectsPath, 'utf8'));
+        if (fs.existsSync(projectsPath)) {
+            try {
+                const fileProjects = JSON.parse(fs.readFileSync(projectsPath, 'utf8'));
+                if (Array.isArray(fileProjects) && fileProjects.length > 0) {
+                    allProjects = fileProjects;
+                }
+            } catch (e) {}
+        }
 
         for (const project of allProjects) {
             const projectDb = client.db(project.name);
