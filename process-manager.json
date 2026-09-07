@@ -1,0 +1,54 @@
+{
+  "name": "Discord-Suite",
+  "repository": "superMi88/servernew",
+  "category": "Discord Bots",
+  "services": [
+    {
+      "name": "Discord-Bot",
+      "pm2Process": "discordBot",
+      "envPath": "./discordBot/.env",
+      "requirements": [
+        {
+          "key": "DATABASE_URL",
+          "label": "MongoDB Datenbank",
+          "type": "database",
+          "dbType": "mongodb",
+          "description": "Verbindung zur MongoDB Datenbank"
+        }
+      ]
+    },
+    {
+      "name": "Web-Dashboard",
+      "pm2Process": "website",
+      "envPath": "./website/.env",
+      "requirements": [
+        {
+          "key": "PORT",
+          "label": "Web Port",
+          "type": "port",
+          "defaultValue": "3000",
+          "description": "Netzwerkport für das Next.js Web-Dashboard"
+        },
+        {
+          "key": "DOMAIN",
+          "label": "Webseite Domain",
+          "type": "domain",
+          "description": "Öffentliche Domain für das Web-Dashboard"
+        },
+        {
+          "key": "JWT_SECRET",
+          "label": "JWT Secret",
+          "type": "secret",
+          "description": "Geheimer Schlüssel zur Signierung der Authentifizierungs-Tokens"
+        },
+        {
+          "key": "DATABASE_URL",
+          "label": "MongoDB Datenbank",
+          "type": "database",
+          "dbType": "mongodb",
+          "description": "Verbindung zur MongoDB Datenbank"
+        }
+      ]
+    }
+  ]
+}

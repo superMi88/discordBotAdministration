@@ -5,7 +5,7 @@ const { MongoClient } = require('mongodb');
 // import { MongoClient } from 'mongodb'
 
 // Connection URL
-const url = 'mongodb://localhost:27017';
+const url = process.env.DATABASE_URL || 'mongodb://localhost:27017';
 const client = new MongoClient(url);
 
 // Database Name
@@ -104,7 +104,7 @@ export async function createNewWebsiteUser(databaseName, discordId) {
 
 export async function getAllUser(databaseName, requestBody) {
   const { MongoClient } = require('mongodb');
-  const url = 'mongodb://localhost:27017';
+  const url = process.env.DATABASE_URL || 'mongodb://localhost:27017';
   const mongoClient = new MongoClient(url);
 
   // Use connect method to connect to the server
