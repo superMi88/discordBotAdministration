@@ -91,7 +91,7 @@ export default async function handler(req, res) {
 //https://www.youtube.com/watch?v=gg40nfS0pTU
 async function getToken(req, projectAlias, code) {
 
-    let clientId = process.env.DISCORD_CLIENT_ID || process.env.NEXT_PUBLIC_DISCORD_CLIENT_ID;
+    let clientId = process.env.DISCORD_CLIENT_ID;
     let clientSecret = process.env.DISCORD_CLIENT_SECRET;
 
     if (!clientId || !clientSecret) {

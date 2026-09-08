@@ -66,7 +66,7 @@ function loginLoadingPage() {
 }
 
 function loginPage(setup, projectAlias, clientIdProp) {
-    let clientId = clientIdProp || process.env.NEXT_PUBLIC_DISCORD_CLIENT_ID;
+    let clientId = clientIdProp;
     if (!clientId) {
         try {
             const config = require('../../../discordBot.config.json');
@@ -132,7 +132,7 @@ export async function getServerSideProps(context) {
         )
     })
 
-    let clientId = process.env.DISCORD_CLIENT_ID || process.env.NEXT_PUBLIC_DISCORD_CLIENT_ID || null;
+    let clientId = process.env.DISCORD_CLIENT_ID || null;
     if (!clientId) {
         try {
             clientId = require('../../../discordBot.config.json')?.clientId || null;
