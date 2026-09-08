@@ -33,6 +33,7 @@
       "name": "Web-Dashboard",
       "pm2Process": "website",
       "envPath": "./website/.env",
+      "dependsOn": "Discord-Suite/Discord-Bot",
       "requirements": [
         {
           "key": "PORT",
