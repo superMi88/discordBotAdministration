@@ -42,12 +42,6 @@
           "description": "Netzwerkport für das Next.js Web-Dashboard"
         },
         {
-          "key": "DOMAIN",
-          "label": "Webseite Domain",
-          "type": "domain",
-          "description": "Öffentliche Domain für das Web-Dashboard"
-        },
-        {
           "key": "JWT_SECRET",
           "label": "JWT Secret",
           "type": "textinput",
