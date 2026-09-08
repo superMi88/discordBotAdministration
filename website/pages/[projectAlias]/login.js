@@ -13,7 +13,7 @@ import log from '@/lib/log';
 
 let errorMessage = false;
 
-export default function ProjectLogin({ setup }) {
+export default function ProjectLogin({ setup, clientId }) {
     const router = useRouter()
     const { projectAlias, code } = router.query
 
@@ -38,7 +38,7 @@ export default function ProjectLogin({ setup }) {
         if (data.login === false) {
             errorMessage = "User nicht berechtigt für dieses Projekt"
             Router.push(`/${projectAlias}/login`)
-            return loginPage(setup, projectAlias)
+            return loginPage(setup, projectAlias, clientId)
         }
         Router.push(`/${projectAlias}/bot`)
         errorMessage = "Beim Anmelden ist ein Fehler aufgetreten"
@@ -48,7 +48,7 @@ export default function ProjectLogin({ setup }) {
         errorMessage = "Du bist nicht berechtigt, dich anzumelden."
     }
 
-    return loginPage(setup, projectAlias)
+    return loginPage(setup, projectAlias, clientId)
 }
 
 function loginLoadingPage() {
@@ -65,9 +65,14 @@ function loginLoadingPage() {
     )
 }
 
-function loginPage(setup, projectAlias) {
-    const config = require('../../../discordBot.config.json');
-    const { clientId } = config;
+function loginPage(setup, projectAlias, clientIdProp) {
+    let clientId = clientIdProp || process.env.NEXT_PUBLIC_DISCORD_CLIENT_ID;
+    if (!clientId) {
+        try {
+            const config = require('../../../discordBot.config.json');
+            clientId = config.clientId;
+        } catch (e) {}
+    }
     const [redirectUrl, setRedirectUrl] = useState("");
     const state = projectAlias;
 
@@ -127,9 +132,17 @@ export async function getServerSideProps(context) {
         )
     })
 
+    let clientId = process.env.DISCORD_CLIENT_ID || process.env.NEXT_PUBLIC_DISCORD_CLIENT_ID || null;
+    if (!clientId) {
+        try {
+            clientId = require('../../../discordBot.config.json')?.clientId || null;
+        } catch (e) {}
+    }
+
     return {
         props: {
             setup: isCollectionEmpty || false,
+            clientId: clientId
         }
     }
 }
