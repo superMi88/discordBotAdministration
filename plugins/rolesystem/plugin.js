@@ -134,11 +134,71 @@ class Plugin {
 			};
 		});
 
+		// Discord Guild Member Daten abrufen (Booster-Status & Beitrittsdatum)
+		let isBooster = false;
+		let premiumSince = null;
+		let premiumSinceTimestamp = null;
+		let joinedAt = null;
+		let joinedTimestamp = null;
+
+		try {
+			const serverId = plugin['var']?.server;
+			if (serverId && client) {
+				const guild = client.guilds.cache.get(serverId) || await client.guilds.fetch(serverId).catch(() => null);
+				if (guild) {
+					let member = guild.members.cache.get(discordUserId);
+					if (!member) {
+						member = await guild.members.fetch(discordUserId).catch(() => null);
+					}
+					if (member) {
+						if (member.premiumSinceTimestamp || member.premiumSince) {
+							isBooster = true;
+							premiumSinceTimestamp = member.premiumSinceTimestamp || (member.premiumSince ? new Date(member.premiumSince).getTime() : null);
+							premiumSince = member.premiumSince ? (member.premiumSince instanceof Date ? member.premiumSince.toISOString() : new Date(member.premiumSince).toISOString()) : (premiumSinceTimestamp ? new Date(premiumSinceTimestamp).toISOString() : null);
+						} else {
+							const boosterRole = guild.roles.premiumSubscriberRole || member.roles.cache.find(r => r.tags && r.tags.premiumSubscriberRole);
+							if (boosterRole && member.roles.cache.has(boosterRole.id)) {
+								isBooster = true;
+							}
+						}
+
+						if (member.joinedTimestamp || member.joinedAt) {
+							joinedTimestamp = member.joinedTimestamp || (member.joinedAt ? new Date(member.joinedAt).getTime() : null);
+							joinedAt = member.joinedAt ? (member.joinedAt instanceof Date ? member.joinedAt.toISOString() : new Date(member.joinedAt).toISOString()) : (joinedTimestamp ? new Date(joinedTimestamp).toISOString() : null);
+						}
+
+						// Synchronisiere Booster- und Beitrittsdaten in die MongoDB
+						try {
+							const db = DatabaseManager.get();
+							if (db) {
+								const updateFields = {
+									isBooster: isBooster,
+									premiumSince: premiumSince
+								};
+								if (joinedAt) updateFields.joinedAt = joinedAt;
+								db.collection('userCollection').updateOne(
+									{ discordId: discordUserId },
+									{ $set: updateFields }
+								).catch(() => {});
+							}
+						} catch (dbErr) {}
+					}
+				}
+			}
+		} catch (err) {
+			console.error("[rolesystem getUserRankInfo] Fehler beim Abrufen der Member-Informationen:", err);
+		}
+
 		return {
 			success: true,
 			userXp: userXp,
 			voiceActivity: voiceActivity,
 			chatActivity: chatActivity,
+			isBooster: isBooster,
+			premiumSince: premiumSince,
+			premiumSinceTimestamp: premiumSinceTimestamp,
+			joinedAt: joinedAt,
+			joinedTimestamp: joinedTimestamp,
 			currentRank: currentRank ? {
 				name: currentRank.name,
 				label: currentRank.label,
@@ -164,6 +224,17 @@ class Plugin {
 
 		plugin.on(client, 'guildMemberUpdate', async (oldMember, newMember) => {
 			try {
+				if (oldMember.premiumSinceTimestamp !== newMember.premiumSinceTimestamp) {
+					const isBooster = Boolean(newMember.premiumSinceTimestamp || newMember.premiumSince);
+					const premiumSince = newMember.premiumSince ? (newMember.premiumSince instanceof Date ? newMember.premiumSince.toISOString() : new Date(newMember.premiumSince).toISOString()) : (newMember.premiumSinceTimestamp ? new Date(newMember.premiumSinceTimestamp).toISOString() : null);
+					if (db) {
+						db.collection('userCollection').updateOne(
+							{ discordId: newMember.id },
+							{ $set: { isBooster: isBooster, premiumSince: premiumSince } }
+						).catch(() => {});
+					}
+				}
+
 				const requiredRole = plugin['var']?.requiredRole;
 				if (requiredRole) {
 					const hadRole = oldMember.roles.cache.has(requiredRole);
